@@ -1,0 +1,6 @@
+node_modules
+out
+dist
+xeroscout-scout.txt
+xeroscout-server.txt
+installer/*.exe

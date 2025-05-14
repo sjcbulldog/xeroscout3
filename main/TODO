@@ -1,0 +1,56 @@
+GitHub Issues
+-------------
+
+All
+---
+Image relative control coordinates
+WiFi based syncing
+Status is not working
+
+Central
+-------
+View: team status view
+View: team database view
+      add conditional formatting
+View: match status view
+View: match database view
+      add contitional formatting
+View: dataset mgr view
+View: picklist editor 
+View: multi team view 
+View: team graph 
+View: spider graph 
+View: formula manager
+      - understand functions, operator, etc.
+
+Scout
+-----
+- add sync with IP address option
+- test syncing w/ cable
+- test syncing w/ wi-fi
+
+Design
+-------
+Have the scouting tablet and the central tablet work via talking to a common
+web server via rest APIs.  For the stands mode, sync with a server running on the
+central machine.  Have a wifi mode where it runs on a server running in my office
+
+Attributions
+------------
+<a href="https://www.flaticon.com/free-icons/info" title="info icons">Info icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/help" title="help icons">Help icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/search" title="search icons">Search icons created by Smashicons - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/survey" title="survey icons">Survey icons created by smashingstocks - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/status" title="status icons">Status icons created by noomtah - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/data-source" title="data source icons">Data source icons created by Vectorslab - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/statistics" title="statistics icons">Statistics icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/multiple-choice" title="multiple choice icons">Multiple choice icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/manufacturing" title="manufacturing icons">Manufacturing icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/activities" title="Activities icons">Activities icons created by Uniconlabs - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/graph" title="graph icons">Graph icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/spider-web" title="spider web icons">Spider web icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/math" title="math icons">Math icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/file-import" title="file import icons">File import icons created by Vectors Tank - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/content" title="content icons">Content icons created by Pixelmeetup - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/editing" title="editing icons">Editing icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/video-camera" title="video camera icons">Video camera icons created by smashingstocks - Flaticon</a>

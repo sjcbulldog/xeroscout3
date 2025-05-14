@@ -1,0 +1,51 @@
+{
+    "team" : {
+        "team_scouter" : {
+            "choices" : [
+                "Anvi",
+                "Bryce",
+                "Aarush",
+                "Carter",
+                "Ethan",
+                "Gabe",
+                "Gavin",
+                "Jack",
+                "Jared",
+                "Jaxon",
+                "Jett",
+                "Jordan",
+                "Kaden",
+                "Kieran",
+                "Liam",
+                "Lucas",
+                "Mason",
+                "Max",
+                "Nash",
+                "Nico",
+                "Owen",
+                "Parker",
+                "Riley"
+            ]
+        }
+    },
+    "match" : {
+        "tele_Notes" : {
+            "choices" : [
+                "Fast collect and score",
+                "Slow collect and score",
+                "Does not place on L1",
+                "Does not place on L2",
+                "Does not place on L3",
+                "Does not place on L4"
+            ]
+        },
+        "auto_Notes" : {
+            "choices" : [
+                "Three coral auto: face 3 - 1, face 2 - 2",
+                "Two coral auto: face 3 - 1, face 2 - 1",
+                "One coral one algae auto: face 4 -> processor",
+                "One coral one algae auto: face 4 -> barge"
+            ]
+        }
+    }
+}

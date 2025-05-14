@@ -1,0 +1,20 @@
+{
+  "game": "2024 Crescendo",
+  "field-image": "reef2025.png",
+  "field-corners": {
+    "top-left": [
+      0,
+      0
+    ],
+    "bottom-right": [
+      1681,
+      638
+    ]
+  },
+  "field-size": [
+    1681,
+    638
+    
+  ],
+  "field-unit": "feet"
+}
