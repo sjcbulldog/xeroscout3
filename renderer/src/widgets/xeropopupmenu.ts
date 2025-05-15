@@ -5,6 +5,9 @@ export class XeroPopMenuItem {
     private text_: string ;
     private callback_?: () => void ;
     private submenu_? : XeroPopupMenu ;
+    private topdiv_? : HTMLElement ;
+    private item_?: HTMLElement ;
+    private sub_? : HTMLElement ;
 
     constructor(text: string, callback: (() => void) | undefined, submenu?: XeroPopupMenu) {
         this.text_ = text ;
@@ -22,6 +25,30 @@ export class XeroPopMenuItem {
 
     public get submenu() : XeroPopupMenu | undefined {
         return this.submenu_ ;
+    }
+
+    public set topdiv(div: HTMLElement) {
+        this.topdiv_ = div ;
+    }   
+
+    public get topdiv() : HTMLElement | undefined {
+        return this.topdiv_ ;
+    }
+
+    public set itemDiv(item: HTMLElement) {
+        this.item_ = item ;
+    }
+
+    public get itemDiv() : HTMLElement | undefined {
+        return this.item_ ;
+    }
+
+    public set subDiv(sub: HTMLElement) {
+        this.sub_ = sub ;
+    }
+
+    public get subDiv() : HTMLElement | undefined {
+        return this.sub_ ;
     }
 }
 
@@ -89,9 +116,7 @@ export class XeroPopupMenu extends EventEmitter {
             this.child_menu_ = undefined ;
         }
 
-        if (this.parent_ && this.popup_?.parentElement === this.parent_) {
-            this.parent_.removeChild(this.popup_!) ;
-        }
+        this.removeFromParent() ;
 
         this.emit('menu-closed') ;
         document.removeEventListener('click', this.global_click_) ;
@@ -99,11 +124,30 @@ export class XeroPopupMenu extends EventEmitter {
     }
 
     public closeMenu() {
-        XeroPopupMenu.current_?.closeInternal() ;
+        if (this.child_menu_) {
+            this.child_menu_.closeMenu() ;
+        }
+
+        this.removeFromParent() ;
+    }
+
+    private removeFromParent() {
+        if (this.parent_ && this.popup_?.parentElement === this.parent_) {
+            this.parent_.removeChild(this.popup_!) ;
+        }        
+    }
+
+    private closeChildMenuInternal(child: XeroPopupMenu) {
+        if (this.child_menu_ === child) {
+            this.child_menu_.removeFromParent() ;
+            this.child_menu_ = undefined ;
+        }
     }
 
     private closeChildMenu() {
-        console.log('closeChildMenu') ;
+        if (XeroPopupMenu.current_) {
+            XeroPopupMenu.current_.closeChildMenuInternal(this) ;
+        }
     }
 
     public showRelative(win: HTMLElement, pt: XeroPoint, child?: boolean) {
@@ -116,30 +160,25 @@ export class XeroPopupMenu extends EventEmitter {
         this.child_ = child ;
 
         for(let item of this.items_) {
-            let div = document.createElement('div') ;
-            div.className = 'xero-popup-menu-item-div' ;
+            item.topdiv = document.createElement('div') ;
+            item.topdiv.className = 'xero-popup-menu-item-div' ;
 
-            let divitem = document.createElement('div') ;
-            divitem.className = 'xero-popup-menu-item' ;
-            divitem.innerText = item.text ;
-            div.appendChild(divitem) ;
+            item.itemDiv = document.createElement('div') ;
+            item.itemDiv.className = 'xero-popup-menu-item' ;
+            item.itemDiv.innerText = item.text ;
+            item.topdiv.appendChild(item.itemDiv) ;
 
-            let divsub = document.createElement('div') ;
-            divsub.className = 'xero-popup-menu-submenu' ;
+            item.subDiv = document.createElement('div') ;
+            item.subDiv.className = 'xero-popup-menu-submenu' ;
             if (item.submenu) {
-                divsub.innerHTML = '&#x27A4;' ;
-                divsub.addEventListener('click', this.onSubmenuShow.bind(this, item)) ;
-                divsub.addEventListener('mouseover', this.onSubmenuShow.bind(this, item)) ;
-                divitem.addEventListener('click', this.onSubmenuShow.bind(this, item)) ;
-                div.addEventListener('click', this.onSubmenuShow.bind(this, item)) ;
+                item.subDiv.innerHTML = '&#x27A4;' ;
+                item.subDiv.addEventListener('mouseover', this.onSubmenuShow.bind(this, item)) ;
             }
             else {
-                divsub.addEventListener('click', this.onClick.bind(this, item)) ;
-                divitem.addEventListener('click', this.onClick.bind(this, item)) ;
-                div.addEventListener('click', this.onClick.bind(this, item)) ;                
+                item.itemDiv.addEventListener('click', this.onClick.bind(this, item)) ;
             }
-            div.appendChild(divsub) ;
-            this.popup_.appendChild(div) ;
+            item.topdiv.appendChild(item.subDiv) ;
+            this.popup_.appendChild(item.topdiv) ;
         }
 
         document.addEventListener('click', this.global_click_) ;

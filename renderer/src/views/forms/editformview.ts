@@ -342,6 +342,7 @@ export class XeroEditFormView extends XeroView {
             this.updateImages() ;
             this.formViewUpdateTabBar() ;
             this.setCurrentSectionByIndex(this.form_.sections.length - 1) ;
+            this.modified() ;
         }
     }
 
@@ -357,13 +358,10 @@ export class XeroEditFormView extends XeroView {
             }
 
             this.form_.removeSectionByIndex(this.currentSectionIndex_) ;
-            let section = this.form_.sections[this.currentSectionIndex_] ;
-            this.form_.sections.splice(this.currentSectionIndex_, 1) ;
-
             this.bardiv_.removeChild(this.bardiv_.children[this.currentSectionIndex_]) ;
-            this.currentSectionIndex_ = -1 ;
-            this.formViewUpdateTabBar() ;
             this.setCurrentSectionByIndex(0) ;
+            this.formViewUpdateTabBar() ;
+            this.modified() ;
         }
     }
 
