@@ -969,6 +969,32 @@ export class XeroEditFormView extends XeroView {
         this.popup_menu_ = undefined ;
     }
 
+    private moveSection(left: boolean) {
+        if (this.form_ && this.currentSectionIndex_ !== -1) {
+            if (left && this.currentSectionIndex_ === 0) {
+                alert('You cannot move the first section left') ;
+                return ;
+            }
+            else if (!left && this.currentSectionIndex_ === this.form_.sections.length - 1) {
+                alert('You cannot move the last section right') ;
+                return ;
+            }
+
+            if (left) {
+                let section = this.form_.sections[this.currentSectionIndex_] ;
+                this.form_.sections.splice(this.currentSectionIndex_, 1) ;
+                this.form_.sections.splice(this.currentSectionIndex_ - 1, 0, section) ;
+                this.setCurrentSectionByIndex(this.currentSectionIndex_ - 1) ;
+            }
+            else {
+                let section = this.form_.sections[this.currentSectionIndex_] ;
+                this.form_.sections.splice(this.currentSectionIndex_, 1) ;
+                this.form_.sections.splice(this.currentSectionIndex_ + 1, 0, section) ;
+                this.setCurrentSectionByIndex(this.currentSectionIndex_ + 1) ;
+            }
+        }
+    }
+
     private contextMenu(event: MouseEvent) {
         event.preventDefault() ;
 
@@ -979,17 +1005,19 @@ export class XeroEditFormView extends XeroView {
 
         if (event.target && event.target instanceof HTMLElement) {
             let sectionItems = [
-                new PopupMenuItem('Add Section', this.addSection.bind(this)),
-                new PopupMenuItem('Delete Section', this.deleteSection.bind(this)),
-                new PopupMenuItem('Rename Section', this.renameSection.bind(this))
+                new PopupMenuItem('Add', this.addSection.bind(this)),
+                new PopupMenuItem('Delete', this.deleteSection.bind(this)),
+                new PopupMenuItem('Rename', this.renameSection.bind(this)),
+                new PopupMenuItem('Move Left', this.moveSection.bind(this, true)),
+                new PopupMenuItem('Move Right', this.moveSection.bind(this, false)),                
             ]
             this.section_menu_ = new XeroPopupMenu('section', sectionItems) ;
 
             let items = [
-                new PopupMenuItem('Import Image', this.importImage.bind(this)),
                 new PopupMenuItem('Sections', undefined, this.section_menu_),
-                new PopupMenuItem('Add Control', undefined, this.ctrl_menu_),
-                new PopupMenuItem('Select Background Image', undefined, this.image_menu_),
+                new PopupMenuItem('Controls', undefined, this.ctrl_menu_),
+                new PopupMenuItem('Import Image', this.importImage.bind(this)),
+                new PopupMenuItem('Background Image', undefined, this.image_menu_),
             ]
 
             this.unselectCurrent() ;
