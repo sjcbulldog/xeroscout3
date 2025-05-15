@@ -1,4 +1,4 @@
-import { TabulatorFull } from "tabulator-tables";
+import { CellComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../apps/xeroapp.js";
 import {  XeroView  } from "./xeroview.js";
 
@@ -24,17 +24,28 @@ export class XeroTeamStatus extends XeroView {
                 { title: 'Number', field: 'number'},
                 { title: 'Name', field: 'teamname'},
                 { title: 'Tablet', field: 'tablet'},
-                { title: 'Status', field: 'status'},
+                { title: 'Status', field: 'status', formatter: this.cellFormatter.bind(this) },
             ],
         }) ;
     }
 
-    private cellFormatter(cell: HTMLElement) {
-        if (cell.innerText === 'Y') {
-            cell.style.backgroundColor = 'lightgreen' ;
+    static count: number = 0 ;
+    private cellFormatter(cell: CellComponent, params: any, onRendered: any) : string {
+        let val = cell.getValue();
+        let el = cell.getElement();
+
+        if (val == 'Y') {
+            el.style.fontSize = '16px';
+            el.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)' ;
+            el.style.borderRadius = '5px' ;
+            el.style.margin = '3px' ;
+            el.style.textAlign = 'center' ;
+            val = 'Scouted' ;
         }
         else {
-            cell.style.backgroundColor = 'lightcoral' ;
+            val = '' ;
         }
+
+        return val;
     }
 }

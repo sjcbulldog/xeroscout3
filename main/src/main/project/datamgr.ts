@@ -10,6 +10,7 @@ import { ColumnDesc } from "../model/datamodel";
 import { MatchSet } from "./datasetmgr";
 import { DataValue } from "../model/datavalue";
 import { IPCDataValue, IPCProjColumnsConfig } from "../../shared/ipc";
+import { DataRecord } from "../model/datarecord";
 
 
 export class DataInfo {
@@ -280,7 +281,7 @@ export class DataManager extends Manager {
         return this.teamdb_.getColumnNames(TeamDataModel.TeamTableName) ;
     }
 
-    public getAllTeamData() : Promise<any[]> {
+    public getAllTeamData() : Promise<DataRecord[]> {
         return this.teamdb_.getAllData(TeamDataModel.TeamTableName) ;
     }
 

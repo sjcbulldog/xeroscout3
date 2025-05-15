@@ -26,15 +26,18 @@ export class XeroPopMenuItem {
 }
 
 export class XeroPopupMenu extends EventEmitter {
+    private static childMenuOffsetX = 10 ;
+    private static childMenuOffsetY = 10 ;
+
+    private static current_? : XeroPopupMenu ;
     private parent_? : HTMLElement ;
     private items_ : XeroPopMenuItem[] ;
     private child_menu_? : XeroPopupMenu ;
-    private parent_menu_? : XeroPopupMenu ;
-    private item_map_ : Map<HTMLElement, XeroPopMenuItem> = new Map() ;
     private popup_? : HTMLElement ;
     private global_click_ : (event: MouseEvent) => void ;
     private global_key_ : (event: KeyboardEvent) => void ;
     private name_ : string ; 
+    private child_?: boolean ;
 
     public constructor(name: string, items: XeroPopMenuItem[]) {
         super() ;
@@ -52,19 +55,23 @@ export class XeroPopupMenu extends EventEmitter {
             item.action() ;
             this.closeMenu() ;
         }
+        event.preventDefault() ;        
     }
 
-    private onSubmenuClick(item: XeroPopMenuItem, event: MouseEvent) {
+    private onSubmenuShow(item: XeroPopMenuItem, event: MouseEvent) {
         this.emit('submenu-opened', item) ;
 
         if (item.submenu && this.parent_) {
             this.child_menu_ = item.submenu ;
-            item.submenu.parent_menu_ = this ;
-            this.child_menu_.showRelative(this.parent_, new XeroPoint(event.clientX, event.clientY)) ;
+            this.child_menu_.showRelative(this.parent_, new XeroPoint(event.clientX - XeroPopupMenu.childMenuOffsetX, event.clientY - XeroPopupMenu.childMenuOffsetY), true) ;
         }
+        event.preventDefault() ;
     }
 
     private onGlobalClick(event: MouseEvent) {
+        if (XeroPopupMenu.current_) {
+            XeroPopupMenu.current_.closeMenu() ;
+        }
     }
 
     private onGlobalKey(event: KeyboardEvent) {
@@ -73,47 +80,77 @@ export class XeroPopupMenu extends EventEmitter {
         }
     }
 
-    public closeMenu() {
-        if (this.popup_ && this.parent_ && this.parent_.contains(this.popup_)) {
-            this.parent_.removeChild(this.popup_) ;
-            this.popup_ = undefined ;
+    private closeInternal() {
+        //
+        // This will always be the top most menu in the stack
+        //
+        if (this.child_menu_) {
+            this.child_menu_.closeInternal() ;
+            this.child_menu_ = undefined ;
         }
 
-        if (this.parent_menu_) {
-            this.parent_menu_.closeMenu() ;
+        if (this.parent_ && this.popup_?.parentElement === this.parent_) {
+            this.parent_.removeChild(this.popup_!) ;
         }
-        else {
-            this.emit('menu-closed') ;
-            document.removeEventListener('click', this.global_click_) ;
-            document.removeEventListener('keydown', this.global_key_) ;
-        }
+
+        this.emit('menu-closed') ;
+        document.removeEventListener('click', this.global_click_) ;
+        document.removeEventListener('keydown', this.global_key_) ;
     }
 
-    public showRelative(win: HTMLElement, pt: XeroPoint) {
+    public closeMenu() {
+        XeroPopupMenu.current_?.closeInternal() ;
+    }
+
+    private closeChildMenu() {
+        console.log('closeChildMenu') ;
+    }
+
+    public showRelative(win: HTMLElement, pt: XeroPoint, child?: boolean) {
         this.parent_ = win ;
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-menu' ;
         this.popup_.style.left = pt.x + 'px' ;
         this.popup_.style.top = pt.y + 'px' ;
         this.popup_.style.zIndex = '1000' ;
+        this.child_ = child ;
 
         for(let item of this.items_) {
             let div = document.createElement('div') ;
-            div.className = 'xero-popup-menu-item' ;
+            div.className = 'xero-popup-menu-item-div' ;
 
-            this.item_map_.set(div, item) ;
+            let divitem = document.createElement('div') ;
+            divitem.className = 'xero-popup-menu-item' ;
+            divitem.innerText = item.text ;
+            div.appendChild(divitem) ;
+
+            let divsub = document.createElement('div') ;
+            divsub.className = 'xero-popup-menu-submenu' ;
             if (item.submenu) {
-                div.onclick = this.onSubmenuClick.bind(this, item) ;
-                div.innerHTML += item.text + '&nbsp;&nbsp;&nbsp;&nbsp;&#x27A4;' ;
-            } else {
-                div.innerText = item.text ;
-                div.onclick = this.onClick.bind(this, item) ;
+                divsub.innerHTML = '&#x27A4;' ;
+                divsub.addEventListener('click', this.onSubmenuShow.bind(this, item)) ;
+                divsub.addEventListener('mouseover', this.onSubmenuShow.bind(this, item)) ;
+                divitem.addEventListener('click', this.onSubmenuShow.bind(this, item)) ;
+                div.addEventListener('click', this.onSubmenuShow.bind(this, item)) ;
             }
+            else {
+                divsub.addEventListener('click', this.onClick.bind(this, item)) ;
+                divitem.addEventListener('click', this.onClick.bind(this, item)) ;
+                div.addEventListener('click', this.onClick.bind(this, item)) ;                
+            }
+            div.appendChild(divsub) ;
             this.popup_.appendChild(div) ;
         }
 
         document.addEventListener('click', this.global_click_) ;
         document.addEventListener('keydown', this.global_key_) ;
         this.parent_.appendChild(this.popup_) ; 
+
+        if (!child) {
+            XeroPopupMenu.current_ = this ;
+        }
+        else {
+            this.popup_.addEventListener('mouseleave', this.closeChildMenu.bind(this)) ;
+        }
     }    
 }

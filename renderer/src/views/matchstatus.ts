@@ -1,4 +1,4 @@
-import { TabulatorFull } from "tabulator-tables";
+import { CellComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../apps/xeroapp.js";
 import {  XeroView  } from "./xeroview.js";
 
@@ -78,37 +78,50 @@ export class XeroMatchStatus extends XeroView {
 
                 { title: 'Blue 1', field: 'blue1'},
                 { title: 'Blue Tablet 1', field: 'bluetab1'},
-                { title: 'Blue 1 Status', field: 'bluest1'},
+                { title: 'Blue 1 Status', field: 'bluest1', formatter: this.cellFormatter.bind(this) },
 
                 { title: 'Blue 2', field: 'blue2'},
                 { title: 'Blue Tablet 2', field: 'bluetab2'},
-                { title: 'Blue 2 Status', field: 'bluest2'},
+                { title: 'Blue 2 Status', field: 'bluest2', formatter: this.cellFormatter.bind(this)},
 
                 { title: 'Blue 3', field: 'blue3'},
                 { title: 'Blue Tablet 3', field: 'bluetab3'},
-                { title: 'Blue 3 Status', field: 'bludst3'},
+                { title: 'Blue 3 Status', field: 'bludst3', formatter: this.cellFormatter.bind(this)},
 
                 { title: 'Red 1', field: 'red1'},
                 { title: 'Red Tablet 1', field: 'redtab1'},
-                { title: 'Red 1 Status', field: 'redst1'},
+                { title: 'Red 1 Status', field: 'redst1', formatter: this.cellFormatter.bind(this)},
 
                 { title: 'Red 2', field: 'red2'},
                 { title: 'Red Tablet 2', field: 'redtab2'},
-                { title: 'Red 2 Status', field: 'redst2'},
+                { title: 'Red 2 Status', field: 'redst2', formatter: this.cellFormatter.bind(this)},
 
                 { title: 'Red 3', field: 'red3'},
                 { title: 'Red Tablet 3', field: 'redtab3'},
-                { title: 'Red 3 Status', field: 'redst3'},
+                { title: 'Red 3 Status', field: 'redst3', formatter: this.cellFormatter.bind(this)},
             ],
         }) ;
     }
 
-    private cellFormatter(cell: HTMLElement) {
-        if (cell.innerText === 'Y') {
-            cell.style.backgroundColor = 'lightgreen' ;
+    private cellFormatter(cell: CellComponent, params: any, onRendered: any) : HTMLElement{
+        let val = cell.getValue();
+        let el = cell.getElement();
+
+        if (Math.random() > 0.75) {
+            val = 'Y' ;
+        }
+
+        if (val == 'Y') {
+            el.style.fontSize = '16px';
+            el.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)' ;
+            el.style.borderRadius = '5px' ;
+            el.style.textAlign = 'center' ;
+            val = 'Scouted' ;
         }
         else {
-            cell.style.backgroundColor = 'lightcoral' ;
+            val = '' ;
         }
+
+        return val;
     }
 }

@@ -94,7 +94,7 @@ export class GraphManager extends Manager {
     			//
     			let dvals = [];
     			for (let record of values) {
-    				dvals.push(record[data]);
+    				dvals.push(record.value(data));
     			}
 
     			let dset = {

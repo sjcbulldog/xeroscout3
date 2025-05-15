@@ -24,6 +24,7 @@ import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr
 import { FormManager } from "../project/formmgr";
 import { DataValue } from "../model/datavalue";
 import { IPCProjColumnsConfig } from "../../shared/ipc";
+import { DataRecord } from "../model/datarecord";
 
 export interface GraphDataRequest {
 	ds: string,
@@ -961,7 +962,7 @@ export class SCCentral extends SCBase {
 						.then((data) => {
 							let dataobj = {
 								cols: cols,
-								data: data,
+								data: this.convertDataForDisplay(data),
 							};
 							this.sendToRenderer('send-match-col-config',this.project_!.data_mgr_!.getMatchColConfig()) ;
 							this.sendToRenderer('send-match-db', dataobj);
@@ -972,6 +973,19 @@ export class SCCentral extends SCBase {
 		}
 	}
 
+	private convertDataForDisplay(data: DataRecord[]) {
+		let ret: any[] = [];
+		for (let d of data) {
+			let obj: any = {};
+			for (let key of d.keys()) {
+				let value: any = d.value(key);
+				obj[key] = value;
+			}
+			ret.push(obj);
+		}
+		return ret;
+	}
+
 	public sendTeamDB(): void {
 		if (this.project_ && this.project_.team_mgr_!.hasTeams()) {
 			this.project_.data_mgr_?.getTeamColumns()
@@ -980,7 +994,7 @@ export class SCCentral extends SCBase {
 						.then((data) => {
 							let dataobj = {
 								cols: cols,
-								data: data
+								data: this.convertDataForDisplay(data),
 							};
 							this.sendToRenderer('send-team-col-config', this.project_!.data_mgr_!.getTeamColConfig()) ;
 							this.sendToRenderer('send-team-db', dataobj);
