@@ -195,13 +195,23 @@
     z-index: 1000;
 }
 
-.xero-form-scout-choice {
+.xero-form-edit-choice {
     z-index: 1000;
+    width: 100%;
+    height: 100%;
 }
 
-.xero-form-choice-table-vertical {
+.xero-form-scout-choice {
     z-index: 1000;
+    width: 100%;
+    height: 100%;
 }
+
+.xero-form-choice-vertical-table {
+    z-index: 1000;
+    width: 100%;
+    height: 100%;
+}    
 
 .xero-form-edit-choice-table-vertical {
     z-index: 1000;
@@ -223,8 +233,10 @@
     z-index: 1000;
 }
 
-.xero-form-choice-table-horizontal {
+.xero-form-choice-horizontal-table {
     z-index: 1000;
+    width: 100%;
+    height: 100%;    
 }
 
 .xero-form-edit-choice-table-horizontal {
@@ -248,13 +260,9 @@
 }
 
 .xero-form-choice-label {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     text-align: center;   
-    z-index: 1000;
     pointer-events: none;
-    text-align: center;
+    vertical-align: middle;
 }
 
 .xero-form-edit-choice-label {

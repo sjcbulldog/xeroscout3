@@ -124,6 +124,7 @@
 	border: black 1px solid;
 	border-radius: 5px;
 	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+	user-select: none;
 }
 
 .xero-popup-menu-item-div {
@@ -133,6 +134,7 @@
 	font-size: 16px;
 	color: black;
 	background-color: white;
+	user-select: none;
 }
 
 .xero-popup-menu-item-div:hover {
@@ -143,6 +145,7 @@
 .xero-popup-menu-item {
 	padding: 10px;
 	flex-grow: 1;
+	user-select: none;
 }
 
 .xero-popup-menu-item:hover {
@@ -153,6 +156,7 @@
 .xero-popup-menu-submenu {
 	padding: 10px;
 	flex-grow: 0;
+	user-select: none;	
 }
 
 .xero-popup-menu-submenu:hover {

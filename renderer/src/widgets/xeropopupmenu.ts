@@ -3,13 +3,13 @@ import {  XeroPoint  } from "./xerogeom.js";
 
 export class XeroPopMenuItem {
     private text_: string ;
-    private callback_?: () => void ;
+    private callback_?: (pt: XeroPoint) => void ;
     private submenu_? : XeroPopupMenu ;
     private topdiv_? : HTMLElement ;
     private item_?: HTMLElement ;
     private sub_? : HTMLElement ;
 
-    constructor(text: string, callback: (() => void) | undefined, submenu?: XeroPopupMenu) {
+    constructor(text: string, callback: ((pt: XeroPoint) => void) | undefined, submenu?: XeroPopupMenu) {
         this.text_ = text ;
         this.callback_ = callback ;
         this.submenu_ = submenu ;
@@ -19,7 +19,7 @@ export class XeroPopMenuItem {
         return this.text_ ;
     }
 
-    public get action() : (() => void) | undefined {
+    public get action() : ((point: XeroPoint) => void) | undefined {
         return this.callback_ ;
     }
 
@@ -55,6 +55,7 @@ export class XeroPopMenuItem {
 export class XeroPopupMenu extends EventEmitter {
     private static childMenuOffsetX = 10 ;
     private static childMenuOffsetY = 10 ;
+    private static initialClick?: XeroPoint ;
 
     private static current_? : XeroPopupMenu ;
     private parent_? : HTMLElement ;
@@ -79,7 +80,7 @@ export class XeroPopupMenu extends EventEmitter {
     private onClick(item: XeroPopMenuItem, event: MouseEvent) {
         if (item.action) {
             this.emit('menu-item-selected', item) ;
-            item.action() ;
+            item.action(XeroPopupMenu.initialClick!) ;
             this.closeMenu() ;
         }
         event.preventDefault() ;        
@@ -97,6 +98,12 @@ export class XeroPopupMenu extends EventEmitter {
 
     private onGlobalClick(event: MouseEvent) {
         if (XeroPopupMenu.current_) {
+            if (event.target) {
+                let elem = event.target as HTMLElement ;
+                if (elem.className.startsWith('xero-popup-menu')) {
+                    return ;
+                }   
+            }
             XeroPopupMenu.current_.closeMenu() ;
         }
     }
@@ -124,11 +131,10 @@ export class XeroPopupMenu extends EventEmitter {
     }
 
     public closeMenu() {
-        if (this.child_menu_) {
-            this.child_menu_.closeMenu() ;
+        if (XeroPopupMenu.current_) {
+            XeroPopupMenu.current_.closeInternal() ;
+            XeroPopupMenu.current_ = undefined ;
         }
-
-        this.removeFromParent() ;
     }
 
     private removeFromParent() {
@@ -149,6 +155,10 @@ export class XeroPopupMenu extends EventEmitter {
             XeroPopupMenu.current_.closeChildMenuInternal(this) ;
         }
     }
+
+    private onSubmenuClick(item: XeroPopMenuItem, event: MouseEvent) {
+        event.preventDefault() ;
+    }   
 
     public showRelative(win: HTMLElement, pt: XeroPoint, child?: boolean) {
         this.parent_ = win ;
@@ -173,6 +183,9 @@ export class XeroPopupMenu extends EventEmitter {
             if (item.submenu) {
                 item.subDiv.innerHTML = '&#x27A4;' ;
                 item.subDiv.addEventListener('mouseover', this.onSubmenuShow.bind(this, item)) ;
+                item.subDiv.addEventListener('click', this.onSubmenuClick.bind(this, item)) ;
+                item.itemDiv.addEventListener('click', this.onSubmenuClick.bind(this, item)) ;
+                item.topdiv.addEventListener('click', this.onSubmenuClick.bind(this, item)) ;
             }
             else {
                 item.itemDiv.addEventListener('click', this.onClick.bind(this, item)) ;
@@ -187,6 +200,7 @@ export class XeroPopupMenu extends EventEmitter {
 
         if (!child) {
             XeroPopupMenu.current_ = this ;
+            XeroPopupMenu.initialClick = new XeroPoint(pt.x, pt.y) ;
         }
         else {
             this.popup_.addEventListener('mouseleave', this.closeChildMenu.bind(this)) ;

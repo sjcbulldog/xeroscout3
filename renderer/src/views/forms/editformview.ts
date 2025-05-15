@@ -130,10 +130,15 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
-    private addNewLabelCtrl() {
+    private findCtrlLocation(pt: XeroPoint) : XeroPoint {
+        let bounds = this.formimg_!.getBoundingClientRect() ;
+        return new XeroPoint(pt.x - bounds.left, pt.y) ;
+    }
+
+    private addNewLabelCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new LabelControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new LabelControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -143,10 +148,10 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
-    addNewTextCtrl() {
+    addNewTextCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new TextControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new TextControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -156,10 +161,10 @@ export class XeroEditFormView extends XeroView {
         }
     }    
 
-    private addNewUpDownCtrl() {
+    private addNewUpDownCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new UpDownControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new UpDownControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -169,10 +174,10 @@ export class XeroEditFormView extends XeroView {
         }
     }  
 
-    private addNewBooleanCtrl() {
+    private addNewBooleanCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new BooleanControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new BooleanControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -182,10 +187,10 @@ export class XeroEditFormView extends XeroView {
         }
     }  
 
-    private addNewMultipleChoiceCtrl() {
+    private addNewMultipleChoiceCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new MultipleChoiceControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new MultipleChoiceControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 180, 180)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -195,10 +200,10 @@ export class XeroEditFormView extends XeroView {
         }
     } 
 
-    private addNewSelectCtrl() {
+    private addNewSelectCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new SelectControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new SelectControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -208,10 +213,10 @@ export class XeroEditFormView extends XeroView {
         }
     } 
 
-    private addNewTimerCtrl() {
+    private addNewTimerCtrl(pt: XeroPoint) {
         if (this.formimg_) {
-            let imgrect = this.formimg_.getBoundingClientRect() ;
-            let formctrl = new TimerControl(this, this.getUniqueTagName(), new XeroRect(0, imgrect.top, 250, 50)) ;
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new TimerControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.form_ctrls_.push(formctrl) ;
@@ -433,6 +438,7 @@ export class XeroEditFormView extends XeroView {
                 button.id = section + '-button' ;
                 button.section_index = index++ ;
                 button.addEventListener('click', this.formViewSelectButton.bind(this)) ;
+                button.addEventListener('dblclick', this.renameSection.bind(this)) ;
                 this.bardiv_.append(button) ;
             }  
         }
@@ -500,9 +506,21 @@ export class XeroEditFormView extends XeroView {
             let formctrl = this.findFormControlFromCtrl(this.selected_) ;
             this.dragging_ = 'none' ;
             if (formctrl) {
+                let bounds = this.formimg_!.getBoundingClientRect() ;
+                let x = event.clientX ;
+                let y = event.clientY ;
+
+                if (x > bounds.left + bounds.width - 600) {
+                    x = bounds.left  + bounds.width - 600 ;
+                }
+
+                if (y > bounds.top + bounds.height - 400) {
+                    y = bounds.top + bounds.height - 400 ;
+                }
+
                 this.unselectCurrent() ;
                 this.edit_dialog_ = formctrl.createEditDialog() ;
-                this.edit_dialog_.showRelative(this.elem) ;
+                this.edit_dialog_.showRelative(this.elem, x, y) ;
                 this.edit_dialog_.on('closed', this.dialogClosed.bind(this)) ;
             }
         }
@@ -954,10 +972,11 @@ export class XeroEditFormView extends XeroView {
 
     private renameSection() {
         if (this.form_) {
+            let bounds = this.formimg_!.getBoundingClientRect() ;
             this.unselectCurrent() ;
             this.edit_dialog_ = new EditSectionNameDialog(this.form_.sections[this.currentSectionIndex_]) ;
             this.edit_dialog_.on('closed', this.sectionNameDialogDone.bind(this)) ;
-            this.edit_dialog_.showRelative(this.elem.parentElement!) ;
+            this.edit_dialog_.showRelative(this.elem.parentElement!, bounds.left + bounds.width / 4, bounds.top + bounds.height / 4) ;
         }
     }
 

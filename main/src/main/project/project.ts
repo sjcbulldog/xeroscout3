@@ -446,7 +446,7 @@ export class Project {
                     
                     if (results) {
                         if (callback) {
-                            callback('Inserting ' + type + ' into XeroScout2 database ... ');
+                            callback('Inserting ' + type + ' into database ... ');
                         }
                         this.data_mgr_!.processMatchBAData(matches, results) ;
                         if (callback) {
@@ -480,7 +480,7 @@ export class Project {
                 else {
                     if (callback) {
                         callback(' received data.<br>') ;
-                        callback('Inserting data into XeroScout2 database ... ');
+                        callback('Inserting data into database ... ');
                     }
                     await this.data_mgr_!.processOPRData(opr) ;
                     if (callback) {
@@ -525,7 +525,7 @@ export class Project {
                 else {
                     if (callback) {
                         callback('received data.<br>') ;
-                        callback('Inserting data into XeroScout2 database ... ');
+                        callback('Inserting data into database ... ');
                     }
                     await 
                     await this.data_mgr_!.processRankings(rankings.rankings) ;

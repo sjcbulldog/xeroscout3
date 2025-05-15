@@ -27,7 +27,7 @@ export abstract class XeroDialog extends EventEmitter {
         this.key_down_handler_ = this.keyDown.bind(this) ;
     }
 
-    public showRelative(win: HTMLElement) {
+    public showRelative(win: HTMLElement, x: number, y: number) {
         this.parent_ = win ;
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-form-edit-dialog' ;
@@ -50,11 +50,6 @@ export abstract class XeroDialog extends EventEmitter {
         this.populateDialog(this.client_area_) 
         this.populateButtons(this.button_area_) ;
 
-        let prect = win.getBoundingClientRect() ;
-        let drect = this.popup_.getBoundingClientRect() ;
-        let x = (prect.width - drect.width) / 2 ;
-        let y = (prect.height - drect.height) / 8 ;
-
         this.popup_.style.left = x + 'px' ;
         this.popup_.style.top = y + 'px' ;
 
@@ -63,6 +58,20 @@ export abstract class XeroDialog extends EventEmitter {
 
         document.addEventListener('keydown', this.key_down_handler_) ;
         this.topbar_.addEventListener('mousedown', this.mouseDown.bind(this)) ;
+    }
+
+    private repositionDialog(mutations: MutationRecord[]) {
+        for (let mutation of mutations) {
+            let rect = this.parent_?.getBoundingClientRect() ;
+            if (rect) {
+                let prect = this.parent_!.getBoundingClientRect() ;
+                let drect = this.popup_!.getBoundingClientRect() ;
+                let x = (prect.width - drect.width) / 2 ;
+                let y = (prect.height - drect.height) / 8 ;
+                this.popup_!.style.left = x + 'px' ;
+                this.popup_!.style.top = y + 'px' ;
+            }
+        }
     }
 
     protected abstract populateDialog(div: HTMLDivElement) : void ;

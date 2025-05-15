@@ -9,7 +9,7 @@ export abstract class FormControl {
     private ctrl_? : HTMLElement ;
 
     constructor(view: XeroView, item: IPCFormItem) {
-        this.item_ = item ;
+        this.item_ = JSON.parse(JSON.stringify(item)) ;
         this.view_ = view ;
     }
 

@@ -14,7 +14,7 @@ labelstep 'Removing old artifacts'
 rm -rf out dist
 
 labelstep 'Compiling the application'
-npm run compile
+npm run main
 
 labelstep 'Creating the bundled electron application'
 npm run make
