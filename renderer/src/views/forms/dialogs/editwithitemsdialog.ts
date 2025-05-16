@@ -2,13 +2,32 @@ import { CellComponent, ColumnDefinition, TabulatorFull } from "tabulator-tables
 import { FormControl } from "../controls/formctrl.js";
 import { EditFormControlDialog } from "./editformctrldialog.js";
 import { IPCDataValueType } from "../../../ipc.js";
+import { XeroTabbedWidget } from "../../../widgets/xerotabbedwidget.js";
 
 export abstract class EditWithItemsDialog extends EditFormControlDialog {
+    private tabwidget_? : XeroTabbedWidget ;
+    protected tab_page_1? : HTMLDivElement ;
+    protected tab_page_2? : HTMLDivElement ;
     private table_? : TabulatorFull ;
     private data_type_display_? : HTMLSpanElement ;        
 
     constructor(name: string, formctrl: FormControl) {
         super(name, formctrl) ;
+    }
+
+    protected createTabs(div: HTMLElement) : void {
+        this.tabwidget_ = new XeroTabbedWidget('Edit With Items') ;
+        div.appendChild(this.tabwidget_.elem) ;
+
+        this.tab_page_1 = document.createElement('div') ;
+        this.tab_page_1.className = 'xero-popup-form-edit-dialog-tab-page' ;
+        this.tabwidget_.addPage('Properties', this.tab_page_1) ;
+
+        this.tab_page_2 = document.createElement('div') ;
+        this.tab_page_2.className = 'xero-popup-form-edit-dialog-tab-page' ;
+        this.tabwidget_.addPage('Choices', this.tab_page_2) ;
+
+        this.tabwidget_.selectPage(0) ;
     }
 
     private getColumnData() : string[] {
@@ -41,6 +60,14 @@ export abstract class EditWithItemsDialog extends EditFormControlDialog {
         return this.deduceDataType(data) ;
     }
 
+    private formatterBiggerFont(cell: CellComponent) : string {
+        let val = cell.getValue();
+        let el = cell.getElement();
+        el.style.fontSize = '20px' ;
+
+        return val ;
+    }
+
     protected populateChoices(div: HTMLElement, datatype: HTMLElement, choices: any[]) : void {
         this.data_type_display_ = datatype ;
 
@@ -57,12 +84,16 @@ export abstract class EditWithItemsDialog extends EditFormControlDialog {
             field: 'text',
             title: 'Display',
             editor: 'input',
+            width: 200,
+            formatter: this.formatterBiggerFont.bind(this)
         }) ;
     
         cols.push({
             field: 'value',
             title: 'Value',
             editor: 'input',
+            width: 200,
+            formatter: this.formatterBiggerFont.bind(this)
         }) ;
 
         this.table_ = new TabulatorFull(tdiv, 
@@ -74,6 +105,7 @@ export abstract class EditWithItemsDialog extends EditFormControlDialog {
             });
         this.table_.on('tableBuilt', this.tableReady.bind(this)) ;
         this.table_.on('cellEdited', this.tableCellChanged.bind(this)) ;
+        this.table_.on('cellEditing', this.tableCellChanged.bind(this)) ;
 
         let btndiv = document.createElement('div') ;
         btndiv.className = 'xero-popup-form-edit-dialog-choice-button-div' ;

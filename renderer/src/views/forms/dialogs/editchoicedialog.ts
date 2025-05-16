@@ -1,7 +1,5 @@
-import {  EditFormControlDialog  } from "./editformctrldialog.js";
-import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCMultipleChoiceItem  } from "../../../ipc.js";
-import { CellComponent, ColumnDefinition, TabulatorFull } from "tabulator-tables";
+import { FormControl  } from "../controls/formctrl.js";
+import { IPCMultipleChoiceItem  } from "../../../ipc.js";
 import { EditWithItemsDialog } from "./editwithitemsdialog.js";
 
 export class EditChoiceDialog extends EditWithItemsDialog {
@@ -17,11 +15,9 @@ export class EditChoiceDialog extends EditWithItemsDialog {
         let label ;
         let option: HTMLOptionElement ;
 
-        let div = document.createElement('div') ;
-        div.className = 'xero-popup-form-edit-dialog-rowdiv' ;
-        pdiv.appendChild(div) ;
+        this.createTabs(pdiv) ;
 
-        this.populateTag(div) ;
+        this.populateTag(this.tab_page_1!) ;
 
         this.radio_size_ = document.createElement("input");
         this.radio_size_.type = "number";
@@ -34,17 +30,17 @@ export class EditChoiceDialog extends EditWithItemsDialog {
         label.className = "xero-popup-form-edit-dialog-label";
         label.innerText = "Radio Button Size";
         label.appendChild(this.radio_size_);
-        div.appendChild(label);        
+        this.tab_page_1!.appendChild(label);        
 
         this.data_type_ = document.createElement('span') ;
         this.data_type_.className = 'xero-popup-form-edit-dialog-label' ;
         this.data_type_.innerText = 'Data Type: ' + item.datatype ;
-        div.appendChild(this.data_type_) ;
+        this.tab_page_2!.appendChild(this.data_type_) ;
 
-        this.populateOrientation(div, item.orientation) ;
-        this.populateColors(div) ;
-        await this.populateFontSelector(div) ;
-        this.populateChoices(div, this.data_type_, item.choices) ;
+        this.populateOrientation(this.tab_page_1!, item.orientation) ;
+        this.populateColors(this.tab_page_1!) ;
+        await this.populateFontSelector(this.tab_page_1!) ;
+        this.populateChoices(this.tab_page_2!, this.data_type_, item.choices) ;
     }
 
     protected extractData() : void {

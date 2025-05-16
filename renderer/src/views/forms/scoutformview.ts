@@ -308,7 +308,8 @@ export class XeroScoutFormView extends XeroView {
 
                 if (formctrl) {
                     this.form_ctrls_.push(formctrl) ;
-                    formctrl.createForScouting(this.elem) ;
+                    let top = this.formimg_!.getBoundingClientRect().top ;
+                    formctrl.createForScouting(this.elem, 0, top) ;
                 }
             }
         }

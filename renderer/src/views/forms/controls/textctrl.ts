@@ -36,11 +36,13 @@ export class TextControl extends FormControl {
         return new TextControl(this.view, this.item.tag, this.bounds()) ;
     }    
 
-    public updateFromItem(editing: boolean) : void {
+    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCTextItem ;
             let ctrl = this.ctrl as HTMLInputElement ;
 
+            this.setPosition(xoff, yoff) ;
+            
             if (editing) {
                 ctrl.value = item.placeholder ;
             }
@@ -48,32 +50,26 @@ export class TextControl extends FormControl {
                 ctrl.placeholder = item.placeholder ;
             }
 
-            ctrl.style.left = item.x + 'px' ;
-            ctrl.style.top = item.y + 'px' ;
-            ctrl.style.width = item.width + 'px' ;
-            ctrl.style.height = item.height + 'px' ;
-            ctrl.style.position = 'absolute' ;
             ctrl.style.fontFamily = item.fontFamily ;
             ctrl.style.fontSize = item.fontSize + 'px' ;
             ctrl.style.fontWeight = item.fontWeight ;
             ctrl.style.fontStyle = item.fontStyle ;
             ctrl.style.color = item.color ;
             ctrl.style.backgroundColor = item.background ;
-            ctrl.style.margin = '4px' ;
         }
     }
 
-    public createForEdit(parent: HTMLElement) : void  {
+    public createForEdit(parent: HTMLElement, xoff: number, yoff: number) : void  {
         let input = document.createElement('input') ;
         this.setClassList(input, 'edit') ;
         input.disabled = true ;
 
         this.ctrl = input ;
-        this.updateFromItem(true) ;
+        this.updateFromItem(true, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement) : void {
+    public createForScouting(parent: HTMLElement, xoff: number, yoff: number) : void {
         let input = document.createElement('input') ;
         this.setClassList(input, 'scout') ;
         this.ctrl = input ;
@@ -90,7 +86,7 @@ export class TextControl extends FormControl {
             input.type = 'text' ;
         }
 
-        this.updateFromItem(false) ;
+        this.updateFromItem(false, xoff, yoff) ;
         parent.appendChild(this.ctrl);
     }
 

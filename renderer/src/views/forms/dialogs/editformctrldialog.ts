@@ -34,7 +34,7 @@ export abstract class EditFormControlDialog extends XeroDialog {
 
   public okButton(event: Event) {
     this.extractData(); // Extract the item data form the dialog
-    this.formctrl_.updateFromItem(true); // Make the control on the screen match the item data
+    this.formctrl_.updateFromItem(true, undefined, undefined); // Make the control on the screen match the item data
     super.okButton(event); // Finish the edit operation, save the form, and dismiss the dialog
   }
 
@@ -122,6 +122,7 @@ export abstract class EditFormControlDialog extends XeroDialog {
     option.value = "lighter";
     option.innerText = "Lighter";
     this.font_weight_.appendChild(option);
+    this.font_weight_.value = this.formctrl_.item.fontWeight;
 
     label = document.createElement("label");
     label.className = "xero-popup-form-edit-dialog-label";

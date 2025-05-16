@@ -45,9 +45,9 @@ export abstract class FormControl {
         this.item_ = item ;
     }
 
-    public abstract updateFromItem(editing: boolean) : void ;
-    public abstract createForEdit(parent: HTMLElement) : void ;
-    public abstract createForScouting(parent: HTMLElement) : void ;
+    public abstract updateFromItem(editing: boolean, xoff?: number, yoff?: number) : void ;
+    public abstract createForEdit(parent: HTMLElement, xoff: number, yoff:number) : void ;
+    public abstract createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void ;
     public abstract createEditDialog() : EditFormControlDialog ;
     public abstract getData() : void ;
     public abstract setData(data: any) : void ;
@@ -55,6 +55,18 @@ export abstract class FormControl {
 
     protected setTag(tag: string) {
         this.item_.tag = tag ;
+    }
+
+    protected setPosition(xoff:number, yoff:number) {
+        if (xoff !== undefined && yoff !== undefined && this.ctrl) {
+            this.ctrl.style.left = (this.item.x + xoff) + 'px' ;
+            this.ctrl.style.top = (this.item.y + yoff) + 'px' ;
+            this.ctrl.style.width = this.item.width + 'px' ;
+            this.ctrl.style.height = this.item.height + 'px' ;
+            this.ctrl.style.position = 'absolute' ;            
+            this.ctrl.style.margin = '4px' ;     
+            this.ctrl.style.zIndex = '100' ;       
+        }
     }
 
     protected setBounds(bounds: XeroRect) {

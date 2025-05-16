@@ -29,7 +29,6 @@ export class XeroTeamStatus extends XeroView {
         }) ;
     }
 
-    static count: number = 0 ;
     private cellFormatter(cell: CellComponent, params: any, onRendered: any) : string {
         let val = cell.getValue();
         let el = cell.getElement();

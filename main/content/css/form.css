@@ -11,14 +11,15 @@
 
 .xero-form-title {
     text-align: center;
-    font-size: 1.5em;
+    font-size: 36px;
+    font-family: Arial;
     font-weight: bold;
     flex-grow: 0;
 }
 
 .xero-form-tab {
     border: 1px solid #ccc;
-    background-color:   rgba(211, 211, 211, 0.74) ;
+    background-color:   rgb(192, 192, 192) ;
     flex-grow: 0;
     display: flex ;
     flex-direction: row;
@@ -26,42 +27,45 @@
 
 .xero-form-tab-button-unselected {
     font-family: Arial;
-    font-size: 24px;
+    font-size: 36px;
     font-weight: bold;
     width: fit-content;
-    margin-left: 4px;
-    margin-right: 4px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    margin: 4px ;
-    padding: 4px ;
-    border-radius: 6px;
+    cursor: pointer;
+    border-bottom: 2px solid black ;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: rgb(192, 192, 192) ;
+    flex-grow: 0 ;
+}
+
+.xero-form-tab-filler {
+    border-bottom: 2px solid black ;
+    background: rgb(192, 192, 192) ;
+    flex-grow: 1 ;
 }
 
 .xero-form-tab-button-unselected:hover {
-    font-family: Arial;
-    font-size: 24px;
-    font-weight: bold;
-    width: fit-content;
-    background-color: rgb(96, 96, 186);
     color: white;
     cursor: pointer;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) ;
-    margin: 4px ;
-    padding: 4px ;
-    border-radius: 6px;
 }
 
 .xero-form-tab-button-selected {
     font-family: Arial;
-    font-size: 24px;
+    font-size: 36px;
     font-weight: bold;
-    background-color: blue;
-    color: white;
     width: fit-content;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) ;
-    margin: 4px ;
-    padding: 4px ;
-    border-radius: 6px;
+    cursor: pointer;    
+    border-left: 2px solid black ;    
+    border-right: 2px solid black ;
+    border-top: 2px solid black ;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: rgb(230, 230, 230) ;
+    flex-grow: 0 ;    
 }
 
 .xero-form-form {
@@ -346,4 +350,9 @@
     border-radius: 10px;    
     box-shadow: 10px 5px 5px lightgray;
     margin-left: 10px;
+}
+
+.xero-popup-form-edit-dialog-tab-page {
+    display: flex;
+    flex-direction: column;
 }

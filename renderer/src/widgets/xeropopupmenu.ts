@@ -89,6 +89,11 @@ export class XeroPopupMenu extends EventEmitter {
     private onSubmenuShow(item: XeroPopMenuItem, event: MouseEvent) {
         this.emit('submenu-opened', item) ;
 
+        if (this.child_menu_) {
+            this.child_menu_.closeMenu() ;
+            this.child_menu_ = undefined ;
+        }
+
         if (item.submenu && this.parent_) {
             this.child_menu_ = item.submenu ;
             this.child_menu_.showRelative(this.parent_, new XeroPoint(event.clientX - XeroPopupMenu.childMenuOffsetX, event.clientY - XeroPopupMenu.childMenuOffsetY), true) ;
@@ -115,10 +120,12 @@ export class XeroPopupMenu extends EventEmitter {
     }
 
     private closeInternal() {
+        console.log("Closing menu: " + this.name_) ;
         //
         // This will always be the top most menu in the stack
         //
         if (this.child_menu_) {
+            console.log("    Closing child menu: " + this.name_) ;
             this.child_menu_.closeInternal() ;
             this.child_menu_ = undefined ;
         }
@@ -132,15 +139,23 @@ export class XeroPopupMenu extends EventEmitter {
 
     public closeMenu() {
         if (XeroPopupMenu.current_) {
+            console.log("Closing menu: " + this.name_) ;
             XeroPopupMenu.current_.closeInternal() ;
             XeroPopupMenu.current_ = undefined ;
+        }
+        else {
+            console.log("No current menu to close") ;
         }
     }
 
     private removeFromParent() {
         if (this.parent_ && this.popup_?.parentElement === this.parent_) {
+            console.log("Removing menu from parent: " + this.name_) ;
             this.parent_.removeChild(this.popup_!) ;
         }        
+        else {
+            console.log("Menu not in parent: " + this.name_) ;
+        }
     }
 
     private closeChildMenuInternal(child: XeroPopupMenu) {

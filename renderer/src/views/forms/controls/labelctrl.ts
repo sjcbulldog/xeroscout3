@@ -35,15 +35,12 @@ export class LabelControl extends FormControl {
         return new LabelControl(this.view, this.item.tag, this.bounds()) ;
     }
 
-    public updateFromItem(editing: boolean) : void {
+    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCLabelItem ;
+            this.setPosition(xoff, yoff) ;
+
             this.ctrl.innerText = item.text ;
-            this.ctrl.style.left = item.x + 'px' ;
-            this.ctrl.style.top = item.y + 'px' ;
-            this.ctrl.style.width = item.width + 'px' ;
-            this.ctrl.style.height = item.height + 'px' ;
-            this.ctrl.style.position = 'absolute' ;
             this.ctrl.style.fontFamily = item.fontFamily ;
             this.ctrl.style.fontSize = item.fontSize + 'px' ;
             this.ctrl.style.fontWeight = item.fontWeight ;
@@ -55,24 +52,22 @@ export class LabelControl extends FormControl {
             else {
                 this.ctrl.style.backgroundColor = item.background ;
             }
-            this.ctrl.style.margin = '4px' ;
-            this.ctrl.style.zIndex = '100' ;
         }
     }
 
-    public createForEdit(parent: HTMLElement) : void  {
+    public createForEdit(parent: HTMLElement, xoff: number, yoff:number) : void  {
         this.ctrl = document.createElement('span') ;
         this.setClassList(this.ctrl, 'edit') ;
         this.ctrl.classList.add('xero-form-label') ;
         this.ctrl.classList.add('xero-form-edit-label') ;       
-        this.updateFromItem(true) ;
+        this.updateFromItem(true, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement) : void {
+    public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void {
         this.ctrl = document.createElement('span') ;
         this.setClassList(this.ctrl, 'scout') ;
-        this.updateFromItem(false) ;
+        this.updateFromItem(false, xoff, yoff) ;
         parent.appendChild(this.ctrl);
     }
 

@@ -44,19 +44,12 @@ export class MultipleChoiceControl extends FormControl {
         return new MultipleChoiceControl(this.view, this.item.tag, this.bounds()) ;
     }
 
-    public updateFromItem(editing: boolean) : void {
+    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCMultipleChoiceItem ;
             let ctrl = this.ctrl as HTMLDivElement
             
-            ctrl.style.position = 'absolute' ;
-            ctrl.style.left = this.item.x + 'px' ;
-            ctrl.style.top = this.item.y + 'px' ;
-            ctrl.style.width = this.item.width + 'px' ;
-            ctrl.style.height = this.item.height + 'px' ;
-            ctrl.style.margin = '4px' ;
-            
-            this.choice_table_!.innerHTML = '' ;
+            this.setPosition(xoff, yoff) ;
             this.updateChoices(editing) ;
         }
     }
@@ -168,7 +161,7 @@ export class MultipleChoiceControl extends FormControl {
         }
     }
 
-    public createForEdit(parent: HTMLElement) : void  {
+    public createForEdit(parent: HTMLElement, xoff: number, yoff: number) : void  {
         let item = this.item as IPCMultipleChoiceItem ;
         this.choice_ctrls_ = [] ;
 
@@ -179,11 +172,11 @@ export class MultipleChoiceControl extends FormControl {
         this.setClassList(this.choice_table_, 'edit', item.orientation + '-table') ;
         this.ctrl.appendChild(this.choice_table_) ;
 
-        this.updateFromItem(true) ;
+        this.updateFromItem(true, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement): void {
+    public createForScouting(parent: HTMLElement, xoff: number, yoff: number): void {
         let item = this.item as IPCMultipleChoiceItem ;
         this.choice_ctrls_ = [] ;
 
@@ -194,7 +187,7 @@ export class MultipleChoiceControl extends FormControl {
         this.setClassList(this.choice_table_, 'scout', item.orientation + '-table') ;
         this.ctrl.appendChild(this.choice_table_) ;
 
-        this.updateFromItem(false) ;
+        this.updateFromItem(false, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 

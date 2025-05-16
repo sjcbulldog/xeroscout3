@@ -40,83 +40,6 @@
 	height: 100%;
 }
 
-.xero-table {
-	width: 100%;
-	height: 100%;
-}
-
-.xero-table-container {
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	height: 100%;
-}
-
-.xero-table-headers {
-	display: flex;
-	flex-direction: row;
-	flex-grow: 0;
-}
-
-.xero-table-cols {
-	display: flex;
-	flex-direction: row;
-	flex-grow: 1;
-	overflow: auto;
-}
-
-.xero-table-col {
-	display: flex;
-	flex-direction: column;
-}
-
-.xero-table-header-cell {
-	border: 1px solid black;
-	vertical-align: middle;
-}
-
-.xero-table-header-cell-sortable {
-	border: 1px solid black;
-	vertical-align: middle;
-	cursor: pointer;
-	background-color: white;
-	user-select: none;
-}
-
-.xero-table-header-cell-sortable-selected {
-	border: 1px solid black;
-	vertical-align: middle;
-	cursor: pointer;
-	background-color: lightblue;
-	user-select: none;
-}
-
-.xero-table-header-cell-sortable:hover {
-	vertical-align: middle;
-	background-color: lightgrey;
-}
-
-.xero-table-cell {
-	display: flex;
-	align-items: center;
-	border: 1px solid black;
-	vertical-align: middle;
-}
-
-.xero-table-cell-rowselected {
-	background-color: lightblue;
-}
-
-.xero-table-cell-clickable {
-	cursor: pointer;
-	user-select: none;
-}
-
-.xero-table-cell-clickable:hover {
-	vertical-align: middle;
-	background-color: lightgrey;
-}
-
 .xero-popup-menu {
 	z-index: 1000;
 	position: absolute;
@@ -162,4 +85,64 @@
 .xero-popup-menu-submenu:hover {
 	background-color: gray;
 	color: white
+}
+
+.xero-tabbed-widget-top {
+	background-color: white;	
+}
+
+.xero-tabbed-widget-bar {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+	background-color: rgb(192, 192, 192);
+	font-family: Arial ;
+	font-size: 18px;
+	font-weight: bold;
+}
+
+.xero-tabbed-widget-tab {
+	padding-left: 10px ;
+	padding-right: 10px ;
+	padding-top: 3px ;
+	padding-bottom: 3px ;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.xero-tabbed-widget-filler {
+    border-bottom: 2px solid black ;
+    background: rgb(192, 192, 192) ;
+    flex-grow: 1 ;
+}
+
+.xero-tabbed-widget-tab-selected {
+    width: fit-content;
+    cursor: pointer;    
+    border-left: 2px solid black ;    
+    border-right: 2px solid black ;
+    border-top: 2px solid black ;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: rgb(230, 230, 230) ;
+    flex-grow: 0 ;    
+}
+
+.xero-tabbed-widget-tab-unselected {
+    width: fit-content;
+    cursor: pointer;
+    border-bottom: 2px solid black ;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: rgb(192, 192, 192) ;
+    flex-grow: 0 ;
+}
+
+.xero-tabbed-widget-tab-unselected:hover {
+	color: white ;
+	background-color: lightgrey;
 }

@@ -40,17 +40,12 @@ export class SelectControl extends FormControl {
         return new SelectControl(this.view, this.item.tag, this.bounds()) ;
     }
 
-    public updateFromItem(editing: boolean) : void {
+    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCSelectItem ;
             let ctrl = this.ctrl as HTMLDivElement
             
-            ctrl.style.position = 'absolute' ;
-            ctrl.style.left = this.item.x + 'px' ;
-            ctrl.style.top = this.item.y + 'px' ;
-            ctrl.style.width = this.item.width + 'px' ;
-            ctrl.style.height = this.item.height + 'px' ;
-            ctrl.style.margin = '4px' ;
+            this.setPosition(xoff, yoff) ;
 
             ctrl.style.color = item.color ;
             ctrl.style.backgroundColor = item.background ;
@@ -77,7 +72,7 @@ export class SelectControl extends FormControl {
         }
     }
 
-    public createForEdit(parent: HTMLElement) : void  {
+    public createForEdit(parent: HTMLElement, xoff: number, yoff: number) : void  {
         let item = this.item as IPCSelectItem ;
 
         let sel = document.createElement('select') ;
@@ -85,16 +80,16 @@ export class SelectControl extends FormControl {
         sel.disabled = true ;
         this.ctrl = sel ;
         this.setClassList(this.ctrl, 'edit') ;
-        this.updateFromItem(true) ;
+        this.updateFromItem(true, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement): void {
+    public createForScouting(parent: HTMLElement, xoff: number, yoff: number): void {
         let item = this.item as IPCSelectItem ;
 
         this.ctrl = document.createElement('select') ;
         this.setClassList(this.ctrl, 'scout') ;
-        this.updateFromItem(true) ;
+        this.updateFromItem(true, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 

@@ -16,20 +16,18 @@ export class EditSelectDialog extends EditWithItemsDialog {
         let label ;
         let option: HTMLOptionElement ;
 
-        let div = document.createElement('div') ;
-        div.className = 'xero-popup-form-edit-dialog-rowdiv' ;
-        pdiv.appendChild(div) ;
+        this.createTabs(pdiv) ;        
 
-        this.populateTag(div) ;
+        this.populateTag(this.tab_page_1!) ;
 
         this.data_type_ = document.createElement('span') ;
         this.data_type_.className = 'xero-popup-form-edit-dialog-label' ;
         this.data_type_.innerText = 'Data Type: ' + item.datatype ;
-        div.appendChild(this.data_type_) ;
+        this.tab_page_2!.appendChild(this.data_type_) ;
 
-        this.populateColors(div) ;
-        await this.populateFontSelector(div) ;
-        this.populateChoices(div, this.data_type_, item.choices) ;
+        this.populateColors(this.tab_page_1!) ;
+        await this.populateFontSelector(this.tab_page_1!) ;
+        this.populateChoices(this.tab_page_2!, this.data_type_, item.choices) ;
     }
 
     protected extractData() : void {

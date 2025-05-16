@@ -36,16 +36,13 @@ export class BooleanControl extends FormControl {
         return new BooleanControl(this.view, this.item.tag, this.bounds()) ;
     }
 
-    public updateFromItem(editing: boolean) : void {
+    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCBooleanItem ;
             let ctrl = this.ctrl as HTMLInputElement ;
 
-            ctrl.style.left = item.x + 'px' ;
-            ctrl.style.top = item.y + 'px' ;
-            ctrl.style.width = item.width + 'px' ;
-            ctrl.style.height = item.height + 'px' ;
-            ctrl.style.position = 'absolute' ;
+            this.setPosition(xoff, yoff) ;
+
             ctrl.style.fontFamily = item.fontFamily ;
             ctrl.style.fontSize = item.fontSize + 'px' ;
             ctrl.style.fontWeight = item.fontWeight ;
@@ -53,12 +50,10 @@ export class BooleanControl extends FormControl {
             ctrl.style.color = item.color ;
             ctrl.style.accentColor = item.accent ;
             ctrl.style.backgroundColor = item.background ;
-            ctrl.style.zIndex = '100' ;
-            ctrl.style.margin = '4px' ;
         }
     }
 
-    public createForEdit(parent: HTMLElement) : void  {
+    public createForEdit(parent: HTMLElement, xoff: number, yoff: number) : void  {
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'edit') ;
 
@@ -66,19 +61,19 @@ export class BooleanControl extends FormControl {
         this.setClassList(this.input_, 'edit', 'checkbox') ;
         this.input_.type = 'checkbox' ;
         this.input_.disabled = true ;
-        this.updateFromItem(true) ;
+        this.updateFromItem(true, xoff, yoff) ;
         this.ctrl.appendChild(this.input_) ;
         parent.appendChild(this.ctrl) ;
     }
     
-    public createForScouting(parent: HTMLElement) : void {
+    public createForScouting(parent: HTMLElement, xoff: number, yoff: number) : void {
         this.ctrl = document.createElement('div') ;        
         this.setClassList(this.ctrl, 'scout') ;
 
         this.input_ = document.createElement('input') ;
         this.setClassList(this.input_, 'scout', 'checkbox') ;
         this.input_.type = 'checkbox' ;
-        this.updateFromItem(false) ;
+        this.updateFromItem(false, xoff, yoff) ;
         this.ctrl.appendChild(this.input_) ;
         parent.appendChild(this.ctrl) ;
     }
