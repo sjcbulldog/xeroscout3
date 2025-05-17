@@ -13,7 +13,7 @@ export class UpDownControl extends FormControl {
         x: 0,
         y: 0,
         width: 40,
-        height: 80,
+        height: 200,
         color: 'black',
         background: 'white',
         fontFamily: 'Arial',

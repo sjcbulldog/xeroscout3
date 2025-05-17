@@ -12,8 +12,30 @@ export class XeroPoint {
         return new XeroPoint(this.x, this.y);
     }
 
+    public add(p: XeroPoint): XeroPoint {
+        return new XeroPoint(this.x + p.x, this.y + p.y);
+    }
+
+    public subtract(p: XeroPoint): XeroPoint {
+        return new XeroPoint(this.x - p.x, this.y - p.y);
+    }
+
     public static fromDOMPoint(point: DOMPoint): XeroPoint { 
         return new XeroPoint(point.x, point.y);
+    }
+}
+
+export class XeroSize {
+    public readonly width: number;
+    public readonly height: number;
+
+    constructor(public wid: number, public hei: number) {
+        this.width = wid;
+        this.height = hei;
+    }
+
+    public clone(): XeroSize {
+        return new XeroSize(this.width, this.height);
     }
 }
 
