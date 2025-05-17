@@ -8,7 +8,7 @@ export class XeroTabbedWidget extends XeroWidget {
     private selected_page_ : number ;
     private filler_ : HTMLElement ;
 
-    public constructor(name: string) {
+    public constructor() {
         super('div', 'xero-tabbed-widget-top') ;
 
         this.tabbar_ = document.createElement('div') ;
@@ -23,6 +23,54 @@ export class XeroTabbedWidget extends XeroWidget {
         this.filler_.className = 'xero-tabbed-widget-filler' ;
         this.tabbar_.appendChild(this.filler_) ;
     }
+
+    public get selectedPageNumber() : number {
+        return this.selected_page_ ;
+    }
+
+    public get selectedPage() : HTMLElement | undefined {
+        return this.selected_ ;
+    }
+
+    public renamePage(index: number, name: string) : void { 
+        if (index < 0 || index >= this.names_.length) {
+            throw new Error('renamePage: invalid page index') ;
+        }
+
+        this.names_[index] = name ;
+        (this.tabbar_!.children[index] as HTMLElement).innerText = name ;
+    }
+
+    public movePageLeft(index: number) : void {
+        if (index < 1 || index >= this.names_.length) {
+            throw new Error('movePageLeft: invalid page index') ;
+        }
+        let temp = this.names_[index] ;
+        this.names_[index] = this.names_[index - 1] ;
+        this.names_[index - 1] = temp ;
+
+        let temp2 = this.contents_[index] ;
+        this.contents_[index] = this.contents_[index - 1] ;
+        this.contents_[index - 1] = temp2 ;
+
+        this.tabbar_!.insertBefore(this.tabbar_!.children[index], this.tabbar_!.children[index - 1]) ;
+    }
+    
+    public movePageRight(index: number) : void {
+        if (index < 0 || index >= this.names_.length - 1) {
+            throw new Error('movePageRight: invalid page index') ;
+        }
+        let temp = this.names_[index] ;
+        this.names_[index] = this.names_[index + 1] ;
+        this.names_[index + 1] = temp ;
+
+        let temp2 = this.contents_[index] ;
+        this.contents_[index] = this.contents_[index + 1] ;
+        this.contents_[index + 1] = temp2 ;
+
+        this.tabbar_!.insertBefore(this.tabbar_!.children[index + 1], this.tabbar_!.children[index]) ;
+    }
+        
 
     public addPage(name: string, content: HTMLElement) : void {
         this.names_.push(name) ;
@@ -40,9 +88,24 @@ export class XeroTabbedWidget extends XeroWidget {
         tab.addEventListener('click', this.tabButtonClicked.bind(this, this.names_.length - 1)) ;   
     }
 
+    public removePage(which: number) : void {
+        if (which < 0 || which >= this.contents_.length) {
+            throw new Error('removePage: invalid page index') ;
+        }
+
+        let changed = false ;
+        if (which === this.selected_page_) {
+            changed = true ;
+        }
+
+        this.names_.splice(which, 1) ;
+        this.contents_.splice(which, 1) ;
+        this.tabbar_!.removeChild(this.tabbar_!.children[which]) ;
+    }
+
     public selectPage(index: number) : void {
         if (index < 0 || index >= this.contents_.length) {
-            throw new Error('Invalid page index') ;
+            throw new Error('selectPage: invalid page index') ;
         }
 
         if (this.selected_ !== undefined) {

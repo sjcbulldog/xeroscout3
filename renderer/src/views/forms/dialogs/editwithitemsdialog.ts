@@ -16,7 +16,7 @@ export abstract class EditWithItemsDialog extends EditFormControlDialog {
     }
 
     protected createTabs(div: HTMLElement) : void {
-        this.tabwidget_ = new XeroTabbedWidget('Edit With Items') ;
+        this.tabwidget_ = new XeroTabbedWidget() ;
         div.appendChild(this.tabwidget_.elem) ;
 
         this.tab_page_1 = document.createElement('div') ;
