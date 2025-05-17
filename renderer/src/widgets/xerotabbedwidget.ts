@@ -2,7 +2,7 @@ import { XeroWidget } from "./xerowidget.js";
 
 export class XeroTabbedWidget extends XeroWidget {
     private tabbar_? : HTMLDivElement ;
-    private contents_: HTMLElement[] ;
+    private pages_: HTMLElement[] ;
     private names_ : string[] ;
     private selected_? : HTMLElement ;
     private selected_page_ : number ;
@@ -15,7 +15,7 @@ export class XeroTabbedWidget extends XeroWidget {
         this.tabbar_.className = 'xero-tabbed-widget-bar' ;
         this.elem.appendChild(this.tabbar_) ;
 
-        this.contents_ = [] ;
+        this.pages_ = [] ;
         this.names_ = [] ;
         this.selected_page_ = -1 ;
 
@@ -49,9 +49,9 @@ export class XeroTabbedWidget extends XeroWidget {
         this.names_[index] = this.names_[index - 1] ;
         this.names_[index - 1] = temp ;
 
-        let temp2 = this.contents_[index] ;
-        this.contents_[index] = this.contents_[index - 1] ;
-        this.contents_[index - 1] = temp2 ;
+        let temp2 = this.pages_[index] ;
+        this.pages_[index] = this.pages_[index - 1] ;
+        this.pages_[index - 1] = temp2 ;
 
         this.tabbar_!.insertBefore(this.tabbar_!.children[index], this.tabbar_!.children[index - 1]) ;
     }
@@ -64,17 +64,19 @@ export class XeroTabbedWidget extends XeroWidget {
         this.names_[index] = this.names_[index + 1] ;
         this.names_[index + 1] = temp ;
 
-        let temp2 = this.contents_[index] ;
-        this.contents_[index] = this.contents_[index + 1] ;
-        this.contents_[index + 1] = temp2 ;
+        let temp2 = this.pages_[index] ;
+        this.pages_[index] = this.pages_[index + 1] ;
+        this.pages_[index + 1] = temp2 ;
 
         this.tabbar_!.insertBefore(this.tabbar_!.children[index + 1], this.tabbar_!.children[index]) ;
     }
         
 
-    public addPage(name: string, content: HTMLElement) : void {
+    public addPage(name: string, page: HTMLElement) : void {
+        page.classList.add('xero-tabbed-widget-page') ;
+
         this.names_.push(name) ;
-        this.contents_.push(content) ;
+        this.pages_.push(page) ;
 
         let tab = document.createElement('div') ;
         tab.classList.add('xero-tabbed-widget-tab') ;        
@@ -89,7 +91,7 @@ export class XeroTabbedWidget extends XeroWidget {
     }
 
     public removePage(which: number) : void {
-        if (which < 0 || which >= this.contents_.length) {
+        if (which < 0 || which >= this.pages_.length) {
             throw new Error('removePage: invalid page index') ;
         }
 
@@ -99,12 +101,12 @@ export class XeroTabbedWidget extends XeroWidget {
         }
 
         this.names_.splice(which, 1) ;
-        this.contents_.splice(which, 1) ;
+        this.pages_.splice(which, 1) ;
         this.tabbar_!.removeChild(this.tabbar_!.children[which]) ;
     }
 
     public selectPage(index: number) : void {
-        if (index < 0 || index >= this.contents_.length) {
+        if (index < 0 || index >= this.pages_.length) {
             throw new Error('selectPage: invalid page index') ;
         }
 
@@ -117,8 +119,8 @@ export class XeroTabbedWidget extends XeroWidget {
 
         }
 
-        this.elem.appendChild(this.contents_[index]) ;
-        this.selected_ = this.contents_[index] ;
+        this.elem.appendChild(this.pages_[index]) ;
+        this.selected_ = this.pages_[index] ;
         this.selected_page_ = index ;
         this.tabbar_!.children[this.selected_page_].classList.add('xero-tabbed-widget-tab-selected') ;
         this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-unselected') ;

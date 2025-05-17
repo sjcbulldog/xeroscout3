@@ -99,6 +99,11 @@
 	font-family: Arial ;
 	font-size: 18px;
 	font-weight: bold;
+	flex-grow: 0;
+}
+
+.xero-tabbed-widget-page {
+	flex-grow: 1 ;
 }
 
 .xero-tabbed-widget-tab {
@@ -145,4 +150,11 @@
 .xero-tabbed-widget-tab-unselected:hover {
 	color: white ;
 	background-color: lightgrey;
+}
+
+.xero-tabbed-widget-top {
+	width: 100%;	
+	height: 100%;
+	display: flex ;
+	flex-direction: column;
 }

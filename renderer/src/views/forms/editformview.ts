@@ -2,7 +2,6 @@ import {  XeroApp  } from "../../apps/xeroapp.js";
 import {  XeroPoint, XeroRect  } from "../../widgets/xerogeom.js";
 import {  XeroPopupMenu, XeroPopMenuItem as PopupMenuItem  } from "../../widgets/xeropopupmenu.js";
 import {  XeroView  } from "../xeroview.js";
-import {  FormControl  } from "./controls/formctrl.js";
 import {  LabelControl  } from "./controls/labelctrl.js";
 import {  TextControl  } from "./controls/textctrl.js";
 import {  XeroDialog  } from "../../widgets/xerodialog.js";
@@ -15,8 +14,8 @@ import {  SelectControl  } from "./controls/selectctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
 import {  XeroLogger  } from "../../utils/xerologger.js";
 import {  IPCFormItem, IPCSection  } from "../../ipc.js";
-import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
-import { XeroFormEditSectionPage } from "./sectionpage.js";
+import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
+import {  XeroFormEditSectionPage } from "./editpage.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' ;
 
@@ -30,7 +29,6 @@ declare global {
 export class XeroEditFormView extends XeroView {    
     private static blankImageName = 'blank' ;
 
-
     private static moveControlAmount = 1 ;
     private static shiftMoveControlAmount = 10 ;
     private static ctrlMoveControlAmount = 50 ;
@@ -38,6 +36,7 @@ export class XeroEditFormView extends XeroView {
     private tabbed_ctrl_? : XeroTabbedWidget ;
     private section_pages_ : XeroFormEditSectionPage[] = [] ;
     private titlediv_? : HTMLElement ;
+    private tabdiv_? : HTMLElement ;
 
     private dragging_ : DragState = 'none' ;    
     private edit_dialog_? : XeroDialog ;
@@ -299,10 +298,10 @@ export class XeroEditFormView extends XeroView {
     }
 
     private createSectionPage(section: IPCSection) : void { 
-        if (!this.nameToImageMap_.has(XeroEditFormView.blankImageName)) {
-            this.request('get-image-data', XeroEditFormView.blankImageName) ; 
+        if (!this.nameToImageMap_.has(section.image)) {
+            this.request('get-image-data', section.image) ; 
         }
-        let image = this.nameToImageMap_.get('blank') ;
+        let image = this.nameToImageMap_.get(section.image) ;
         let page = new XeroFormEditSectionPage(image!) ;        // May be undefined
         this.tabbed_ctrl_!.addPage(section.name, page.elem) ;
         this.section_pages_.push(page) ;
@@ -384,8 +383,12 @@ export class XeroEditFormView extends XeroView {
         this.titlediv_.innerText = tname + ' Form' ;
         this.elem.append(this.titlediv_) ;
 
+        this.tabdiv_ = document.createElement('div') ;
+        this.tabdiv_.className = 'xero-form-tab-div' ;
+        this.elem.append(this.tabdiv_) ;
+
         this.tabbed_ctrl_ = new XeroTabbedWidget() ;
-        this.tabbed_ctrl_.setParent(this.elem) ;
+        this.tabbed_ctrl_.setParent(this.tabdiv_) ;
 
         this.ctxbind_ = this.contextMenu.bind(this) ;
         document.addEventListener('contextmenu', this.ctxbind_) ;
@@ -572,9 +575,11 @@ export class XeroEditFormView extends XeroView {
         }
     }
     
-
-
     private updateMouseCursor(x:number, y: number) {
+        if (this.section_pages_.length === 0) { 
+            return ;
+        }
+
         let ctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(x, y) ;
         if (ctrl === undefined) {
             this.unselectCurrent() ;
@@ -1025,7 +1030,7 @@ export class XeroEditFormView extends XeroView {
             this.unselectCurrent() ;
             this.popup_menu_ = new XeroPopupMenu('main', items) ;
             this.popup_menu_.on('menu-closed', this.menuClosed.bind(this)) ;
-            this.popup_menu_.showRelative(event.target.parentElement!, new XeroPoint(event.clientX, event.clientY)) ;
+            this.popup_menu_.showRelative(this.elem, new XeroPoint(event.clientX, event.clientY)) ;
         }
     }    
 }

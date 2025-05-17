@@ -96,7 +96,7 @@ export class XeroPopupMenu extends EventEmitter {
 
         if (item.submenu && this.parent_) {
             this.child_menu_ = item.submenu ;
-            this.child_menu_.showRelative(this.parent_, new XeroPoint(event.clientX - XeroPopupMenu.childMenuOffsetX, event.clientY - XeroPopupMenu.childMenuOffsetY), true) ;
+            this.child_menu_.showRelativeInternal(this.parent_, new XeroPoint(event.clientX - XeroPopupMenu.childMenuOffsetX, event.clientY - XeroPopupMenu.childMenuOffsetY), true) ;
         }
         event.preventDefault() ;
     }
@@ -175,12 +175,18 @@ export class XeroPopupMenu extends EventEmitter {
         event.preventDefault() ;
     }   
 
-    public showRelative(win: HTMLElement, pt: XeroPoint, child?: boolean) {
+    public showRelative(win: HTMLElement, pt: XeroPoint) {
+        this.showRelativeInternal(win, pt, false) ;
+    }
+
+    private showRelativeInternal(win: HTMLElement, pt: XeroPoint, child: boolean) {
+        let bounds = win.getBoundingClientRect() ;
+
         this.parent_ = win ;
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-menu' ;
-        this.popup_.style.left = pt.x + 'px' ;
-        this.popup_.style.top = pt.y + 'px' ;
+        this.popup_.style.left = (pt.x - bounds.left) + 'px' ;
+        this.popup_.style.top = (pt.y - bounds.top) + 'px' ;
         this.popup_.style.zIndex = '1000' ;
         this.child_ = child ;
 

@@ -70,6 +70,8 @@ export class EditTextDialog extends EditFormControlDialog {
             item.fontStyle = this.font_style_!.value ;
             item.fontWeight = this.font_weight_!.value ;
             item.color = this.text_color_.value ;
+            item.background = this.background_color_!.value ;
+            item.transparent = this.transparent_!.checked ;
         }
     }
 }

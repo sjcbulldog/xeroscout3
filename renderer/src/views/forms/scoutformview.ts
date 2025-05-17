@@ -1,5 +1,8 @@
 import {  XeroApp  } from "../../apps/xeroapp.js";
+import { IPCSection } from "../../ipc.js";
+import { XeroLogger } from "../../utils/xerologger.js";
 import {  XeroRect  } from "../../widgets/xerogeom.js";
+import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import {  XeroView  } from "../xeroview.js";
 import {  BooleanControl  } from "./controls/booleanctrl.js";
 import {  MultipleChoiceControl  } from "./controls/choicectrl.js";
@@ -9,7 +12,9 @@ import {  SelectControl  } from "./controls/selectctrl.js";
 import {  TextControl  } from "./controls/textctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
+import { XeroEditFormView } from "./editformview.js";
 import {  FormObject  } from "./formobj.js";
+import { XeroFormScoutSectionPage } from "./scoutpage.js";
 
 class TimerStatus {
     public readonly name: string ;
@@ -77,12 +82,11 @@ export class XeroScoutFormView extends XeroView {
     private nameToImageMap_: Map<string, string> = new Map<string, string>() ;    
     private form_? : FormObject ;
     private type_: string ;
-    private currentSectionIndex_: number = -1 ;
 
-    private titlediv_? : HTMLDivElement ;
-    private bardiv_? : HTMLDivElement ;
-    private formimg_? : HTMLImageElement ;
-    private form_ctrls_: FormControl[] = [] ;
+    private tabbed_ctrl_? : XeroTabbedWidget ;
+    private section_pages_ : XeroFormScoutSectionPage[] = [] ;
+    private titlediv_? : HTMLElement ;
+    private tabdiv_? : HTMLElement ;    
 
     private timer_map_: Map<string, TimerStatus> = new Map<string, TimerStatus>() ;
 
@@ -145,6 +149,15 @@ export class XeroScoutFormView extends XeroView {
     public setTimerValue(tag: string, value: number) : void {
     }
 
+    private setCurrentSectionByIndex(sectionIndex: number) : boolean {
+        if (!this.form_ || sectionIndex < 0 || sectionIndex >= this.form_.sections.length) {
+            return false ;
+        }
+
+        this.tabbed_ctrl_!.selectPage(sectionIndex) ;
+        return true ;
+    }    
+
     private formCallback(args: any) : void {
         this.initDisplay() ;
 
@@ -152,39 +165,27 @@ export class XeroScoutFormView extends XeroView {
         if (this.form_) {
                 // Make sure we have the images for the sections.
             this.updateImages() ;
-            this.formViewUpdateTabBar() ;
+            this.createSectionPages() ;
             this.setCurrentSectionByIndex(0) ;
         }        
     }
 
-    private formViewUpdateTabBar() {
-        if (this.bardiv_ && this.form_) {
-            this.bardiv_.innerHTML = '' ;
-            let index = 0 ;
-            for(let section of this.form_.sections) {
-                let button = document.createElement('div') ;
-                button.innerText = section.name ;
-                button.className = XeroScoutFormView.buttonClassUnselected ;
-                button.id = section + '-button' ;
-                button.section_index = index++ ;
-                button.addEventListener('click', this.formViewSelectButton.bind(this)) ;
-                this.bardiv_.append(button) ;
-            }  
+    private createSectionPages() {
+        for(let section of this.form_!.sections) {
+            this.createSectionPage(section) ;
         }
-        return this.bardiv_ ;
-    }    
+    }   
 
-    private formViewSelectButton(event: MouseEvent) {
-        if (this.bardiv_ && this.form_) {
-            if (this.currentSectionIndex_ !== -1) {
-                this.bardiv_.children[this.currentSectionIndex_].className = XeroScoutFormView.buttonClassUnselected ;
-            }
-
-            let index = Array.prototype.indexOf.call(this.bardiv_.children, event.target) ;
-            if (index !== -1) {
-                this.setCurrentSectionByIndex(index) ;
-            }
+    private createSectionPage(section: IPCSection) : void { 
+        if (!this.nameToImageMap_.has(section.image)) {
+            this.request('get-image-data', section.image) ; 
         }
+        let image = this.nameToImageMap_.get(section.image) ;
+        let page = new XeroFormScoutSectionPage(image!) ;
+        this.tabbed_ctrl_!.addPage(section.name, page.elem) ;
+        this.section_pages_.push(page) ;
+
+        this.updateControls(section, page) ;
     }    
 
     private initDisplay() {
@@ -196,15 +197,13 @@ export class XeroScoutFormView extends XeroView {
         this.titlediv_.innerText = tname + ' Form' ;
         this.elem.append(this.titlediv_) ;
 
-        this.bardiv_ = document.createElement('div') ;
-        this.bardiv_.className = 'xero-form-tab' ;
-        this.elem.append(this.bardiv_) ;
+        this.tabdiv_ = document.createElement('div') ;
+        this.tabdiv_.className = 'xero-form-tab-div' ;
+        this.elem.append(this.tabdiv_) ;
 
-        this.formimg_ = document.createElement('img') ;
-        this.formimg_.className = 'xero-form-form' ;
-        this.formimg_.style.pointerEvents = 'none' ;
-        this.elem.style.userSelect = 'none' ;
-        this.elem.append(this.formimg_) ;
+        this.tabbed_ctrl_ = new XeroTabbedWidget() ;
+        this.tabbed_ctrl_.setParent(this.tabdiv_) ;        
+
     }
 
     private receiveImageData(args: any) : void {
@@ -214,47 +213,14 @@ export class XeroScoutFormView extends XeroView {
         this.nameToImageMap_.set(name, data) ;
 
         if (this.form_ && this.form_.sections && this.form_.sections.length !== 0) {
-            let section = this.form_.sections[this.currentSectionIndex_] ;
+            let section = this.form_.sections[this.tabbed_ctrl_!.selectedPageNumber] ;
             if (section.image === name) {
-                this.updateSectionDisplay() ;
+                this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].setImage(data) ;
             }
-        }  
+        }     
     }
 
-    private updateSectionDisplay() {
-        if (this.form_ && this.formimg_) {
-            let imname = this.form_.sections[this.currentSectionIndex_].image ;
-            let data = this.nameToImageMap_.get(imname) ;
-            this.formimg_.src = `data:image/jpg;base64,${data}`
-            this.updateControls() ;
-        }
-    }
-
-    private removeExistingControls() {
-        for(let entry of this.form_ctrls_) {
-            if (entry.ctrl) {
-                if (this.elem.contains(entry.ctrl)) {
-                    this.elem.removeChild(entry.ctrl) ;
-                }
-            }
-        }
-        this.form_ctrls_ = [] ;
-    }    
-
-    private setCurrentSectionByIndex(sectionIndex: number) : boolean {
-        if (!this.form_ || sectionIndex < 0 || sectionIndex >= this.form_.sections.length) {
-            return false ;
-        }
-
-        if (this.bardiv_) {
-            this.currentSectionIndex_ = sectionIndex ;
-            this.bardiv_.children[this.currentSectionIndex_]!.className = XeroScoutFormView.buttonClassSelected ;
-            this.updateSectionDisplay() ;
-        }
-        return true ;
-    }
-
-    updateImages() {
+    private updateImages() {
         if (this.form_) {
             this.form_.resetImages() ;
             for(let image of this.form_.images) {
@@ -263,14 +229,7 @@ export class XeroScoutFormView extends XeroView {
         }  
     }    
 
-    private updateControls() {
-        if (!this.form_) {
-            return ;
-        }
-
-        this.removeExistingControls() ;
-
-        let section = this.form_.sections[this.currentSectionIndex_] ;
+    private updateControls(section: IPCSection, page: XeroFormScoutSectionPage) : void {
         if (section.items) {
             for(let item of section.items) {
                 let formctrl ;
@@ -303,13 +262,12 @@ export class XeroScoutFormView extends XeroView {
                     formctrl.update(item) ;
                 }
                 else {
-                    console.log('Unknown form control type: ', item.type) ;
+                    let logger = XeroLogger.getInstance() ;
+                    logger.warn(`XeroEditFormView: unknown form control type ${item.type}`) ;
                 }
 
                 if (formctrl) {
-                    this.form_ctrls_.push(formctrl) ;
-                    let top = this.formimg_!.getBoundingClientRect().top ;
-                    formctrl.createForScouting(this.elem, 0, top) ;
+                    page.addControl(formctrl) ;
                 }
             }
         }

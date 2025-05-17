@@ -84,5 +84,8 @@ export abstract class FormControl {
 
         name = 'xero-form-' + oper + '-' + this.item.type + (child ? '-' + child : '') ;
         ctrl.classList.add(name) ;
+
+        name = 'xero-form-' + oper + '-item' ;
+        ctrl.classList.add(name) ;
     }
 }

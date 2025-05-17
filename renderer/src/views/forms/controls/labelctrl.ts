@@ -58,8 +58,6 @@ export class LabelControl extends FormControl {
     public createForEdit(parent: HTMLElement, xoff: number, yoff:number) : void  {
         this.ctrl = document.createElement('span') ;
         this.setClassList(this.ctrl, 'edit') ;
-        this.ctrl.classList.add('xero-form-label') ;
-        this.ctrl.classList.add('xero-form-edit-label') ;       
         this.updateFromItem(true, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
