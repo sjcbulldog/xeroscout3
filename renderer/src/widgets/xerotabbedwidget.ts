@@ -1,5 +1,12 @@
 import { XeroWidget } from "./xerowidget.js";
 
+export interface XeroTabbedWidgetOptions {
+    fontSize?: string | number ;
+    fontFamily?: string ;
+    fontWeight?: string ;
+    fontColor?: string ;
+}
+
 export class XeroTabbedWidget extends XeroWidget {
     private tabbar_? : HTMLDivElement ;
     private pages_: HTMLElement[] ;
@@ -7,9 +14,12 @@ export class XeroTabbedWidget extends XeroWidget {
     private selected_? : HTMLElement ;
     private selected_page_ : number ;
     private filler_ : HTMLElement ;
+    private options_ : XeroTabbedWidgetOptions ;
 
-    public constructor() {
+    public constructor(options: XeroTabbedWidgetOptions = {}) {
         super('div', 'xero-tabbed-widget-top') ;
+
+        this.options_ = options ;
 
         this.tabbar_ = document.createElement('div') ;
         this.tabbar_.className = 'xero-tabbed-widget-bar' ;
@@ -70,7 +80,6 @@ export class XeroTabbedWidget extends XeroWidget {
 
         this.tabbar_!.insertBefore(this.tabbar_!.children[index + 1], this.tabbar_!.children[index]) ;
     }
-        
 
     public addPage(name: string, page: HTMLElement) : void {
         page.classList.add('xero-tabbed-widget-page') ;
@@ -82,12 +91,34 @@ export class XeroTabbedWidget extends XeroWidget {
         tab.classList.add('xero-tabbed-widget-tab') ;        
         tab.classList.add('xero-tabbed-widget-tab-unselected') ;
         tab.innerText = name ;
+
+        if (this.options_.fontSize) {
+            if (typeof this.options_.fontSize === 'number') {
+                this.options_.fontSize = this.options_.fontSize + 'px' ;
+            }
+            else {
+                tab.style.fontSize = this.options_.fontSize ;
+            }
+        }
+
+        if (this.options_.fontFamily) {
+            tab.style.fontFamily = this.options_.fontFamily ;
+        }
+
+        if (this.options_.fontWeight) {
+            tab.style.fontWeight = this.options_.fontWeight ;
+        }
+
+        if (this.options_.fontColor) {
+            tab.style.color = this.options_.fontColor ;
+        }
         
         this.tabbar_!.removeChild(this.filler_) ;
         this.tabbar_!.appendChild(tab) ;
         this.tabbar_!.appendChild(this.filler_) ;
 
-        tab.addEventListener('click', this.tabButtonClicked.bind(this, this.names_.length - 1)) ;   
+        tab.addEventListener('click', this.tabButtonClicked.bind(this, this.names_.length - 1)) ;  
+        tab.addEventListener('dblclick', this.tabButtonDoubleClicked.bind(this, this.names_.length - 1)) ; 
     }
 
     public removePage(which: number) : void {
@@ -110,13 +141,18 @@ export class XeroTabbedWidget extends XeroWidget {
             throw new Error('selectPage: invalid page index') ;
         }
 
+        if (index === this.selected_page_) {
+            return ;
+        }        
+
+        this.emit('beforeSelectNewPage', index) ;
+
         if (this.selected_ !== undefined) {
             this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-selected') ;
             this.tabbar_!.children[this.selected_page_].classList.add('xero-tabbed-widget-tab-unselected') ;
             this.elem.removeChild(this.selected_) ;
             this.selected_ = undefined ;
             this.selected_page_ = -1 ;
-
         }
 
         this.elem.appendChild(this.pages_[index]) ;
@@ -124,9 +160,15 @@ export class XeroTabbedWidget extends XeroWidget {
         this.selected_page_ = index ;
         this.tabbar_!.children[this.selected_page_].classList.add('xero-tabbed-widget-tab-selected') ;
         this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-unselected') ;
+
+        this.emit('afterSelectNewPage', index) ;
     }
 
     private tabButtonClicked(index: number) : void {
         this.selectPage(index) ;
+    }
+
+    private tabButtonDoubleClicked(index: number) : void {
+        this.emit('tabButtonDoubleClicked', index) ;
     }
 }

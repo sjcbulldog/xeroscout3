@@ -21,7 +21,7 @@ export interface IPCTabletDefn {
     purpose: string | undefined;
 }
 
-export type IPCFormControlType = 'label' | 'text' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' ;
+export type IPCFormControlType = 'label' | 'text' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'box' ;
 
 export interface IPCFormItem {
     type: IPCFormControlType ;
@@ -42,6 +42,12 @@ export interface IPCFormItem {
 
 export interface IPCLabelItem extends IPCFormItem {
     text: string ;
+}
+
+export interface IPCBoxItem extends IPCFormItem {
+    borderStyle: string ;
+    borderWidth: number ;
+    borderRadius: number ;
 }
 
 export interface IPCTextItem extends IPCFormItem {

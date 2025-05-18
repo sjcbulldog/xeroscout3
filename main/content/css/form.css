@@ -369,3 +369,12 @@
 .xero-form-edit-item {
     user-select: none;
 }
+
+.xero-form-box {
+    z-index: 900;
+}
+
+.xero-form-box-box {
+    width: 100%;
+    height: 100%;
+}

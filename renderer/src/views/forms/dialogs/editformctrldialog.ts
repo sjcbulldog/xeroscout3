@@ -131,7 +131,7 @@ export abstract class EditFormControlDialog extends XeroDialog {
     div.appendChild(label);
   }
 
-  protected populateColors(div: HTMLElement) {
+  protected populateForegroundColor(div: HTMLElement) {
     let label: HTMLLabelElement;
 
     this.text_color_ = document.createElement("input");
@@ -145,7 +145,11 @@ export abstract class EditFormControlDialog extends XeroDialog {
     label.className = "xero-popup-form-edit-dialog-label";
     label.innerText = "Foreground Color";
     label.appendChild(this.text_color_);
-    div.appendChild(label);
+    div.appendChild(label);    
+  }
+
+  protected populateBackgroundColor(div: HTMLElement) {
+    let label: HTMLLabelElement;
 
     this.background_color_ = document.createElement("input");
     this.background_color_.type = "color";
@@ -159,6 +163,10 @@ export abstract class EditFormControlDialog extends XeroDialog {
     label.innerText = "Background Color";
     label.appendChild(this.background_color_);
     div.appendChild(label);
+  }
+
+  protected populateTransparent(div: HTMLElement) {
+    let label: HTMLLabelElement;
 
     this.transparent_ = document.createElement("input");
     this.transparent_.type = "checkbox";
@@ -170,6 +178,12 @@ export abstract class EditFormControlDialog extends XeroDialog {
     label.innerText = "Background Transparent";
     label.appendChild(this.transparent_);
     div.appendChild(label);
+  }
+
+  protected populateColors(div: HTMLElement) {
+    this.populateForegroundColor(div);
+    this.populateBackgroundColor(div);
+    this.populateTransparent(div);
   }
 
   protected populateTag(div: HTMLElement) {

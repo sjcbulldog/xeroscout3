@@ -57,7 +57,7 @@ export abstract class FormControl {
         this.item_.tag = tag ;
     }
 
-    protected setPosition(xoff:number, yoff:number) {
+    protected setPosition(xoff:number, yoff:number, zpos?: number) {
         if (xoff !== undefined && yoff !== undefined && this.ctrl) {
             this.ctrl.style.left = (this.item.x + xoff) + 'px' ;
             this.ctrl.style.top = (this.item.y + yoff) + 'px' ;
@@ -65,7 +65,7 @@ export abstract class FormControl {
             this.ctrl.style.height = this.item.height + 'px' ;
             this.ctrl.style.position = 'absolute' ;            
             this.ctrl.style.margin = '4px' ;     
-            this.ctrl.style.zIndex = '100' ;       
+            this.ctrl.style.zIndex = zpos ? zpos.toString() : '1000' ;
         }
     }
 

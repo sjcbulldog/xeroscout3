@@ -16,6 +16,7 @@ import {  XeroLogger  } from "../../utils/xerologger.js";
 import {  IPCFormItem, IPCSection  } from "../../ipc.js";
 import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import {  XeroFormEditSectionPage } from "./editpage.js";
+import { BoxControl } from "./controls/boxctrl.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' ;
 
@@ -48,6 +49,8 @@ export class XeroEditFormView extends XeroView {
     private selected_ctrls_ : HTMLElement[] = [] ;
     private highlighted_ctrl_? : HTMLElement ;
     private image_names_ : string[] = [] ;
+
+    private middle_text_ : string = '' ;
 
     private section_menu_? : XeroPopupMenu ;
     private image_menu_? : XeroPopupMenu ;
@@ -83,6 +86,7 @@ export class XeroEditFormView extends XeroView {
 
         let ctrlitems = [
             new PopupMenuItem('Label', this.addNewLabelCtrl.bind(this)),
+            new PopupMenuItem('Box', this.addNewBoxCtrl.bind(this)),
             new PopupMenuItem('Text Field', this.addNewTextCtrl.bind(this)),
             new PopupMenuItem('Up/Down Field', this.addNewUpDownCtrl.bind(this)),
             new PopupMenuItem('Boolean Field', this.addNewBooleanCtrl.bind(this)),
@@ -146,6 +150,23 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;        
         }
+        else {
+            alert('You cannot create a label control without a section. Use the "Section" menu to add a section first.') ;
+        }
+    }
+
+    private addNewBoxCtrl(pt: XeroPoint) {
+        if (this.tabbed_ctrl_?.selectedPage) {
+            let ctrlpt = this.findCtrlLocation(pt) ;
+            let formctrl = new BoxControl(this, this.getUniqueTagName(), new XeroRect(ctrlpt.x, ctrlpt.y, 250, 50)) ;
+
+            this.addItemToCurrentSection(formctrl.item) ;
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
+            this.modified() ;  
+        }
+        else {
+            alert('You cannot create a box control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     }
 
     addNewTextCtrl(pt: XeroPoint) {
@@ -157,6 +178,9 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;  
         }
+        else {
+            alert('You cannot create a text control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     }    
 
     private addNewUpDownCtrl(pt: XeroPoint) {
@@ -168,6 +192,9 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;  
         }
+        else {
+            alert('You cannot create a up/down control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     }  
 
     private addNewBooleanCtrl(pt: XeroPoint) {
@@ -179,6 +206,9 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;  
         }
+        else {
+            alert('You cannot create a boolean control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     }  
 
     private addNewMultipleChoiceCtrl(pt: XeroPoint) {
@@ -190,6 +220,9 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;  
         }
+        else {
+            alert('You cannot create a choice control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     } 
 
     private addNewSelectCtrl(pt: XeroPoint) {
@@ -201,6 +234,9 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;  
         }
+        else {
+            alert('You cannot create a select control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     } 
 
     private addNewTimerCtrl(pt: XeroPoint) {
@@ -212,6 +248,9 @@ export class XeroEditFormView extends XeroView {
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified() ;  
         }
+        else {
+            alert('You cannot create a timer control without a section. Use the "Section" menu to add a section first.') ;
+        }        
     }     
 
     private formCallback(args: any) {
@@ -241,6 +280,10 @@ export class XeroEditFormView extends XeroView {
                 let formctrl ;
                 if (item.type === 'label') {
                     formctrl = new LabelControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'box') {
+                    formctrl = new BoxControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else if (item.type === 'text') {
@@ -334,6 +377,11 @@ export class XeroEditFormView extends XeroView {
     }
 
     private selectBackgroundImage(image: string) {
+        if (this.tabbed_ctrl_!.selectedPageNumber === -1) {
+            alert('You cannot set the background image without a section. Use the "Section" menu to add a section first.') ;
+            return ;
+        }
+
         if (this.form_) {
             if (this.nameToImageMap_.has(image)) {
                 let data = `${this.nameToImageMap_.get(image)}` ;
@@ -387,7 +435,13 @@ export class XeroEditFormView extends XeroView {
         this.tabdiv_.className = 'xero-form-tab-div' ;
         this.elem.append(this.tabdiv_) ;
 
-        this.tabbed_ctrl_ = new XeroTabbedWidget() ;
+        this.tabbed_ctrl_ = new XeroTabbedWidget({
+            fontFamily: 'Arial',
+            fontSize: 28,
+            fontWeight: 'bold',
+            fontColor: 'black'
+        }) ;
+        this.tabbed_ctrl_.on('tabButtonDoubleClicked', this.renameSection.bind(this)) ;
         this.tabbed_ctrl_.setParent(this.tabdiv_) ;
 
         this.ctxbind_ = this.contextMenu.bind(this) ;
@@ -642,6 +696,15 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
+    private setMiddleStatusBarText(text: string) {
+        if (this.middle_text_ !== text) {
+            this.middle_text_ = text ;
+            if (this.app.statusBar) {
+                this.app.statusBar.setMiddleStatus(text) ;
+            }
+        }
+    }
+
     private displayMiddleBar() {
         if (this.cursor_.x >= 0 && this.cursor_.y >= 0) {
             let str = `Location: ${this.cursor_.x.toFixed(1)}, ${this.cursor_.y.toFixed(1)}` ;
@@ -652,10 +715,10 @@ export class XeroEditFormView extends XeroView {
                     str += `, Control: ${frmctrl!.item.x},${frmctrl!.item.y} ${frmctrl!.item.width}x${frmctrl!.item.height}` ;
                 }
             }
-            this.app.statusBar.setMiddleStatus(str) ;
+            this.setMiddleStatusBarText(str) ;
         }
         else {
-            this.app.statusBar.setMiddleStatus('') ;
+            this.setMiddleStatusBarText('Right Click For Menu') ;
         }
     }
 
@@ -856,6 +919,11 @@ export class XeroEditFormView extends XeroView {
     }   
 
     private mouseMove(event: MouseEvent) {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) {
+            this.setMiddleStatusBarText('Right Click For Menu') ;            
+            return ;
+        }
+
         let bounds = this.tabbed_ctrl_!.elem.getBoundingClientRect() ;
         this.cursor_ = this.pageToForm(event.pageX, event.pageY) ;
 
@@ -1140,6 +1208,11 @@ export class XeroEditFormView extends XeroView {
     }
     
     private alignTop() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot align controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }        
+
         if (this.selected_ctrls_.length > 1) {
             let top = this.selected_ctrls_[0].offsetTop ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1151,9 +1224,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to align them') ;
+        }
     }
 
     private alignLeft() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot align controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }  
+
         if (this.selected_ctrls_.length > 1) {
             let left = this.selected_ctrls_[0].offsetLeft ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1165,9 +1246,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to align them') ;
+        }        
     }
 
     private alignRight() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot align controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }  
+
         if (this.selected_ctrls_.length > 1) {
             let right = this.selected_ctrls_[0].offsetLeft + this.selected_ctrls_[0].offsetWidth ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1179,9 +1268,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to align them') ;
+        }        
     }
 
     private alignBottom() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot align controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }  
+
         if (this.selected_ctrls_.length > 1) {
             let bottom = this.selected_ctrls_[0].offsetTop + this.selected_ctrls_[0].offsetHeight ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1193,9 +1290,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to align them') ;
+        }        
     }
 
     private alignCenter() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot align controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }
+
         if (this.selected_ctrls_.length > 1) {
             let center = this.selected_ctrls_[0].offsetTop + this.selected_ctrls_[0].offsetHeight / 2 ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1207,9 +1312,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to align them') ;
+        }        
     }
 
     private alignMiddle() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot align controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }  
+
         if (this.selected_ctrls_.length > 1) {
             let middle = this.selected_ctrls_[0].offsetLeft + this.selected_ctrls_[0].offsetWidth / 2 ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1221,9 +1334,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to align them') ;
+        }        
     }
 
     private sameWidth() {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot resize controls when no section is selected.  Please create a section first using the Section menu') ;
+            return ;
+        }  
+
         if (this.selected_ctrls_.length > 1) {
             let width = this.selected_ctrls_[0].offsetWidth ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1235,9 +1356,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to reisze controls') ;
+        }        
     }
 
-    private sameHeight() {
+    private sameHeight() : boolean {
+        if (this.tabbed_ctrl_?.selectedPageNumber === -1) { 
+            alert('You cannot resize controls when no section is selected.  Please create a section first using the Section menu') ;
+            return false ;
+        }  
+
         if (this.selected_ctrls_.length > 1) {
             let height = this.selected_ctrls_[0].offsetHeight ;
             for(let ctrl of this.selected_ctrls_) {
@@ -1249,10 +1378,17 @@ export class XeroEditFormView extends XeroView {
             }
             this.modified() ;
         }
+        else {
+            alert('You must select at least 2 controls to reisze controls') ;
+            return false ;
+        }              
+        return true ;
     }
 
     private sameSize() {
-        this.sameHeight() ;
+        if (!this.sameHeight()) {
+            return ;
+        }
         this.sameWidth() ;
     }
 }

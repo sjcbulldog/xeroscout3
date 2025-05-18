@@ -5,6 +5,7 @@ import {  XeroRect  } from "../../widgets/xerogeom.js";
 import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import {  XeroView  } from "../xeroview.js";
 import {  BooleanControl  } from "./controls/booleanctrl.js";
+import { BoxControl } from "./controls/boxctrl.js";
 import {  MultipleChoiceControl  } from "./controls/choicectrl.js";
 import {  FormControl  } from "./controls/formctrl.js";
 import {  LabelControl  } from "./controls/labelctrl.js";
@@ -235,6 +236,10 @@ export class XeroScoutFormView extends XeroView {
                 let formctrl ;
                 if (item.type === 'label') {
                     formctrl = new LabelControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'box') {
+                    formctrl = new BoxControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else if (item.type === 'text') {
