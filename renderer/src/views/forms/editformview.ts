@@ -17,6 +17,7 @@ import {  IPCFormItem, IPCSection  } from "../../ipc.js";
 import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import {  XeroFormEditSectionPage } from "./editpage.js";
 import { BoxControl } from "./controls/boxctrl.js";
+import { FormControl } from "./controls/formctrl.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' ;
 
@@ -53,11 +54,12 @@ export class XeroEditFormView extends XeroView {
     private middle_text_ : string = '' ;
 
     private section_menu_? : XeroPopupMenu ;
-    private image_menu_? : XeroPopupMenu ;
+    private sel_image_menu_? : XeroPopupMenu ;
     private popup_menu_? : XeroPopupMenu ;
     private align_menu_? : XeroPopupMenu ;  
     private size_menu_? : XeroPopupMenu ;  
-
+    private image_menu_? : XeroPopupMenu ;
+ 
     private item_ : XeroPoint[] = [] ;
     private ctrl_ : XeroPoint[] = [] ;
     private ctrl_size_ : XeroSize[] = [] ;
@@ -70,6 +72,9 @@ export class XeroEditFormView extends XeroView {
     private mouseupbind_? : (e: MouseEvent) => void ;
     private mousemovebind_? : (e: MouseEvent) => void ;
     private mouusedownbind_? : (e: MouseEvent) => void ;
+    private cut_bind_? : (e: ClipboardEvent) => void ;
+    private copy_bind_? : (e: ClipboardEvent) => void ;
+    private paste_bind_? : (e: ClipboardEvent) => void ;
 
     constructor(app: XeroApp, type: any) {
         super(app, 'xero-form-view') ;
@@ -272,52 +277,59 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
+    private createControlFromItem(item: IPCFormItem, page: XeroFormEditSectionPage) : FormControl {
+        let formctrl : FormControl | undefined ;
+
+        if (item.type === 'label') {
+            formctrl = new LabelControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'box') {
+            formctrl = new BoxControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'text') {
+            formctrl = new TextControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'boolean') {  
+            formctrl = new BooleanControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'updown') {
+            formctrl = new UpDownControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'choice') {
+            formctrl = new MultipleChoiceControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'select') {
+            formctrl = new SelectControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'timer') {
+            formctrl = new TimerControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else {
+            let logger = XeroLogger.getInstance() ;
+            logger.warn(`XeroEditFormView: unknown form control type ${item.type}`) ;
+        }        
+
+        if (formctrl) {
+            page.addControl(formctrl) ;
+        }        
+
+        return formctrl! ;
+    }
+
     private updateControls(section: IPCSection, page: XeroFormEditSectionPage) {
         page.removeAllControls() ;
 
         if (section.items) {
             for(let item of section.items) {
-                let formctrl ;
-                if (item.type === 'label') {
-                    formctrl = new LabelControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'box') {
-                    formctrl = new BoxControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'text') {
-                    formctrl = new TextControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'boolean') {  
-                    formctrl = new BooleanControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'updown') {
-                    formctrl = new UpDownControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'choice') {
-                    formctrl = new MultipleChoiceControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'select') {
-                    formctrl = new SelectControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else if (item.type === 'timer') {
-                    formctrl = new TimerControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
-                    formctrl.update(item) ;
-                }
-                else {
-                    let logger = XeroLogger.getInstance() ;
-                    logger.warn(`XeroEditFormView: unknown form control type ${item.type}`) ;
-                }
-
-                if (formctrl) {
-                    page.addControl(formctrl) ;
-                }
+                this.createControlFromItem(item, page) ;
             }
         }
     }
@@ -399,7 +411,7 @@ export class XeroEditFormView extends XeroView {
             let item = new PopupMenuItem(im, this.selectBackgroundImage.bind(this, im)) ;
             items.push(item) ;
         }
-        this.image_menu_ = new XeroPopupMenu('images', items) ;        
+        this.sel_image_menu_ = new XeroPopupMenu('images', items) ;        
     }
 
     private receiveImageData(args: any) {
@@ -442,6 +454,7 @@ export class XeroEditFormView extends XeroView {
             fontColor: 'black'
         }) ;
         this.tabbed_ctrl_.on('tabButtonDoubleClicked', this.renameSection.bind(this)) ;
+        this.tabbed_ctrl_.on('afterSelectPage', this.sectionChanged.bind(this)) ;
         this.tabbed_ctrl_.setParent(this.tabdiv_) ;
 
         this.ctxbind_ = this.contextMenu.bind(this) ;
@@ -461,7 +474,84 @@ export class XeroEditFormView extends XeroView {
 
         this.mouusedownbind_ = this.mouseDown.bind(this) ;
         document.addEventListener('mousedown', this.mouusedownbind_) ;
+
+        this.cut_bind_ = this.cutSelectedItems.bind(this) ;
+        document.addEventListener('cut', this.cut_bind_) ;
+
+        this.copy_bind_ = this.copySelectedItems.bind(this) ;
+        document.addEventListener('copy', this.copy_bind_) ;
+
+        this.paste_bind_ = this.pasteSelectedItem.bind(this) ;
+        document.addEventListener('paste', this.paste_bind_) ;
     }
+
+    private sectionChanged() {
+        if (this.tabbed_ctrl_!.selectedPageNumber !== -1) {
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].doLayout() ;
+        }
+    }
+
+    private cutSelectedItems(ev: ClipboardEvent) {
+        ev.preventDefault() ;
+        this.copySelectedItems(ev) ;
+        this.deleteSelectedItems() ;
+    }
+
+    private copySelectedItems(ev: ClipboardEvent) {
+        ev.preventDefault() ;
+        let json : any[] = [] ;
+
+        for(let ctrl of this.selected_ctrls_) {
+            let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
+            if (frmctrl) {
+                json.push(frmctrl.item) ;
+            }
+        }
+
+        let str = JSON.stringify(json) ;
+        navigator.clipboard.writeText(str) ;
+    }
+
+    private async pasteSelectedItem(ev: ClipboardEvent) {
+        ev.preventDefault() ;
+
+        if (!this.tabbed_ctrl_ || this.tabbed_ctrl_!.selectedPageNumber === -1) {
+            return ;
+        }
+
+        let data = await navigator.clipboard.readText() ;
+        if (data) {
+            let json = JSON.parse(data) ;
+            let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
+            for(let item of json) {
+                item.x += 20 ;
+                item.y += 20 ;
+                let frmctrl = this.createControlFromItem(item, page) ;
+                if (frmctrl) {
+                    this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(frmctrl) ;
+                    this.addItemToCurrentSection(frmctrl.item) ;
+                    this.modified() ;
+                }
+            }
+        }
+
+        // for(let ctrl of this.selected_ctrls_) {
+        //     let top = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect().top ;
+        //     let curfrmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
+        //     if (curfrmctrl) {
+        //         let tag = this.getUniqueTagName() ;
+        //         let frmctrl = curfrmctrl.clone(tag) ;
+        //         frmctrl.item.x += 80 ;
+        //         frmctrl.item.y += 80 ;
+        //         this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(frmctrl) ;
+        //         this.addItemToCurrentSection(frmctrl.item) ;
+        //         this.unselectCurrent(ctrl) ;
+        //         this.select(frmctrl.ctrl!) ;
+        //         this.modified() ;
+        //     }
+        // }
+    }    
+
 
     private mouseUp(event: MouseEvent) {
         this.controlRelease(event) ;
@@ -504,10 +594,7 @@ export class XeroEditFormView extends XeroView {
             console.log('onGlobalKey', event.key, event.ctrlKey) ;
             
             if (event.key === 'Delete') {
-                this.deleteSelectedItem() ;
-            }
-            else if (event.key === 'v' && event.ctrlKey) {
-                this.pasteSelectedItem() ;
+                this.deleteSelectedItems() ;
             }
             else if (event.key === 'ArrowRight') {
                 if (event.ctrlKey) {
@@ -589,25 +676,7 @@ export class XeroEditFormView extends XeroView {
         }
     }    
 
-    private pasteSelectedItem() {
-        for(let ctrl of this.selected_ctrls_) {
-            let top = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect().top ;
-            let curfrmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-            if (curfrmctrl) {
-                let tag = this.getUniqueTagName() ;
-                let frmctrl = curfrmctrl.clone(tag) ;
-                frmctrl.item.x += 80 ;
-                frmctrl.item.y += 80 ;
-                this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(frmctrl) ;
-                this.addItemToCurrentSection(frmctrl.item) ;
-                this.unselectCurrent(ctrl) ;
-                this.select(frmctrl.ctrl!) ;
-                this.modified() ;
-            }
-        }
-    }
-
-    private deleteSelectedItem() {
+    private deleteSelectedItems() {
         if (this.selected_ctrls_.length > 0 && this.form_) {
             for(let ctrl of this.selected_ctrls_) {
                 let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
@@ -617,7 +686,6 @@ export class XeroEditFormView extends XeroView {
                     if (index !== -1) {
                         section.items.splice(index, 1) ;
                         this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].removeControl(frmctrl) ;
-                        this.elem.removeChild(ctrl) ;
                         this.dragging_ = 'none' ;
                         this.modified() ;
                     }
@@ -928,7 +996,7 @@ export class XeroEditFormView extends XeroView {
         this.cursor_ = this.pageToForm(event.pageX, event.pageY) ;
 
         let ctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(event.clientX, event.clientY) ;
-        if (ctrl && this.selected_ctrls_.indexOf(ctrl) === -1) {
+        if (ctrl && this.selected_ctrls_.indexOf(ctrl) === -1 && this.popup_menu_ === undefined && this.edit_dialog_ === undefined) {
             //
             // We are moving over a control, but it is not selected, so highlight it
             //
@@ -1190,15 +1258,22 @@ export class XeroEditFormView extends XeroView {
                     new PopupMenuItem('Same Size', this.sameSize.bind(this)),
                 ]
                 this.size_menu_ = new XeroPopupMenu('controls', items) ;
-            }            
+            }
+
+            if (!this.image_menu_) {
+                let items = [
+                    new PopupMenuItem('Import Image', this.importImage.bind(this)),
+                    new PopupMenuItem('Select Background Image', undefined, this.sel_image_menu_),
+                ]
+                this.image_menu_ = new XeroPopupMenu('image', items) ;
+            }
 
             let items = [
                 new PopupMenuItem('Sections', undefined, this.section_menu_),
                 new PopupMenuItem('Controls', undefined, this.ctrl_menu_),
                 new PopupMenuItem('Align', undefined, this.align_menu_),
                 new PopupMenuItem('Size', undefined, this.size_menu_),
-                new PopupMenuItem('Import Image', this.importImage.bind(this)),
-                new PopupMenuItem('Background Image', undefined, this.image_menu_),
+                new PopupMenuItem('Images', undefined, this.image_menu_),
             ]
 
             this.popup_menu_ = new XeroPopupMenu('main', items) ;

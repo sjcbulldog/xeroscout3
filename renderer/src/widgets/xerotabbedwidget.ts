@@ -94,7 +94,7 @@ export class XeroTabbedWidget extends XeroWidget {
 
         if (this.options_.fontSize) {
             if (typeof this.options_.fontSize === 'number') {
-                this.options_.fontSize = this.options_.fontSize + 'px' ;
+                tab.style.fontSize = this.options_.fontSize + 'px' ;
             }
             else {
                 tab.style.fontSize = this.options_.fontSize ;
@@ -145,7 +145,7 @@ export class XeroTabbedWidget extends XeroWidget {
             return ;
         }        
 
-        this.emit('beforeSelectNewPage', index) ;
+        this.emit('beforeSelectPage', index) ;
 
         if (this.selected_ !== undefined) {
             this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-selected') ;
@@ -161,7 +161,7 @@ export class XeroTabbedWidget extends XeroWidget {
         this.tabbar_!.children[this.selected_page_].classList.add('xero-tabbed-widget-tab-selected') ;
         this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-unselected') ;
 
-        this.emit('afterSelectNewPage', index) ;
+        this.emit('afterSelectPage', index) ;
     }
 
     private tabButtonClicked(index: number) : void {

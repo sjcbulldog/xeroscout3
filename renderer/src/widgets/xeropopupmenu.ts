@@ -53,19 +53,26 @@ export class XeroPopMenuItem {
 }
 
 export class XeroPopupMenu extends EventEmitter {
-    private static childMenuOffsetX = 10 ;
+    private static childMenuOffsetX = 30 ;
     private static childMenuOffsetY = 10 ;
     private static initialClick?: XeroPoint ;
 
-    private static current_? : XeroPopupMenu ;
+    //
+    // There can only be one menu open at a time, so we use a static variable to track the current menu
+    // This is the topmost menu in the stack
+    //
+    private static top_most_menu_? : XeroPopupMenu ;
+
     private parent_? : HTMLElement ;
     private items_ : XeroPopMenuItem[] ;
     private child_menu_? : XeroPopupMenu ;
     private popup_? : HTMLElement ;
     private global_click_ : (event: MouseEvent) => void ;
     private global_key_ : (event: KeyboardEvent) => void ;
+    private mouse_move_bind_ : (event: MouseEvent) => void ;    
     private name_ : string ; 
     private child_?: boolean ;
+    private can_close_ : boolean  = true ;
 
     public constructor(name: string, items: XeroPopMenuItem[]) {
         super() ;
@@ -75,108 +82,149 @@ export class XeroPopupMenu extends EventEmitter {
 
         this.global_click_ = this.onGlobalClick.bind(this) ;
         this.global_key_ = this.onGlobalKey.bind(this) ;
+        this.mouse_move_bind_ = this.onGlobalMouseMove.bind(this) ;
     }
 
     private onClick(item: XeroPopMenuItem, event: MouseEvent) {
         if (item.action) {
             this.emit('menu-item-selected', item) ;
             item.action(XeroPopupMenu.initialClick!) ;
-            this.closeMenu() ;
+            XeroPopupMenu.top_most_menu_!.closeMenu() ;
         }
-        event.preventDefault() ;        
+        event.preventDefault() ;
+        event.stopPropagation() ;        
     }
 
     private onSubmenuShow(item: XeroPopMenuItem, event: MouseEvent) {
         this.emit('submenu-opened', item) ;
 
         if (this.child_menu_) {
-            this.child_menu_.closeMenu() ;
-            this.child_menu_ = undefined ;
+            this.closeChildren() ;
         }
 
         if (item.submenu && this.parent_) {
             this.child_menu_ = item.submenu ;
+            this.child_menu_.can_close_ = false ;
             this.child_menu_.showRelativeInternal(this.parent_, new XeroPoint(event.clientX - XeroPopupMenu.childMenuOffsetX, event.clientY - XeroPopupMenu.childMenuOffsetY), true) ;
         }
+        event.stopPropagation() ;
         event.preventDefault() ;
     }
 
     private onGlobalClick(event: MouseEvent) {
-        if (XeroPopupMenu.current_) {
-            if (event.target) {
-                let elem = event.target as HTMLElement ;
-                if (elem.className.startsWith('xero-popup-menu')) {
-                    return ;
-                }   
+        if (XeroPopupMenu.top_most_menu_ && event.target) {
+            //
+            // See if this is a click outside of any menu elements,  in 
+            // this case we close the menu
+            //
+            let elem = event.target as HTMLElement ;
+            if (this.findMenuItem(elem)) {
+                return ;
             }
-            XeroPopupMenu.current_.closeMenu() ;
+            XeroPopupMenu.top_most_menu_.closeMenu() ;
         }
     }
 
     private onGlobalKey(event: KeyboardEvent) {
+        //
+        // If the user presses the escape key, close the menu
+        //
         if (event.key === 'Escape') {
             this.closeMenu() ;
         }
     }
 
-    private closeInternal() {
-        console.log("Closing menu: " + this.name_) ;
-        //
-        // This will always be the top most menu in the stack
-        //
-        if (this.child_menu_) {
-            console.log("    Closing child menu: " + this.name_) ;
-            this.child_menu_.closeInternal() ;
-            this.child_menu_ = undefined ;
+    public closeMenu() {
+        if (this !== XeroPopupMenu.top_most_menu_) {
+            throw new Error("closeMenu: not the top menu") ;
         }
 
-        this.removeFromParent() ;
+        this.closeMenuInternal() ;
 
-        this.emit('menu-closed') ;
+        document.removeEventListener('mousemove', this.mouse_move_bind_!) ;
         document.removeEventListener('click', this.global_click_) ;
         document.removeEventListener('keydown', this.global_key_) ;
     }
 
-    public closeMenu() {
-        if (XeroPopupMenu.current_) {
-            console.log("Closing menu: " + this.name_) ;
-            XeroPopupMenu.current_.closeInternal() ;
-            XeroPopupMenu.current_ = undefined ;
-        }
-        else {
-            console.log("No current menu to close") ;
-        }
-    }
-
     private removeFromParent() {
         if (this.parent_ && this.popup_?.parentElement === this.parent_) {
-            console.log("Removing menu from parent: " + this.name_) ;
+            console.log(`removingFromParent: ${this.name_}`) ; 
             this.parent_.removeChild(this.popup_!) ;
         }        
-        else {
-            console.log("Menu not in parent: " + this.name_) ;
-        }
     }
 
-    private closeChildMenuInternal(child: XeroPopupMenu) {
-        if (this.child_menu_ === child) {
-            this.child_menu_.removeFromParent() ;
+    private closeMenuInternal() {
+        this.closeChildren() ;
+        this.removeFromParent() ;
+    }
+
+    private closeChildren() {
+        if (this.child_menu_) {
+            this.child_menu_.closeMenuInternal() ;
             this.child_menu_ = undefined ;
-        }
-    }
-
-    private closeChildMenu() {
-        if (XeroPopupMenu.current_) {
-            XeroPopupMenu.current_.closeChildMenuInternal(this) ;
         }
     }
 
     private onSubmenuClick(item: XeroPopMenuItem, event: MouseEvent) {
         event.preventDefault() ;
+        event.stopPropagation() ;
     }   
 
     public showRelative(win: HTMLElement, pt: XeroPoint) {
         this.showRelativeInternal(win, pt, false) ;
+    }
+
+    private isChildOf(parent: HTMLElement, child: HTMLElement) : boolean {
+        let elem = child ;
+        while (elem) {
+            if (elem === parent) {
+                return true ;
+            }
+            elem = elem.parentElement! ;
+        }
+        return false ;
+    }
+
+    private dumpMenuList() : string {
+        let str = "" ;
+        let menu = XeroPopupMenu.top_most_menu_ ;
+        while (menu) {
+            if (str.length > 0) {
+                str += " -> " ;
+            }
+            str += menu.name_ ;
+            menu = menu.child_menu_ ;
+        }
+        return str ;
+    }
+
+    private findMenuItem(elem: HTMLElement) : XeroPopupMenu | undefined {
+        let menu = XeroPopupMenu.top_most_menu_ ;
+        while (menu) {
+            if (this.isChildOf(menu.popup_!, elem)) {
+                return menu ;
+            }
+            menu = menu.child_menu_ ;
+        }
+        return undefined ;
+    }
+
+    private onGlobalMouseMove(event: MouseEvent) {
+        let elem = event.target as HTMLElement ;
+
+        let menu = this.findMenuItem(elem) ;
+
+        if (menu && menu !== XeroPopupMenu.top_most_menu_) {
+            menu.can_close_ = true ;
+        }
+
+        if (menu && menu.can_close_) {
+            if (menu.child_menu_ && menu.child_menu_.can_close_) {
+                menu.closeChildren() ;
+            }
+        }
+        event.preventDefault() ;
+        event.stopPropagation() ;
     }
 
     private showRelativeInternal(win: HTMLElement, pt: XeroPoint, child: boolean) {
@@ -215,16 +263,15 @@ export class XeroPopupMenu extends EventEmitter {
             this.popup_.appendChild(item.topdiv) ;
         }
 
-        document.addEventListener('click', this.global_click_) ;
-        document.addEventListener('keydown', this.global_key_) ;
         this.parent_.appendChild(this.popup_) ; 
 
         if (!child) {
-            XeroPopupMenu.current_ = this ;
+            XeroPopupMenu.top_most_menu_ = this ;
             XeroPopupMenu.initialClick = new XeroPoint(pt.x, pt.y) ;
-        }
-        else {
-            this.popup_.addEventListener('mouseleave', this.closeChildMenu.bind(this)) ;
+
+            document.addEventListener('click', this.global_click_) ;
+            document.addEventListener('keydown', this.global_key_) ;            
+            document.addEventListener('mousemove', this.mouse_move_bind_) ;
         }
     }    
 }

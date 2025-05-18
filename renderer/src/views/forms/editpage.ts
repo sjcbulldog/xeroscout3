@@ -16,6 +16,13 @@ export class XeroFormEditSectionPage extends XeroWidget {
         this.image_.src = `data:image/jpg;base64,${data}` ;
     }
 
+    public doLayout() : void {
+        for(let control of this.controls_) {
+            this.removeControlFromLayout(control) ;
+            this.addControlToLayout(control) ;
+        }
+    }
+
     public get controls() : FormControl[] {
         return this.controls_ ;
     }
@@ -49,9 +56,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
     public addControl(control: FormControl) : void {
         this.controls_.push(control) ;
-
-        let top = this.elem.getBoundingClientRect().top ;
-        control.createForEdit(this.elem, 0, top) ;
+        this.addControlToLayout(control) ;
     }
 
     public removeControl(control: FormControl) : void {
@@ -73,7 +78,14 @@ export class XeroFormEditSectionPage extends XeroWidget {
         this.controls_ = [] ;
     }
 
-    private get image() : HTMLImageElement {
-        return this.image_ ;
+    private removeControlFromLayout(control: FormControl) : void {
+        if (control.ctrl && control.ctrl.parentElement) {
+            control.ctrl.parentElement.removeChild(control.ctrl) ;
+        }
+    }
+
+    private addControlToLayout(control: FormControl) : void {
+        let top = this.elem.getBoundingClientRect().top ;
+        control.createForEdit(this.elem, 0, top) ;
     }
 }
