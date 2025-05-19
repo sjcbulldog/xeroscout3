@@ -38,7 +38,7 @@ export class UpDownControl extends FormControl {
     }
 
     public copyObject() : FormControl {
-        return new UpDownControl(this.view, this.item.tag, this.bounds()) ;
+        return new UpDownControl(this.view, this.item.tag, this.bounds) ;
     }
 
     public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
@@ -121,6 +121,7 @@ export class UpDownControl extends FormControl {
     }
 
     public createForEdit(parent: HTMLElement, xoff: number, yoff: number) : void  {
+        super.createForEdit(parent, xoff, yoff) ;        
         let item = this.item as IPCUpDownItem ;
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'edit') ;

@@ -1,3 +1,4 @@
+import { XeroPoint } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
 import { XeroEditFormView } from "./editformview.js";
@@ -36,19 +37,17 @@ export class XeroFormEditSectionPage extends XeroWidget {
         return undefined ;
     }
 
-    public findControlByPosition(x: number, y: number) : HTMLElement | undefined {
+    //
+    // Find a control by its form position
+    //
+    public findControlByPosition(pt: XeroPoint) : HTMLElement | undefined {
         for(let entry of this.controls_) {
             if (entry.ctrl === undefined) {
                 continue ;
             }
 
-            let ctrl = entry.ctrl ;
-            let item = entry.item ;
-
-            let rect = ctrl.getBoundingClientRect() ;
-            if (x >= rect.left - XeroFormEditSectionPage.fuzzyEdgeSpacing && x <= rect.right + XeroFormEditSectionPage.fuzzyEdgeSpacing && 
-                    y >= rect.top - XeroFormEditSectionPage.fuzzyEdgeSpacing && y <= rect.bottom + XeroFormEditSectionPage.fuzzyEdgeSpacing) {
-                return ctrl ;
+            if (entry.bounds.contains(pt)) {
+                return entry.ctrl ;
             }
         }
         return undefined ;

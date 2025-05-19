@@ -52,6 +52,22 @@ export class XeroRect {
         this.height = hv;
     }
 
+    public get left(): number {
+        return this.x;
+    }
+
+    public get right(): number {
+        return this.x + this.width;
+    }
+
+    public get top(): number {
+        return this.y;
+    }
+
+    public get bottom(): number {
+        return this.y + this.height;
+    }
+
     public clone(): XeroRect {
         return new XeroRect(this.x, this.y, this.width, this.height);
     }
@@ -112,10 +128,11 @@ export class XeroRect {
         return new XeroRect(rect.x, rect.y, rect.width, rect.height);
     }
 
-    public static fromPoints(points: XeroPoint[]): XeroRect | undefined {
-        if (points.length === 0) {
-            return undefined;
+    public static fromPoints(points: XeroPoint[]): XeroRect {
+        if (points.length !== 2) {
+            throw new Error('XeroRect.fromPoints requires exactly 2 points');
         }
+        
         let minX = points[0].x;
         let minY = points[0].y;
         let maxX = points[0].x;

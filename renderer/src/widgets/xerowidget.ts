@@ -57,4 +57,15 @@ export class XeroWidget extends XeroMainProcessInterface {
             XeroWidget.checkWidgetPositions(child as HTMLElement);
         }
     }
+
+    public static isChildOf(parent: HTMLElement, child: HTMLElement) : boolean {
+        let elem = child ;
+        while (elem) {
+            if (elem === parent) {
+                return true ;
+            }
+            elem = elem.parentElement! ;
+        }
+        return false ;
+    }    
 }

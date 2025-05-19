@@ -361,10 +361,7 @@
     flex-direction: column;
 }
 
-.xero-form-section-image {
-    width: 100%;
-    height: 100%;
-}
+
 
 .xero-form-edit-item {
     user-select: none;
@@ -375,6 +372,11 @@
 }
 
 .xero-form-box-box {
+    width: 100%;
+    height: 100%;
+}
+
+.xero-form-section-image {
     width: 100%;
     height: 100%;
 }

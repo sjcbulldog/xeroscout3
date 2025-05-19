@@ -1,5 +1,6 @@
 import {  EventEmitter  } from "events";
 import {  XeroPoint  } from "./xerogeom.js";
+import { XeroWidget } from "./xerowidget.js";
 
 export class XeroPopMenuItem {
     private text_: string ;
@@ -53,8 +54,8 @@ export class XeroPopMenuItem {
 }
 
 export class XeroPopupMenu extends EventEmitter {
-    private static childMenuOffsetX = 30 ;
-    private static childMenuOffsetY = 10 ;
+    private static childMenuOffsetX = 0 ;
+    private static childMenuOffsetY = 0 ;
     private static initialClick?: XeroPoint ;
 
     //
@@ -70,6 +71,7 @@ export class XeroPopupMenu extends EventEmitter {
     private global_click_ : (event: MouseEvent) => void ;
     private global_key_ : (event: KeyboardEvent) => void ;
     private mouse_move_bind_ : (event: MouseEvent) => void ;    
+    private mouse_enter_bind_ : (event: MouseEvent) => void ;
     private name_ : string ; 
     private child_?: boolean ;
     private can_close_ : boolean  = true ;
@@ -83,6 +85,7 @@ export class XeroPopupMenu extends EventEmitter {
         this.global_click_ = this.onGlobalClick.bind(this) ;
         this.global_key_ = this.onGlobalKey.bind(this) ;
         this.mouse_move_bind_ = this.onGlobalMouseMove.bind(this) ;
+        this.mouse_enter_bind_ = this.onGlobalMouseEnter.bind(this) ;
     }
 
     private onClick(item: XeroPopMenuItem, event: MouseEvent) {
@@ -105,7 +108,9 @@ export class XeroPopupMenu extends EventEmitter {
         if (item.submenu && this.parent_) {
             this.child_menu_ = item.submenu ;
             this.child_menu_.can_close_ = false ;
-            this.child_menu_.showRelativeInternal(this.parent_, new XeroPoint(event.clientX - XeroPopupMenu.childMenuOffsetX, event.clientY - XeroPopupMenu.childMenuOffsetY), true) ;
+            let bounds = item.topdiv?.getBoundingClientRect() ;
+            let y = (bounds!.top + bounds!.bottom) / 2 ;
+            this.child_menu_.showRelativeInternal(this.parent_, new XeroPoint(bounds!.right, y), true) ;
         }
         event.stopPropagation() ;
         event.preventDefault() ;
@@ -141,14 +146,16 @@ export class XeroPopupMenu extends EventEmitter {
 
         this.closeMenuInternal() ;
 
-        document.removeEventListener('mousemove', this.mouse_move_bind_!) ;
+        document.removeEventListener('mousemove', this.mouse_move_bind_) ;
+        document.removeEventListener('mouseenter', this.mouse_enter_bind_) ;
         document.removeEventListener('click', this.global_click_) ;
         document.removeEventListener('keydown', this.global_key_) ;
+
+        this.emit('menu-closed') ;
     }
 
     private removeFromParent() {
         if (this.parent_ && this.popup_?.parentElement === this.parent_) {
-            console.log(`removingFromParent: ${this.name_}`) ; 
             this.parent_.removeChild(this.popup_!) ;
         }        
     }
@@ -174,17 +181,6 @@ export class XeroPopupMenu extends EventEmitter {
         this.showRelativeInternal(win, pt, false) ;
     }
 
-    private isChildOf(parent: HTMLElement, child: HTMLElement) : boolean {
-        let elem = child ;
-        while (elem) {
-            if (elem === parent) {
-                return true ;
-            }
-            elem = elem.parentElement! ;
-        }
-        return false ;
-    }
-
     private dumpMenuList() : string {
         let str = "" ;
         let menu = XeroPopupMenu.top_most_menu_ ;
@@ -201,7 +197,7 @@ export class XeroPopupMenu extends EventEmitter {
     private findMenuItem(elem: HTMLElement) : XeroPopupMenu | undefined {
         let menu = XeroPopupMenu.top_most_menu_ ;
         while (menu) {
-            if (this.isChildOf(menu.popup_!, elem)) {
+            if (XeroWidget.isChildOf(menu.popup_!, elem)) {
                 return menu ;
             }
             menu = menu.child_menu_ ;
@@ -209,9 +205,12 @@ export class XeroPopupMenu extends EventEmitter {
         return undefined ;
     }
 
+    private onGlobalMouseEnter(event: MouseEvent) {
+
+    }
+
     private onGlobalMouseMove(event: MouseEvent) {
         let elem = event.target as HTMLElement ;
-
         let menu = this.findMenuItem(elem) ;
 
         if (menu && menu !== XeroPopupMenu.top_most_menu_) {
@@ -228,6 +227,8 @@ export class XeroPopupMenu extends EventEmitter {
     }
 
     private showRelativeInternal(win: HTMLElement, pt: XeroPoint, child: boolean) {
+        console.log(`XeroPopupMenu.showRelativeInternal: ${this.name_} ${pt.x}, ${pt.y} ${child}`) ;
+
         let bounds = win.getBoundingClientRect() ;
 
         this.parent_ = win ;
@@ -272,6 +273,7 @@ export class XeroPopupMenu extends EventEmitter {
             document.addEventListener('click', this.global_click_) ;
             document.addEventListener('keydown', this.global_key_) ;            
             document.addEventListener('mousemove', this.mouse_move_bind_) ;
+            document.addEventListener('mouseenter', this.mouse_enter_bind_) ;
         }
     }    
 }

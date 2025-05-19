@@ -41,7 +41,7 @@ export class MultipleChoiceControl extends FormControl {
     }
 
     public copyObject() : FormControl {
-        return new MultipleChoiceControl(this.view, this.item.tag, this.bounds()) ;
+        return new MultipleChoiceControl(this.view, this.item.tag, this.bounds) ;
     }
 
     public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
@@ -162,6 +162,7 @@ export class MultipleChoiceControl extends FormControl {
     }
 
     public createForEdit(parent: HTMLElement, xoff: number, yoff: number) : void  {
+        super.createForEdit(parent, xoff, yoff) ;        
         let item = this.item as IPCMultipleChoiceItem ;
         this.choice_ctrls_ = [] ;
 
