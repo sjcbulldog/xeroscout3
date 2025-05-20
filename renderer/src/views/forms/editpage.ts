@@ -94,6 +94,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
     private addControlToLayout(control: FormControl) : void {
         let top = this.elem.getBoundingClientRect().top ;
         control.createForEdit(this.elem, 0, top) ;
+        control.ctrl!.draggable = false ;
     }
 
     private onResize(entries: ResizeObserverEntry[]) : void {

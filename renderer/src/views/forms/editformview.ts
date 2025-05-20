@@ -29,7 +29,7 @@ declare global {
     }
 }
 
-export class XeroEditFormView extends XeroView {    
+export class XeroEditFormView extends XeroView {
     private static blankImageName = 'blank' ;
 
     private static moveControlAmount = 1 ;
@@ -105,6 +105,7 @@ export class XeroEditFormView extends XeroView {
             new PopupMenuItem('Select', this.addNewSelectCtrl.bind(this)),
             new PopupMenuItem('Timer', this.addNewTimerCtrl.bind(this)),
         ]
+
         this.ctrl_menu_ = new XeroPopupMenu('controls', ctrlitems) ;
     }
 
@@ -118,7 +119,8 @@ export class XeroEditFormView extends XeroView {
     	document.removeEventListener('cut', this.cut_bind_!);
     	document.removeEventListener('copy', this.copy_bind_!);
     	document.removeEventListener('paste', this.paste_bind_!);
-    	window.removeEventListener('focus', this.focusbind_!);
+
+        window.removeEventListener('focus', this.focusbind_!);
     	window.removeEventListener('blur', this.blurbind_!);
     }
 
@@ -1103,7 +1105,6 @@ export class XeroEditFormView extends XeroView {
     private placeAreaSelectDiv(pt: XeroPoint) {
         if (this.area_select_div && this.area_select_start_) {
             let bounds = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect() ;
-            console.log(`placeAreaSelectDiv: ${this.area_select_start_} ${pt}`) ;
 
             let x = Math.min(this.area_select_start_.x, pt.x) ;
             let y = Math.min(this.area_select_start_.y, pt.y) + bounds.top ;
@@ -1166,7 +1167,12 @@ export class XeroEditFormView extends XeroView {
     }
 
     private mouseDown(event: MouseEvent) {
-        if (this.edit_dialog_ || this.popup_menu_ || event.button !== 0) {
+        if (this.edit_dialog_ || this.popup_menu_ || event.button !== 0 || this.tabbed_ctrl_!.selectedPageNumber === -1) {
+            return ;
+        }
+
+        let page = this.tabbed_ctrl_!.selectedPage! ;
+        if (!XeroWidget.isChildOf(page, event.target as HTMLElement)) {
             return ;
         }
 
