@@ -9,15 +9,12 @@ export abstract class FormControl {
     private view_ : XeroView ;
     private item_ : IPCFormItem ;
     private ctrl_? : HTMLElement ;
-    private position_? : XeroPoint ;
-    private bounds_? : XeroRect ;
     private origional_bounds_? : XeroRect ;
-    private size_? : XeroSize ;
     private offset_? : XeroPoint ;
+    
 
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
-        this.setGeometry() ;
         this.view_ = view ;
     }
 
@@ -26,7 +23,12 @@ export abstract class FormControl {
     }
 
     public get bounds() : XeroRect {
-        return this.bounds_! ;
+        return new XeroRect(this.item.x, this.item.y, this.item.width, this.item.height) ;
+    }
+
+    public get fuzzyBounds() : XeroRect {
+        return new XeroRect(this.item.x - FormControl.fuzzyEdgeSpacing, this.item.y - FormControl.fuzzyEdgeSpacing,
+                            this.item.width + (2 * FormControl.fuzzyEdgeSpacing), this.item.height + (2 * FormControl.fuzzyEdgeSpacing)) ;
     }
 
     public get origionalBounds() : XeroRect {
@@ -34,11 +36,22 @@ export abstract class FormControl {
     }
 
     public get size() : XeroSize {
-        return this.size_! ;
+        return new XeroSize(this.item.width, this.item.height) ;
     }
 
     public get position() : XeroPoint {
-        return this.position_! ;
+        return new XeroPoint(this.item.x, this.item.y) ;
+    }
+
+    private isNear(pt: number, edge: number) {
+        let ret = false ;
+
+        let upper = edge + FormControl.fuzzyEdgeSpacing ;
+        let lower = edge - FormControl.fuzzyEdgeSpacing ;
+        if (pt >= lower && pt <= upper) {
+            ret = true ;
+        }
+        return ret ;
     }
 
     public isRightEdge(pt: XeroPoint) {
@@ -46,7 +59,7 @@ export abstract class FormControl {
             return false ;
         }
 
-        if (pt.x >= this.bounds.right - FormControl.fuzzyEdgeSpacing && pt.x <= this.bounds.right + FormControl.fuzzyEdgeSpacing && pt.y >= this.bounds.top && pt.y <= this.bounds.bottom) {
+        if (this.isNear(pt.x, this.bounds.right) && pt.y >= this.bounds.top && pt.y <= this.bounds.bottom) {
             return true ;
         }
         return false ;
@@ -56,7 +69,7 @@ export abstract class FormControl {
         if (this.ctrl_ === undefined) {
             return false ;
         }
-        if (pt.x >= this.bounds.left - FormControl.fuzzyEdgeSpacing && pt.x <= this.bounds.left + FormControl.fuzzyEdgeSpacing && pt.y >= this.bounds.top && pt.y <= this.bounds.bottom) {
+        if (this.isNear(pt.x, this.bounds.left) && pt.y >= this.bounds.top && pt.y <= this.bounds.bottom) {
             return true ;
         }
         return false ;
@@ -66,7 +79,7 @@ export abstract class FormControl {
         if (this.ctrl_ === undefined) {
             return false ;
         }
-        if (pt.y >= this.bounds.top - FormControl.fuzzyEdgeSpacing && pt.y <= this.bounds.top + FormControl.fuzzyEdgeSpacing && pt.x >= this.bounds.left && pt.x <= this.bounds.right) {
+        if (this.isNear(pt.y, this.bounds.top) && pt.x >= this.bounds.left && pt.x <= this.bounds.right) {
             return true ;
         }
         return false ;
@@ -76,7 +89,7 @@ export abstract class FormControl {
         if (this.ctrl_ === undefined) {
             return false ;
         }
-        if (pt.y >= this.bounds.bottom - FormControl.fuzzyEdgeSpacing && pt.y <= this.bounds.bottom + FormControl.fuzzyEdgeSpacing && pt.x >= this.bounds.left && pt.x <= this.bounds.right) {
+        if (this.isNear(pt.y, this.bounds.bottom) && pt.x >= this.bounds.left && pt.x <= this.bounds.right) {
             return true ;
         }
         return false ;
@@ -103,7 +116,7 @@ export abstract class FormControl {
         this.ctrl_ = ctrl ;
     }
 
-    public updateHTMLElemPosition() {
+    public positionUpdated() {
         // Update the screen position of the control
         if (this.ctrl_) {
             this.ctrl_.style.left = (this.item_.x + this.offset.x) + 'px' ;
@@ -133,15 +146,8 @@ export abstract class FormControl {
         this.origional_bounds_ = new XeroRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height) ;
     }
 
-    private setGeometry() {
-        this.position_ = new XeroPoint(this.item_.x, this.item_.y) ;
-        this.bounds_ = new XeroRect(this.item_.x, this.item_.y, this.item_.width, this.item_.height) ;
-        this.size_ = new XeroSize(this.item_.width, this.item_.height) ;
-    }
-
     public update(item: IPCFormItem) {
         this.item_ = item ;
-        this.setGeometry() ;
     }
 
     public abstract updateFromItem(editing: boolean, xoff?: number, yoff?: number) : void ;

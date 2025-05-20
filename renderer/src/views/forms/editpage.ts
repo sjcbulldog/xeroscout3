@@ -41,12 +41,14 @@ export class XeroFormEditSectionPage extends XeroWidget {
     // Find a control by its form position
     //
     public findControlByPosition(pt: XeroPoint) : HTMLElement | undefined {
+
         for(let entry of this.controls_) {
             if (entry.ctrl === undefined) {
                 continue ;
             }
 
-            if (entry.bounds.contains(pt)) {
+
+            if (entry.fuzzyBounds.contains(pt)) {
                 return entry.ctrl ;
             }
         }

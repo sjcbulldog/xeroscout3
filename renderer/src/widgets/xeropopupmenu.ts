@@ -1,16 +1,15 @@
 import {  EventEmitter  } from "events";
 import {  XeroPoint  } from "./xerogeom.js";
-import { XeroWidget } from "./xerowidget.js";
 
-export class XeroPopMenuItem {
+export class XeroPopupMenuItem {
     private text_: string ;
-    private callback_?: (pt: XeroPoint) => void ;
+    private callback_?: () => void ;
     private submenu_? : XeroPopupMenu ;
     private topdiv_? : HTMLElement ;
     private item_?: HTMLElement ;
     private sub_? : HTMLElement ;
 
-    constructor(text: string, callback: ((pt: XeroPoint) => void) | undefined, submenu?: XeroPopupMenu) {
+    constructor(text: string, callback: (() => void) | undefined, submenu?: XeroPopupMenu) {
         this.text_ = text ;
         this.callback_ = callback ;
         this.submenu_ = submenu ;
@@ -20,7 +19,7 @@ export class XeroPopMenuItem {
         return this.text_ ;
     }
 
-    public get action() : ((point: XeroPoint) => void) | undefined {
+    public get action() : (() => void) | undefined {
         return this.callback_ ;
     }
 
@@ -51,12 +50,22 @@ export class XeroPopMenuItem {
     public get subDiv() : HTMLElement | undefined {
         return this.sub_ ;
     }
+
+    public isSubDiv(elem: HTMLElement) : boolean {
+        return this.sub_ === elem ;
+    }
+
+    public isItemDiv(elem: HTMLElement) : boolean { 
+        return this.item_ === elem ;
+    }
+
+    public isTopDiv(elem: HTMLElement) : boolean {  
+        return this.topdiv_ === elem ;
+    }
 }
 
 export class XeroPopupMenu extends EventEmitter {
-    private static childMenuOffsetX = 0 ;
-    private static childMenuOffsetY = 0 ;
-    private static initialClick?: XeroPoint ;
+    private static MenuItemTopDivClassName = 'xero-popup-menu-item-div' ;
 
     //
     // There can only be one menu open at a time, so we use a static variable to track the current menu
@@ -65,18 +74,17 @@ export class XeroPopupMenu extends EventEmitter {
     private static top_most_menu_? : XeroPopupMenu ;
 
     private parent_? : HTMLElement ;
-    private items_ : XeroPopMenuItem[] ;
+    private items_ : XeroPopupMenuItem[] ;
     private child_menu_? : XeroPopupMenu ;
     private popup_? : HTMLElement ;
     private global_click_ : (event: MouseEvent) => void ;
     private global_key_ : (event: KeyboardEvent) => void ;
     private mouse_move_bind_ : (event: MouseEvent) => void ;    
-    private mouse_enter_bind_ : (event: MouseEvent) => void ;
     private name_ : string ; 
     private child_?: boolean ;
     private can_close_ : boolean  = true ;
 
-    public constructor(name: string, items: XeroPopMenuItem[]) {
+    public constructor(name: string, items: XeroPopupMenuItem[]) {
         super() ;
 
         this.items_ = items ;
@@ -85,20 +93,19 @@ export class XeroPopupMenu extends EventEmitter {
         this.global_click_ = this.onGlobalClick.bind(this) ;
         this.global_key_ = this.onGlobalKey.bind(this) ;
         this.mouse_move_bind_ = this.onGlobalMouseMove.bind(this) ;
-        this.mouse_enter_bind_ = this.onGlobalMouseEnter.bind(this) ;
     }
 
-    private onClick(item: XeroPopMenuItem, event: MouseEvent) {
+    private onClick(item: XeroPopupMenuItem, event: MouseEvent) {
         if (item.action) {
             this.emit('menu-item-selected', item) ;
-            item.action(XeroPopupMenu.initialClick!) ;
+            item.action() ;
             XeroPopupMenu.top_most_menu_!.closeMenu() ;
         }
         event.preventDefault() ;
         event.stopPropagation() ;        
     }
 
-    private onSubmenuShow(item: XeroPopMenuItem, event: MouseEvent) {
+    private onSubmenuShow(item: XeroPopupMenuItem, event: MouseEvent) {
         this.emit('submenu-opened', item) ;
 
         if (this.child_menu_) {
@@ -123,10 +130,10 @@ export class XeroPopupMenu extends EventEmitter {
             // this case we close the menu
             //
             let elem = event.target as HTMLElement ;
-            if (this.findMenuItem(elem)) {
-                return ;
+            let ret = this.findMenuItemElement(event.target as HTMLElement) ;
+            if (!ret) {
+                XeroPopupMenu.top_most_menu_.closeMenu() ;
             }
-            XeroPopupMenu.top_most_menu_.closeMenu() ;
         }
     }
 
@@ -147,7 +154,6 @@ export class XeroPopupMenu extends EventEmitter {
         this.closeMenuInternal() ;
 
         document.removeEventListener('mousemove', this.mouse_move_bind_) ;
-        document.removeEventListener('mouseenter', this.mouse_enter_bind_) ;
         document.removeEventListener('click', this.global_click_) ;
         document.removeEventListener('keydown', this.global_key_) ;
 
@@ -172,7 +178,7 @@ export class XeroPopupMenu extends EventEmitter {
         }
     }
 
-    private onSubmenuClick(item: XeroPopMenuItem, event: MouseEvent) {
+    private onSubmenuClick(item: XeroPopupMenuItem, event: MouseEvent) {
         event.preventDefault() ;
         event.stopPropagation() ;
     }   
@@ -194,41 +200,81 @@ export class XeroPopupMenu extends EventEmitter {
         return str ;
     }
 
-    private findMenuItem(elem: HTMLElement) : XeroPopupMenu | undefined {
+    private findMenuItemElement(elem: HTMLElement) : [ XeroPopupMenu, XeroPopupMenuItem ] | undefined {
+        let melem : HTMLElement | null = elem ;
+        while (melem && melem !== document.body) {
+            if (melem.classList.contains(XeroPopupMenu.MenuItemTopDivClassName)) {
+                break ;
+            }
+            melem = melem.parentElement ;
+        }
+
+        if (!melem || melem === document.body) {
+            return undefined ;
+        }
+
         let menu = XeroPopupMenu.top_most_menu_ ;
         while (menu) {
-            if (XeroWidget.isChildOf(menu.popup_!, elem)) {
-                return menu ;
+            for (let item of menu.items_) {
+                if (item.topdiv === melem) {
+                    return [ menu, item ] ;
+                }
             }
             menu = menu.child_menu_ ;
         }
         return undefined ;
     }
 
-    private onGlobalMouseEnter(event: MouseEvent) {
-
-    }
-
-    private onGlobalMouseMove(event: MouseEvent) {
-        let elem = event.target as HTMLElement ;
-        let menu = this.findMenuItem(elem) ;
-
-        if (menu && menu !== XeroPopupMenu.top_most_menu_) {
-            menu.can_close_ = true ;
+    private onItemMouseEnter(event: MouseEvent) {
+        let ret = this.findMenuItemElement(event.target as HTMLElement) ;
+        if (!ret) {
+            return ;
         }
 
-        if (menu && menu.can_close_) {
-            if (menu.child_menu_ && menu.child_menu_.can_close_) {
+        let [ menu, item ] = ret ;
+        if (menu.child_menu_) {
+            // We are in the item div, and there is a child, close it
+            menu.closeChildren() ;
+        }
+    }
+
+    private onSubmenuMouseEnter(event: MouseEvent) {
+        let ret = this.findMenuItemElement(event.target as HTMLElement) ;
+        if (!ret) {
+            return ;
+        }
+
+        let [ menu, item ] = ret ;
+        if (item.isSubDiv(event.target as HTMLElement)) {
+            if (!menu.child_menu_) {
+                // We are in the arrow for a submenu, and there is not child, show the child
+                this.onSubmenuShow(item, event) ;
+            }
+            else if (menu.child_menu_ !== item.submenu) {
+                // We are in the arrow for a submenu, and there is a child but it is not the right child
+                this.onSubmenuShow(item, event) ;
+            }
+        }
+        else if (item.isItemDiv(event.target as HTMLElement) || item.isTopDiv(event.target as HTMLElement)) {
+            //
+            // We are in the item div or top div, so if there is a child, close it
+            //
+            if (menu.child_menu_) {
                 menu.closeChildren() ;
             }
         }
+        else {
+            // We are not in any of the menu items, so we do nothing
+        }
+    }
+
+
+    private onGlobalMouseMove(event: MouseEvent) {
         event.preventDefault() ;
         event.stopPropagation() ;
     }
 
     private showRelativeInternal(win: HTMLElement, pt: XeroPoint, child: boolean) {
-        console.log(`XeroPopupMenu.showRelativeInternal: ${this.name_} ${pt.x}, ${pt.y} ${child}`) ;
-
         let bounds = win.getBoundingClientRect() ;
 
         this.parent_ = win ;
@@ -241,18 +287,19 @@ export class XeroPopupMenu extends EventEmitter {
 
         for(let item of this.items_) {
             item.topdiv = document.createElement('div') ;
-            item.topdiv.className = 'xero-popup-menu-item-div' ;
+            item.topdiv.className = XeroPopupMenu.MenuItemTopDivClassName ;
 
             item.itemDiv = document.createElement('div') ;
             item.itemDiv.className = 'xero-popup-menu-item' ;
             item.itemDiv.innerText = item.text ;
+            item.itemDiv.addEventListener('mouseenter', this.onItemMouseEnter.bind(this)) ;
             item.topdiv.appendChild(item.itemDiv) ;
 
             item.subDiv = document.createElement('div') ;
             item.subDiv.className = 'xero-popup-menu-submenu' ;
             if (item.submenu) {
+                item.subDiv.addEventListener('mouseenter', this.onSubmenuMouseEnter.bind(this)) ;
                 item.subDiv.innerHTML = '&#x27A4;' ;
-                item.subDiv.addEventListener('mouseover', this.onSubmenuShow.bind(this, item)) ;
                 item.subDiv.addEventListener('click', this.onSubmenuClick.bind(this, item)) ;
                 item.itemDiv.addEventListener('click', this.onSubmenuClick.bind(this, item)) ;
                 item.topdiv.addEventListener('click', this.onSubmenuClick.bind(this, item)) ;
@@ -268,12 +315,9 @@ export class XeroPopupMenu extends EventEmitter {
 
         if (!child) {
             XeroPopupMenu.top_most_menu_ = this ;
-            XeroPopupMenu.initialClick = new XeroPoint(pt.x, pt.y) ;
-
             document.addEventListener('click', this.global_click_) ;
             document.addEventListener('keydown', this.global_key_) ;            
             document.addEventListener('mousemove', this.mouse_move_bind_) ;
-            document.addEventListener('mouseenter', this.mouse_enter_bind_) ;
         }
     }    
 }

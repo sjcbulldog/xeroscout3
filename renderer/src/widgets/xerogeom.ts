@@ -8,6 +8,10 @@ export class XeroPoint {
         this.y = yv;
     }
 
+    public toString(): string { 
+        return `XeroPoint(${this.x}, ${this.y})`;
+    }
+
     public clone(): XeroPoint {
         return new XeroPoint(this.x, this.y);
     }
@@ -34,6 +38,10 @@ export class XeroSize {
         this.height = hei;
     }
 
+    public toString(): string {
+        return `XeroSize(${this.width}, ${this.height})`;
+    }
+
     public clone(): XeroSize {
         return new XeroSize(this.width, this.height);
     }
@@ -51,6 +59,7 @@ export class XeroRect {
         this.width = wv;
         this.height = hv;
     }
+    
 
     public get left(): number {
         return this.x;
@@ -100,7 +109,7 @@ export class XeroRect {
     }
 
     public toString(): string {
-        return `XeroRect(${this.x}, ${this.y}, ${this.width}, ${this.height})`;
+        return `XeroRect((${this.x}, ${this.y}) ${this.width}x${this.height})`;
     }
 
     public upperLeft(): XeroPoint {
@@ -154,4 +163,7 @@ export class XeroRect {
         return new XeroRect(minX, minY, maxX - minX, maxY - minY);
     }
 
+    public static fromPointSize(point: XeroPoint, size: XeroSize): XeroRect {   
+        return new XeroRect(point.x, point.y, size.width, size.height);
+    }
 }
