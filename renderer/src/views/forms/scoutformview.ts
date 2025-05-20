@@ -178,14 +178,13 @@ export class XeroScoutFormView extends XeroView {
     }   
 
     private createSectionPage(section: IPCSection) : void { 
-        if (!this.nameToImageMap_.has(section.image)) {
-            this.request('get-image-data', section.image) ; 
-        }
         let image = this.nameToImageMap_.get(section.image) ;
+        if (!image) {
+            throw new Error(`XeroScoutFormView: image ${section.image} not found`) ;
+        }
         let page = new XeroFormScoutSectionPage(image!) ;
         this.tabbed_ctrl_!.addPage(section.name, page.elem) ;
         this.section_pages_.push(page) ;
-
         this.updateControls(section, page) ;
     }    
 
@@ -205,6 +204,7 @@ export class XeroScoutFormView extends XeroView {
         this.tabbed_ctrl_ = new XeroTabbedWidget() ;
         this.tabbed_ctrl_.setParent(this.tabdiv_) ;        
 
+        this.tabbed_ctrl_.on('afterSelectPage', this.sectionChanged.bind(this)) ;        
     }
 
     private receiveImageData(args: any) : void {
@@ -277,4 +277,10 @@ export class XeroScoutFormView extends XeroView {
             }
         }
     }    
+
+    private sectionChanged() : void {
+        if (this.tabbed_ctrl_!.selectedPageNumber !== -1) {
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].doLayout() ;
+        }        
+    }
 }

@@ -28,4 +28,23 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     public setImage(data: string) : void {
         this.image_.src = `data:image/jpg;base64,${data}` ;
     }
+
+    public doLayout() : void {
+        this.removeAllControls() ;
+        for(let control of this.controls_) {
+            control.resetHTMLControl() ;
+            this.addControlToLayout(control) ;
+        }
+    }
+
+    private removeAllControls() : void {
+        this.elem.innerHTML = '' ;
+        this.elem.appendChild(this.image_) ;
+    }    
+
+    private addControlToLayout(control: FormControl) : void {
+        let top = this.elem.getBoundingClientRect().top ;
+        control.createForScouting(this.elem, 0, top) ;
+        control.ctrl!.draggable = false ;
+    }
 }
