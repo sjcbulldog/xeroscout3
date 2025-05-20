@@ -73,11 +73,13 @@ export class BoxControl extends FormControl {
     }
 
     public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void {
+        super.createForScouting(parent, xoff, yoff) ;
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'scout') ;
 
         this.box_ctrl_ = document.createElement('div') ;
-        this.setClassList(this.box_ctrl_, 'scout', 'box') ;        
+        this.setClassList(this.box_ctrl_, 'scout', 'box') ;      
+        this.ctrl.appendChild(this.box_ctrl_) ;  
 
         this.updateFromItem(false, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
