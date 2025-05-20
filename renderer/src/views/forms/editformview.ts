@@ -68,6 +68,8 @@ export class XeroEditFormView extends XeroView {
     private cursor_ : XeroPoint = new XeroPoint(0, 0) ;
     private context_menu_cursor_: XeroPoint = new XeroPoint(0, 0) ;
 
+    private requested_images_ : string[] = [] ;
+
     private ctxbind_? : (e: MouseEvent) => void ;
     private dblclkbind_? : (e: MouseEvent) => void ;
     private keydownbind_? : (e: KeyboardEvent) => void ;
@@ -84,8 +86,8 @@ export class XeroEditFormView extends XeroView {
         super(app, 'xero-form-view') ;
 
         this.type_ = type ;
-        this.registerCallback('send-form', this.formReceived.bind(this));
-        this.registerCallback('send-images', this.receiveImages.bind(this)) ;
+        this.registerCallback('send-form', this.receivedForm.bind(this));
+        this.registerCallback('send-images', this.receivedImageNames.bind(this)) ;
         this.registerCallback('send-image-data', this.receiveImageData.bind(this)) ;
 
         this.request('get-images') ;
@@ -264,7 +266,7 @@ export class XeroEditFormView extends XeroView {
         }        
     }     
 
-    private formReceived(args: any) {
+    private receivedForm(args: any) {
         this.initDisplay() ;
 
         this.form_ = new FormObject(args.form.json) ;
@@ -349,18 +351,25 @@ export class XeroEditFormView extends XeroView {
         return true ;
     }
 
-    updateImages() {
+    private requestImage(imgname: string) {
+        if (!this.requested_images_.includes(imgname)) {
+            this.request('get-image-data', imgname) ;
+            this.requested_images_.push(imgname) ;
+        }   
+    }
+
+    private updateImages() {
         if (this.form_) {
             this.form_.resetImages() ;
             for(let image of this.form_.images) {
-                this.request('get-image-data', image) ;
+                this.requestImage(image) ;
             }
         }  
     }
 
     private createSectionPage(section: IPCSection) : void { 
         if (!this.nameToImageMap_.has(section.image)) {
-            this.request('get-image-data', section.image) ; 
+                this.requestImage(section.image) ;
         }
         let image = this.nameToImageMap_.get(section.image) ;
         let page = new XeroFormEditSectionPage(image!) ;        // May be undefined
@@ -394,30 +403,39 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
-    private selectBackgroundImage(image: string) {
+    private setBackgroundImage(image: string) {
         if (this.tabbed_ctrl_!.selectedPageNumber === -1) {
             alert('You cannot set the background image without a section. Use the "Section" menu to add a section first.') ;
             return ;
         }
 
         if (this.form_) {
+            this.form_.sections[this.tabbed_ctrl_!.selectedPageNumber].image = image ;
             if (this.nameToImageMap_.has(image)) {
                 let data = `${this.nameToImageMap_.get(image)}` ;
                 this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].setImage(data) ;
-                this.modified() ;
             }
+            else {
+                this.requestImage(image) ;
+            }
+            this.modified() ;            
         }
     }    
 
-    private receiveImages(args: any) {
+    private receivedImageNames(args: any) {
         this.image_names_ = args ;
 
         let items = [] ;
         for(let im of this.image_names_) {
-            let item = new PopupMenuItem(im, this.selectBackgroundImage.bind(this, im)) ;
+            let item = new PopupMenuItem(im, this.setBackgroundImage.bind(this, im)) ;
             items.push(item) ;
         }
-        this.sel_image_menu_ = new XeroPopupMenu('images', items) ;        
+        this.sel_image_menu_ = new XeroPopupMenu('images', items) ;    
+        items = [
+            new PopupMenuItem('Import Image', this.importImage.bind(this)),
+            new PopupMenuItem('Select Background Image', undefined, this.sel_image_menu_),
+        ]
+        this.image_menu_ = new XeroPopupMenu('image', items) ;    
     }
 
     private receiveImageData(args: any) {
@@ -562,8 +580,8 @@ export class XeroEditFormView extends XeroView {
 
     private mouseUp(event: MouseEvent) {
         if (this.dragging_ === 'area-select' && this.area_select_start_) {
-            this.stopAreaSelect() ;
             this.selectInBox(this.area_select_start_, this.cursor_, event.shiftKey) ;
+            this.stopAreaSelect() ;
             this.dragging_ = 'none' ;
         }
         else {
@@ -1085,6 +1103,7 @@ export class XeroEditFormView extends XeroView {
     private placeAreaSelectDiv(pt: XeroPoint) {
         if (this.area_select_div && this.area_select_start_) {
             let bounds = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect() ;
+            console.log(`placeAreaSelectDiv: ${this.area_select_start_} ${pt}`) ;
 
             let x = Math.min(this.area_select_start_.x, pt.x) ;
             let y = Math.min(this.area_select_start_.y, pt.y) + bounds.top ;
@@ -1120,12 +1139,16 @@ export class XeroEditFormView extends XeroView {
             if (page.contains(this.area_select_div)) {
                 page.removeChild(this.area_select_div) ;
             }
+            else {
+                console.log('stopAreaSelect: area_select_div not in page') ;
+            }
             this.area_select_div = undefined ;
         }
+        this.area_select_start_ = undefined ;
         this.dragging_ = 'none' ;
     }
 
-    private startAreaSelect() {
+    private startAreaSelect(st: XeroPoint) {
         if (this.area_select_div) {
             throw new Error('Area select already started') ;
         }
@@ -1133,9 +1156,9 @@ export class XeroEditFormView extends XeroView {
         let page = this.tabbed_ctrl_!.selectedPage! ;
         this.area_select_div = document.createElement('div') ;
         this.area_select_div.className = 'xero-form-area-select' ;
-        page.appendChild(this.area_select_div) ;
-        
-        this.area_select_start_ = new XeroPoint(this.cursor_.x, this.cursor_.y) ;
+        page.appendChild(this.area_select_div) ;        
+
+        this.area_select_start_ = st.clone() ;
         this.placeAreaSelectDiv(this.area_select_start_) ;
 
         this.area_select_div.style.border = '2px dashed blue' ;
@@ -1156,7 +1179,7 @@ export class XeroEditFormView extends XeroView {
             this.elem.style.cursor = 'default' ;
 
             if (XeroWidget.isChildOf(this.elem, event.target as HTMLElement)) {
-                this.startAreaSelect() ;
+                this.startAreaSelect(this.pageToForm(event.pageX, event.pageY)) ;
             }
         }
         else if (this.selected_ctrls_.indexOf(ctrl) === -1) {

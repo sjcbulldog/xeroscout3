@@ -1,13 +1,14 @@
 import { XeroPoint } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
-import { XeroEditFormView } from "./editformview.js";
 
 export class XeroFormEditSectionPage extends XeroWidget {
     public static fuzzyEdgeSpacing = 10 ;
+    private static kUsageScale = 0.98 ;
 
     private controls_ : FormControl[] = [] ;
     private image_ : HTMLImageElement ;
+    private observer_ : ResizeObserver ;
 
     public constructor(data: string) {
         super('div', 'xero-form-section-page') ;
@@ -15,6 +16,10 @@ export class XeroFormEditSectionPage extends XeroWidget {
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
         this.image_.src = `data:image/jpg;base64,${data}` ;
+        this.elem.appendChild(this.image_) ;
+
+        this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;
+        this.observer_.observe(this.elem) ;
     }
 
     public doLayout() : void {
@@ -76,6 +81,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
     
     public removeAllControls() : void {
         this.elem.innerHTML = '' ;
+        this.elem.appendChild(this.image_) ;
         this.controls_ = [] ;
     }
 
@@ -89,4 +95,13 @@ export class XeroFormEditSectionPage extends XeroWidget {
         let top = this.elem.getBoundingClientRect().top ;
         control.createForEdit(this.elem, 0, top) ;
     }
+
+    private onResize(entries: ResizeObserverEntry[]) : void {
+        for(let entry of entries) {
+            if (entry.target === this.elem) {
+                this.image_.style.width = `${entry.contentRect.width * XeroFormEditSectionPage.kUsageScale}px` ;
+                this.image_.style.height = `${entry.contentRect.height * XeroFormEditSectionPage.kUsageScale}px` ;
+            }
+        }
+    }   
 }
