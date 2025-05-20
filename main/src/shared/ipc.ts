@@ -48,6 +48,7 @@ export interface IPCBoxItem extends IPCFormItem {
     borderStyle: string ;
     borderWidth: number ;
     borderRadius: number ;
+    borderShadow: boolean ;
 }
 
 export interface IPCTextItem extends IPCFormItem {

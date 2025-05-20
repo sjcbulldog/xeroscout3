@@ -3,14 +3,19 @@ import {  XeroPoint, XeroRect, XeroSize  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 
+export type FormDisplayStyle = 'none' | 'selected' | 'highlighted' ;
+
 export abstract class FormControl {
     public static fuzzyEdgeSpacing = 10 ;
+    public static kMinimumWidth = 20 ;
+    public static kMinimumHeight = 20 ;
 
     private view_ : XeroView ;
     private item_ : IPCFormItem ;
     private ctrl_? : HTMLElement ;
     private origional_bounds_? : XeroRect ;
     private offset_? : XeroPoint ;
+    private style_ : FormDisplayStyle = 'none' ;
     
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
@@ -30,7 +35,11 @@ export abstract class FormControl {
                             this.item.width + (2 * FormControl.fuzzyEdgeSpacing), this.item.height + (2 * FormControl.fuzzyEdgeSpacing)) ;
     }
 
-    public get origionalBounds() : XeroRect {
+    public get originalBounds() : XeroRect {
+        if (this.origional_bounds_ === undefined) {
+            return this.bounds ;
+        }
+        
         return this.origional_bounds_! ;
     }
 
@@ -40,6 +49,43 @@ export abstract class FormControl {
 
     public get position() : XeroPoint {
         return new XeroPoint(this.item.x, this.item.y) ;
+    }
+    
+    public get displayStyle() : FormDisplayStyle {   
+        return this.style_ ;
+    }
+
+    public set displayStyle(style: FormDisplayStyle) {
+        this.style_ = style ;
+        if (this.ctrl_) {
+            switch (style) {
+                case 'none':
+                    this.ctrl_.style.border = 'none' ;
+                    this.ctrl_.style.margin = '4px' ;
+                    break ;
+                case 'selected':
+                    this.ctrl_.style.borderStyle = 'solid' ;
+                    this.ctrl_.style.borderWidth = '4px' ;
+                    this.ctrl_.style.borderColor = 'red' ;
+                    this.ctrl_.style.margin = '0px' ;                            
+                    break ;
+                case 'highlighted':
+                    this.ctrl_.style.borderStyle = 'dashed' ;
+                    this.ctrl_.style.borderWidth = '4px' ;
+                    this.ctrl_.style.borderColor = 'red' ;
+                    this.ctrl_.style.margin = '0px' ;                    
+                    break ;
+            }
+        }
+    }
+
+    public positionUpdated() {
+        if (this.ctrl_) {
+            this.ctrl_.style.left = (this.item.x + this.offset.x) + 'px' ;
+            this.ctrl_.style.top = (this.item.y + this.offset.y) + 'px' ;
+            this.ctrl_.style.width = this.item.width + 'px' ;
+            this.ctrl_.style.height = this.item.height + 'px' ;
+        }
     }
 
     private isNear(pt: number, edge: number) {
@@ -53,12 +99,17 @@ export abstract class FormControl {
         return ret ;
     }
 
+    private isWithin(pt: number, minv: number, maxv: number) {
+        console.log(`compare ${pt} ${minv - FormControl.fuzzyEdgeSpacing} ${maxv + FormControl.fuzzyEdgeSpacing}` )
+        return pt > minv - FormControl.fuzzyEdgeSpacing && pt < maxv + FormControl.fuzzyEdgeSpacing ;
+    }
+
     public isRightEdge(pt: XeroPoint) {
         if (this.ctrl_ === undefined) {
             return false ;
         }
 
-        if (this.isNear(pt.x, this.bounds.right) && pt.y >= this.bounds.top && pt.y <= this.bounds.bottom) {
+        if (this.isNear(pt.x, this.bounds.right) && this.isWithin(pt.y, this.bounds.top, this.bounds.bottom)) {
             return true ;
         }
         return false ;
@@ -68,7 +119,7 @@ export abstract class FormControl {
         if (this.ctrl_ === undefined) {
             return false ;
         }
-        if (this.isNear(pt.x, this.bounds.left) && pt.y >= this.bounds.top && pt.y <= this.bounds.bottom) {
+        if (this.isNear(pt.x, this.bounds.left) && this.isWithin(pt.y, this.bounds.top, this.bounds.bottom)) {
             return true ;
         }
         return false ;
@@ -78,7 +129,7 @@ export abstract class FormControl {
         if (this.ctrl_ === undefined) {
             return false ;
         }
-        if (this.isNear(pt.y, this.bounds.top) && pt.x >= this.bounds.left && pt.x <= this.bounds.right) {
+        if (this.isNear(pt.y, this.bounds.top) && this.isWithin(pt.x, this.bounds.left, this.bounds.right)) {
             return true ;
         }
         return false ;
@@ -88,7 +139,7 @@ export abstract class FormControl {
         if (this.ctrl_ === undefined) {
             return false ;
         }
-        if (this.isNear(pt.y, this.bounds.bottom) && pt.x >= this.bounds.left && pt.x <= this.bounds.right) {
+        if (this.isNear(pt.y, this.bounds.bottom) && this.isWithin(pt.x, this.bounds.left, this.bounds.right)) {
             return true ;
         }
         return false ;
@@ -111,18 +162,15 @@ export abstract class FormControl {
         return this.ctrl_ ;
     }
 
-    public set ctrl(ctrl: HTMLElement) {
-        this.ctrl_ = ctrl ;
+    public resetHTMLControl() {
+        if (this.ctrl_ && this.ctrl_.parentElement) {
+            this.ctrl_.parentElement.removeChild(this.ctrl_) ;
+        }
+        this.ctrl_ = undefined ;
     }
 
-    public positionUpdated() {
-        // Update the screen position of the control
-        if (this.ctrl_) {
-            this.ctrl_.style.left = (this.item_.x + this.offset.x) + 'px' ;
-            this.ctrl_.style.top = (this.item_.y + this.offset.y) + 'px' ;
-            this.ctrl_.style.width = this.item_.width + 'px' ;
-            this.ctrl_.style.height = this.item_.height + 'px' ;
-        }
+    public set ctrl(ctrl: HTMLElement) {
+        this.ctrl_ = ctrl ;
     }
 
     public clone(tag: string) : FormControl {
@@ -152,10 +200,18 @@ export abstract class FormControl {
     public abstract updateFromItem(editing: boolean, xoff?: number, yoff?: number) : void ;
 
     public createForEdit(parent: HTMLElement, xoff: number, yoff:number) : void {
+        if(this.ctrl_ !== undefined) {
+            throw new Error('Control already created') ;    
+        }
+
         this.offset_ = new XeroPoint(xoff, yoff) ;
     }
 
     public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void  {
+        if(this.ctrl_ !== undefined) {
+            throw new Error('Control already created') ;    
+        }
+                
         this.offset_ = new XeroPoint(xoff, yoff) ;
     }
 

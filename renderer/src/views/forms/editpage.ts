@@ -24,7 +24,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
     public doLayout() : void {
         for(let control of this.controls_) {
-            this.removeControlFromLayout(control) ;
+            control.resetHTMLControl() ;
             this.addControlToLayout(control) ;
         }
     }
@@ -33,28 +33,17 @@ export class XeroFormEditSectionPage extends XeroWidget {
         return this.controls_ ;
     }
 
-    public findFormControlFromHTMLElement(elem: HTMLElement) : FormControl | undefined {
-        for(let frmctrl of this.controls_) {
-            if (frmctrl.ctrl === elem) {
-                return frmctrl ;
-            }
-        }
-        return undefined ;
-    }
-
     //
     // Find a control by its form position
     //
-    public findControlByPosition(pt: XeroPoint) : HTMLElement | undefined {
-
+    public findControlByPosition(pt: XeroPoint) : FormControl | undefined {
         for(let entry of this.controls_) {
             if (entry.ctrl === undefined) {
                 continue ;
             }
 
-
             if (entry.fuzzyBounds.contains(pt)) {
-                return entry.ctrl ;
+                return entry ;
             }
         }
         return undefined ;
@@ -68,9 +57,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
     public removeControl(control: FormControl) : void {
         let index = this.controls_.indexOf(control) ;
         if (index >= 0) {
-            if (control.ctrl && control.ctrl.parentElement) {
-                control.ctrl.parentElement.removeChild(control.ctrl) ;
-            }
+            control.resetHTMLControl() ;
             this.controls_.splice(index, 1) ;
         }
     }
@@ -83,12 +70,6 @@ export class XeroFormEditSectionPage extends XeroWidget {
         this.elem.innerHTML = '' ;
         this.elem.appendChild(this.image_) ;
         this.controls_ = [] ;
-    }
-
-    private removeControlFromLayout(control: FormControl) : void {
-        if (control.ctrl && control.ctrl.parentElement) {
-            control.ctrl.parentElement.removeChild(control.ctrl) ;
-        }
     }
 
     private addControlToLayout(control: FormControl) : void {

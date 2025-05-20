@@ -16,9 +16,10 @@ export class BoxControl extends FormControl {
         height: 0,
         color: 'black',
         background: 'white',
-        borderWidth: 1,
+        borderWidth: 4,
         borderStyle: 'solid',
-        borderRadius: 0,
+        borderRadius: 8,
+        borderShadow: false,
         transparent: true,
         fontFamily: 'Arial',
         fontSize: 36,
@@ -47,6 +48,7 @@ export class BoxControl extends FormControl {
             this.box_ctrl_.style.borderWidth = item.borderWidth + 'px' ;
             this.box_ctrl_.style.borderStyle = item.borderStyle ;
             this.box_ctrl_.style.borderRadius = item.borderRadius + 'px' ;
+            this.box_ctrl_.style.boxShadow = item.borderShadow ? '10px 5px 5px lightgray' : 'none' ;
             this.box_ctrl_.style.borderCollapse = item.color ;
             if (item.transparent) {
                 this.box_ctrl_.style.backgroundColor = 'transparent' ;

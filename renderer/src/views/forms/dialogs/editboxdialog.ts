@@ -6,6 +6,7 @@ export class EditBoxDialog extends EditFormControlDialog {
     private border_style_? : HTMLSelectElement ;
     private border_width_? : HTMLInputElement ;
     private border_radius_? : HTMLInputElement ;
+    private shadow_? : HTMLInputElement ;
 
     constructor(formctrl: FormControl) {
         super('Edit Box', formctrl) ;
@@ -58,8 +59,21 @@ export class EditBoxDialog extends EditFormControlDialog {
         label.innerText = 'Border Radius' ;
         label.appendChild(this.border_radius_) ;
         div.appendChild(label) ;
+        
+        this.shadow_ = document.createElement("input");
+        this.shadow_.type = "checkbox";
+        this.shadow_.checked = item.borderShadow;
+        this.shadow_.className = "xero-popup-form-edit-dialog-checkbox";
 
-        this.populateColors(div) ;
+        label = document.createElement("label");
+        label.className = "xero-popup-form-edit-dialog-label";
+        label.innerText = "Shadow";
+        label.appendChild(this.shadow_);
+        div.appendChild(label);
+
+        div.appendChild(label) ;
+
+        this.populateForegroundColor(div) ;
         pdiv.appendChild(div) ;
     }
 
@@ -76,7 +90,6 @@ export class EditBoxDialog extends EditFormControlDialog {
         item.borderRadius = parseInt(this.border_radius_!.value) ;
         item.borderWidth = parseInt(this.border_width_!.value) ;
         item.borderStyle = this.border_style_!.value ;
-        item.background = this.background_color_!.value ;
-        item.transparent = this.transparent_!.checked ;
+        item.borderShadow = this.shadow_!.checked ;
     }
 }

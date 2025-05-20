@@ -50,8 +50,8 @@ export class XeroEditFormView extends XeroView {
     private nameToImageMap_: Map<string, string> ;
     private ctrl_menu_ : XeroPopupMenu ;
     private form_? : FormObject ;
-    private selected_ctrls_ : HTMLElement[] = [] ;
-    private highlighted_ctrl_? : HTMLElement ;
+    private selected_ctrls_ : FormControl[] = [] ;
+    private highlighted_ctrl_? : FormControl ;
     private image_names_ : string[] = [] ;
 
     private middle_text_ : string = '' ;
@@ -231,7 +231,7 @@ export class XeroEditFormView extends XeroView {
 
     private addNewMultipleChoiceCtrl() {
         if (this.tabbed_ctrl_?.selectedPage) {
-            let formctrl = new MultipleChoiceControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
+            let formctrl = new MultipleChoiceControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 150))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
@@ -545,8 +545,7 @@ export class XeroEditFormView extends XeroView {
         ev.preventDefault() ;
         let json : any[] = [] ;
 
-        for(let ctrl of this.selected_ctrls_) {
-            let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
+        for(let frmctrl of this.selected_ctrls_) {
             if (frmctrl) {
                 json.push(frmctrl.item) ;
             }
@@ -565,15 +564,16 @@ export class XeroEditFormView extends XeroView {
 
         let data = await navigator.clipboard.readText() ;
         if (data) {
+            this.unselectAll() ;
             let json = JSON.parse(data) ;
             let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
             for(let item of json) {
-                item.x += 20 ;
-                item.y += 20 ;
+                item.x += 60 ;
+                item.y += 60 ;
                 let frmctrl = this.createControlFromItem(item, page) ;
                 if (frmctrl) {
-                    this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(frmctrl) ;
                     this.addItemToCurrentSection(frmctrl.item) ;
+                    this.select(frmctrl) ;
                     this.modified() ;
                 }
             }
@@ -597,28 +597,25 @@ export class XeroEditFormView extends XeroView {
 
     private doubleClick(event: MouseEvent) {
         if (!this.edit_dialog_) {
-            let ctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(this.cursor_) ;;
-            if (ctrl) {
-                let formctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
+            let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(this.cursor_) ;
+            if (frmctrl) {
                 this.dragging_ = 'none' ;
-                if (formctrl) {
-                    let bounds = this.tabbed_ctrl_?.selectedPage!.getBoundingClientRect() ;
-                    let x = event.clientX ;
-                    let y = event.clientY ;
+                let bounds = this.tabbed_ctrl_?.selectedPage!.getBoundingClientRect() ;
+                let x = event.clientX ;
+                let y = event.clientY ;
 
-                    if (x > bounds!.left + bounds!.width - 600) {
-                        x = bounds!.left  + bounds!.width - 600 ;
-                    }
-
-                    if (y > bounds!.top + bounds!.height - 400) {
-                        y = bounds!.top + bounds!.height - 400 ;
-                    }
-
-                    this.unselectCurrent(ctrl) ;
-                    this.edit_dialog_ = formctrl.createEditDialog() ;
-                    this.edit_dialog_.showRelative(this.elem, x, y) ;
-                    this.edit_dialog_.on('closed', this.dialogClosed.bind(this)) ;
+                if (x > bounds!.left + bounds!.width - 600) {
+                    x = bounds!.left  + bounds!.width - 600 ;
                 }
+
+                if (y > bounds!.top + bounds!.height - 400) {
+                    y = bounds!.top + bounds!.height - 400 ;
+                }
+
+                this.unselectCurrent(frmctrl) ;
+                this.edit_dialog_ = frmctrl.createEditDialog() ;
+                this.edit_dialog_.showRelative(this.elem, x, y) ;
+                this.edit_dialog_.on('closed', this.dialogClosed.bind(this)) ;
             }
         }
     }
@@ -689,16 +686,14 @@ export class XeroEditFormView extends XeroView {
 
     private testMoveItem(frmctrl: FormControl, dx: number, dy: number, dw: number, dh: number) : boolean {
         if (frmctrl) {
-
-            console.log(`testMoveItem: ${frmctrl.item.tag} bounds ${frmctrl.origionalBounds} dx: ${dx} dy: ${dy} dw: ${dw} dh: ${dh}`) ;
             
             // Make sure we don't move off the screen
-            if (frmctrl.origionalBounds.x + dx  < 0 || frmctrl.origionalBounds.y + dy < 0) {
+            if (frmctrl.originalBounds.x + dx  < 0 || frmctrl.originalBounds.y + dy < 0) {
                 return false ;
             }
 
-            if (frmctrl.origionalBounds.x + dx + frmctrl.origionalBounds.width + dw > this.tabbed_ctrl_!.selectedPage!.clientWidth || 
-                        frmctrl.origionalBounds.y + dy + frmctrl.origionalBounds.height + dh > this.tabbed_ctrl_!.selectedPage!.clientHeight) {
+            if (frmctrl.originalBounds.x + dx + frmctrl.originalBounds.width + dw > this.tabbed_ctrl_!.selectedPage!.clientWidth - 10 || 
+                        frmctrl.originalBounds.y + dy + frmctrl.originalBounds.height + dh > this.tabbed_ctrl_!.selectedPage!.clientHeight -10) {
                 return false; 
             }
         }
@@ -707,9 +702,8 @@ export class XeroEditFormView extends XeroView {
     }
 
     private testMoveSelectedItems(dx: number, dy: number, dw: number, dh: number) : boolean {
-        for(let ctrl of this.selected_ctrls_) {
-            let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-            if (frmctrl && !this.testMoveItem(frmctrl, dx, dy, dw, dh)) {
+        for(let frmctrl of this.selected_ctrls_) {
+            if (!this.testMoveItem(frmctrl, dx, dy, dw, dh)) {
                 return false ;
             }
         }
@@ -722,32 +716,19 @@ export class XeroEditFormView extends XeroView {
                 return ;
             }
 
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    let x = parseInt(ctrl.style.left) ;
-                    let y = parseInt(ctrl.style.top) ;
-
-                    // Offset the control on the screen
-                    ctrl.style.left = (x + dx) + 'px' ;
-                    ctrl.style.top = (y + dy) + 'px' ;
-
-                    // Offset the control in the form object
-                    frmctrl.item.x += dx ;
-                    frmctrl.item.y += dy ;
-                    this.modified() ;
-
-                    this.displayMiddleBar() ;
-                }
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.x += dx ;
+                frmctrl.item.y += dy ;
+                frmctrl.positionUpdated() ;
+                this.modified() ;
+                this.displayMiddleBar() ;
             }
         }
     }    
 
     private deleteSelectedItems() {
         if (this.selected_ctrls_.length > 0 && this.form_) {
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
+            for(let frmctrl of this.selected_ctrls_) {
                     let section = this.form_.sections[this.tabbed_ctrl_!.selectedPageNumber] ;
                     let index = section.items.indexOf(frmctrl.item) ;
                     if (index !== -1) {
@@ -756,7 +737,6 @@ export class XeroEditFormView extends XeroView {
                         this.dragging_ = 'none' ;
                         this.modified() ;
                     }
-                }
             }
 
             this.selected_ctrls_ = [] ;
@@ -767,7 +747,7 @@ export class XeroEditFormView extends XeroView {
         if (this.tabbed_ctrl_!.selectedPageNumber !== -1) {
             let ctrls = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].controls
             for(let ctrl of ctrls) {
-                this.select(ctrl.ctrl!) ;
+                this.select(ctrl) ;
             }
         }
     }
@@ -780,24 +760,21 @@ export class XeroEditFormView extends XeroView {
         this.selected_ctrls_ = [] ;
     }
 
-    private unselectCurrent(ctrl: HTMLElement) {
-        if (ctrl) {
-            ctrl.style.border = 'none' ;
-            ctrl.style.margin = '4px' ;
-            this.dragging_ = 'none' ;
-            let index = this.selected_ctrls_.indexOf(ctrl) ;
+    private unselectCurrent(frmctrl: FormControl) {
+        if (frmctrl) {
+            if (frmctrl.ctrl) {
+                let ctrl = frmctrl.ctrl ;
+                ctrl.style.border = 'none' ;
+                ctrl.style.margin = '4px' ;
+                this.dragging_ = 'none' ;
+            }
+            let index = this.selected_ctrls_.indexOf(frmctrl) ;
             this.selected_ctrls_.splice(index, 1) ;
         }
     }
     
     private mouseMoveControlsSelected() {
-        let ctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(this.cursor_) ;
-        if (ctrl === undefined) {
-            this.elem.style.cursor = 'default' ;
-            return ;
-        }
-
-        let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
+        let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(this.cursor_) ;
         if (frmctrl === undefined) {
             this.elem.style.cursor = 'default' ;
             return ;
@@ -851,11 +828,15 @@ export class XeroEditFormView extends XeroView {
             let str = `Location: ${this.cursor_.x.toFixed(1)}, ${this.cursor_.y.toFixed(1)}` ;
             
             if (this.selected_ctrls_.length === 1) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;
+                let frmctrl = this.selected_ctrls_[0] ;
                 if (frmctrl) {
                     str += `, Control: ${frmctrl!.item.x.toFixed(1)},${frmctrl!.item.y.toFixed(1)} ${frmctrl!.item.width.toFixed(1)}x${frmctrl!.item.height.toFixed(1)}` ;
                 }
             }
+            else {
+                str += `, Selected: ${this.selected_ctrls_.length}` ;
+            }
+
             this.setMiddleStatusBarText(str) ;
         }
         else {
@@ -877,20 +858,20 @@ export class XeroEditFormView extends XeroView {
             dh = -dxy.y ;
         }
         else if (this.dragging_ === 'urcorner') {
-            dx = dxy.x ;
+            dx = 0 ;
             dy = dxy.y ;
             dw = dxy.x ;
             dh = -dxy.y ;
         }
         else if (this.dragging_ === 'llcorner') {
             dx = dxy.x ;
-            dy = dxy.y ;
+            dy = 0 ;
             dw = -dxy.x ;
             dh = dxy.y ;
         }
         else if (this.dragging_ === 'lrcorner') {
-            dx = dxy.x ;
-            dy = dxy.y ;
+            dx = 0 ;
+            dy = 0 ;
             dw = dxy.x ;
             dh = dxy.y ;
         }
@@ -924,12 +905,7 @@ export class XeroEditFormView extends XeroView {
 
     private testMoveResize(deltas: [number, number, number, number]) : boolean {
         let [dx, dy, dw, dh] = deltas ;
-        for(let ctrl of this.selected_ctrls_) {
-            let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-            if (!frmctrl || !frmctrl.item) {
-                return false ;
-            }
-
+        for(let frmctrl of this.selected_ctrls_) {
             if (!this.testMoveItem(frmctrl, dx, dy, dw, dh)) {
                 return false ;
             }
@@ -977,16 +953,29 @@ export class XeroEditFormView extends XeroView {
 
         if (!this.testMoveResize(ret)) {
             // We are trying to resize/move the control off the screen
-            console.log('Cannot move/resize off screen') ;
             return ;
         }
 
         let [dx, dy, dw, dh] = ret ;
         for(let frmctrl of this.changing_) {
-            frmctrl.item.x = frmctrl.origionalBounds.x + dx ;
-            frmctrl.item.y = frmctrl.origionalBounds.y + dy ;
-            frmctrl.item.width = frmctrl.origionalBounds.width + dw ;
-            frmctrl.item.height = frmctrl.origionalBounds.height + dh ;
+            frmctrl.item.x = frmctrl.originalBounds.x + dx ;
+            frmctrl.item.y = frmctrl.originalBounds.y + dy ;
+
+            if (frmctrl.originalBounds.width + dw > FormControl.kMinimumWidth) {
+                frmctrl.item.width = frmctrl.originalBounds.width + dw ;
+            }
+            else {
+                frmctrl.item.width = FormControl.kMinimumWidth ;
+            }
+
+            if (frmctrl.originalBounds.height + dh > FormControl.kMinimumHeight) {
+                frmctrl.item.height = frmctrl.originalBounds.height + dh ;
+            }
+            else {
+                frmctrl.item.height = FormControl.kMinimumHeight ;
+            }
+
+            frmctrl.item.height = frmctrl.originalBounds.height + dh ;
             frmctrl.positionUpdated() 
             
             this.dragToCursorStyle() ;
@@ -1001,7 +990,6 @@ export class XeroEditFormView extends XeroView {
     }   
 
     private mouseMove(event: MouseEvent) {
-
         if (this.tabbed_ctrl_?.selectedPageNumber === -1) {
             //
             // There are no sections, so we cannot do anything
@@ -1011,7 +999,11 @@ export class XeroEditFormView extends XeroView {
             return ;
         }
 
-        if (!document.hasFocus() || this.edit_dialog_ !== undefined || this.popup_menu_ !== undefined) {
+        if (!document.hasFocus()) {
+            return ;
+        }
+
+        if (this.edit_dialog_ !== undefined || this.popup_menu_ !== undefined) {
             return ;
         }        
 
@@ -1059,45 +1051,33 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
-    private select(ctrl: HTMLElement) {
-        if (ctrl === this.highlighted_ctrl_) {
+    private select(frmctrl: FormControl) {
+        if (frmctrl === this.highlighted_ctrl_) {
             this.unhighlight() ;
         }
 
-        if (this.selected_ctrls_.indexOf(ctrl) !== -1) {
+        if (this.selected_ctrls_.indexOf(frmctrl) !== -1) {
             return ;
         }
 
-        let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-        if (!frmctrl) {
-            return ;
-        }
-
-        ctrl.style.borderStyle = 'solid' ;
-        ctrl.style.borderWidth = '4px' ;
-        ctrl.style.borderColor = 'red' ;
-        ctrl.style.margin = '0px' ;
-        this.selected_ctrls_.push(ctrl) ;
+        frmctrl.displayStyle = 'selected' ;
+        this.selected_ctrls_.push(frmctrl) ;
     }
 
     private unhighlight() {
         if (this.highlighted_ctrl_) {
-            this.highlighted_ctrl_.style.border = 'none' ;
-            this.highlighted_ctrl_.style.margin = '4px' ;
+            this.highlighted_ctrl_.displayStyle = 'none' ;
             this.highlighted_ctrl_ = undefined ;
         }
     }
 
-    private highlight(ctrl: HTMLElement | undefined) {
+    private highlight(ctrl: FormControl | undefined) {
         if (this.highlighted_ctrl_ !== ctrl) {
             this.unhighlight() ;
         }
 
         if(ctrl && this.selected_ctrls_.indexOf(ctrl) === -1) {
-            ctrl.style.borderStyle = 'dashed' ;
-            ctrl.style.borderWidth = '4px' ;
-            ctrl.style.borderColor = 'red' ;
-            ctrl.style.margin = '0px' ;
+            ctrl.displayStyle = 'highlighted' ;
             this.highlighted_ctrl_ = ctrl ;
         }
     }
@@ -1126,22 +1106,18 @@ export class XeroEditFormView extends XeroView {
             for(let ctrl of this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].controls) {
                 if (ctrl.ctrl) {
                     if (selectArea.intersects(ctrl.bounds)) {
-                        this.select(ctrl.ctrl) ;
+                        this.select(ctrl) ;
                     }
                 }
             }
         }
     }
 
-
     private stopAreaSelect() {
         if (this.area_select_div) {
             let page = this.tabbed_ctrl_!.selectedPage! ;
             if (page.contains(this.area_select_div)) {
                 page.removeChild(this.area_select_div) ;
-            }
-            else {
-                console.log('stopAreaSelect: area_select_div not in page') ;
             }
             this.area_select_div = undefined ;
         }
@@ -1198,18 +1174,12 @@ export class XeroEditFormView extends XeroView {
             if (!event.shiftKey) {
                 this.unselectAll() ;
             }
-
             this.select(ctrl) ;
         }
         else {
             this.changing_ = [] ;
             
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (!frmctrl) {
-                    continue ;
-                }
-
+            for(let frmctrl of this.selected_ctrls_) {
                 let [top, left, bottom, right] = frmctrl.getEdgeFlags(this.cursor_) ;
 
                 if (top && left) {
@@ -1381,16 +1351,11 @@ export class XeroEditFormView extends XeroView {
         }        
 
         if (this.selected_ctrls_.length > 1) {
-            let first = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;
-            if (!first) {
-                return ;
-            }
-
+            let first = this.selected_ctrls_[0] ;
             let top = first.bounds.y ;
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                frmctrl!.item.y = top ;
-                frmctrl?.positionUpdated() ;
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.y = top ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1406,13 +1371,10 @@ export class XeroEditFormView extends XeroView {
         }  
 
         if (this.selected_ctrls_.length > 1) {
-            let first = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.x = first!.bounds.left ;
-                    frmctrl.positionUpdated() ;
-                }
+            let first = this.selected_ctrls_[0] ;
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.x = first!.bounds.left ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1428,15 +1390,12 @@ export class XeroEditFormView extends XeroView {
         }  
 
         if (this.selected_ctrls_.length > 1) {
-            let first = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;
+            let first = this.selected_ctrls_[0] ;
             let right = first!.bounds.right ;
 
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.x = right - frmctrl.item.width ;
-                    frmctrl.positionUpdated() ;
-                }
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.x = right - frmctrl.item.width ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1452,15 +1411,12 @@ export class XeroEditFormView extends XeroView {
         }  
 
         if (this.selected_ctrls_.length > 1) {
-            let first = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;
+            let first = this.selected_ctrls_[0] ;
             let bottom = first!.bounds.bottom ;
 
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.y = bottom - frmctrl.item.height ;
-                    frmctrl.positionUpdated() ;
-                }
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.y = bottom - frmctrl.item.height ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1476,15 +1432,12 @@ export class XeroEditFormView extends XeroView {
         }
 
         if (this.selected_ctrls_.length > 1) {
-            let first = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;
+            let first = this.selected_ctrls_[0] ;
             let center = first!.bounds.top + first!.bounds.height / 2 ;
 
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.y = center - frmctrl.item.height / 2 ;
-                    frmctrl.positionUpdated() ;
-                }
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.y = center - frmctrl.item.height / 2 ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1500,14 +1453,11 @@ export class XeroEditFormView extends XeroView {
         }  
 
         if (this.selected_ctrls_.length > 1) {
-            let first = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(this.selected_ctrls_[0]) ;            
+            let first = this.selected_ctrls_[0] ;            
             let middle = first!.bounds.left + first!.bounds.width / 2 ;
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.x = middle - frmctrl.item.width / 2 ;
-                    frmctrl.positionUpdated() ;
-                }
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.x = middle - frmctrl.item.width / 2 ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1523,13 +1473,10 @@ export class XeroEditFormView extends XeroView {
         }  
 
         if (this.selected_ctrls_.length > 1) {
-            let width = this.selected_ctrls_[0].offsetWidth ;
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.width = width ;
-                    frmctrl.positionUpdated() ;
-                }
+            let width = this.selected_ctrls_[0].bounds.width ;
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.width = width ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
@@ -1545,13 +1492,10 @@ export class XeroEditFormView extends XeroView {
         }  
 
         if (this.selected_ctrls_.length > 1) {
-            let height = this.selected_ctrls_[0].offsetHeight ;
-            for(let ctrl of this.selected_ctrls_) {
-                let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findFormControlFromHTMLElement(ctrl) ;
-                if (frmctrl) {
-                    frmctrl.item.height = height ;
-                    frmctrl.positionUpdated() ;
-                }
+            let height = this.selected_ctrls_[0].bounds.height ;
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.height = height ;
+                frmctrl.positionUpdated() ;
             }
             this.modified() ;
         }
