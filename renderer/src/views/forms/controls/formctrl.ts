@@ -12,7 +12,6 @@ export abstract class FormControl {
     private origional_bounds_? : XeroRect ;
     private offset_? : XeroPoint ;
     
-
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
         this.view_ = view ;
