@@ -1167,7 +1167,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private mouseDown(event: MouseEvent) {
-        if (this.edit_dialog_ || this.popup_menu_ || event.button !== 0 || this.tabbed_ctrl_!.selectedPageNumber === -1) {
+        if (this.edit_dialog_ || this.popup_menu_ || event.button !== 0) {
             return ;
         }
 
@@ -1175,6 +1175,9 @@ export class XeroEditFormView extends XeroView {
         if (!XeroWidget.isChildOf(page, event.target as HTMLElement)) {
             return ;
         }
+
+        event.preventDefault() ;
+        event.stopPropagation() ;
 
         let ctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlByPosition(this.cursor_) ;
         if (ctrl === undefined) {
