@@ -117,6 +117,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-form',
         'send-images',
         'send-image-data',
+        'send-form-image',
         'send-initial-values',
         'send-team-status',
         'send-match-status',

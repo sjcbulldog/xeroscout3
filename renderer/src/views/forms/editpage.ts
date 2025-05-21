@@ -36,17 +36,39 @@ export class XeroFormEditSectionPage extends XeroWidget {
     //
     // Find a control by its form position
     //
-    public findControlByPosition(pt: XeroPoint) : FormControl | undefined {
+    public findControlsByPosition(pt: XeroPoint) : FormControl[] {
+        let ret : FormControl[] = [] ;
         for(let entry of this.controls_) {
             if (entry.ctrl === undefined) {
                 continue ;
             }
 
             if (entry.fuzzyBounds.contains(pt)) {
-                return entry ;
+                ret.push(entry) ;
             }
         }
-        return undefined ;
+
+        ret.sort((a, b) => {
+            if (a.bounds.width * a.bounds.height > b.bounds.width * b.bounds.height) {
+                return -1 ;
+            } else if (a.bounds.width * a.bounds.height < b.bounds.width * b.bounds.height) {
+                return 1 ;
+            }
+            if (a.bounds.left < b.bounds.left) {
+                return -1 ;
+            }
+            if (a.bounds.left > b.bounds.left) {
+                return 1 ;
+            }
+            if (a.bounds.top < b.bounds.top) {
+                return -1 ;
+            }
+            if (a.bounds.top > b.bounds.top) {
+                return 1 ;
+            }
+            return 0 ;
+        }) ;    
+        return ret ;
     }    
 
     public addControl(control: FormControl) : void {

@@ -50,7 +50,7 @@ export class ImageManager {
         return undefined ;
     }
 
-    public addImage(imagePath : string) : boolean {
+    public addImage(imagePath : string) : boolean | string {
         // Add an image to the image directory
         if (this.imagedir_) {
             let name = path.basename(imagePath) ;
@@ -58,7 +58,7 @@ export class ImageManager {
             const destPath = path.join(this.imagedir_, name) ;
             fs.copyFileSync(imagePath, destPath) ;
             this.imagemap_.set(mname, destPath) ;
-            return true ;
+            return mname ;
         }
         return false ;
     }

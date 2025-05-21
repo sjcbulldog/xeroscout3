@@ -24,6 +24,10 @@ export class XeroPoint {
         return new XeroPoint(this.x - p.x, this.y - p.y);
     }
 
+    public distance(p: XeroPoint): number {
+        return Math.sqrt((this.x - p.x) ** 2 + (this.y - p.y) ** 2);
+    }
+
     public static fromDOMPoint(point: DOMPoint): XeroPoint { 
         return new XeroPoint(point.x, point.y);
     }

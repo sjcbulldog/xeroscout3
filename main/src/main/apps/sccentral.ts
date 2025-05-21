@@ -567,8 +567,18 @@ export class SCCentral extends SCBase {
 			]
 		}).then(result => {	
 			if (!result.canceled) {
-				this.image_mgr_.addImage(result.filePaths[0]) ;
-				this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
+				let name = this.image_mgr_.addImage(result.filePaths[0]) ;
+				if (typeof name === 'string') {
+					this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
+					this.sendImageData(name) ;
+					this.sendToRenderer("send-form-image", name) ;
+				}
+				else {
+					dialog.showErrorBox(
+						'Error',
+						'Error loading external image, no image directory set'
+					);					
+				}
 			}
 		}) ;		
 	}

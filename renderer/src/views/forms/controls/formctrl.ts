@@ -100,7 +100,6 @@ export abstract class FormControl {
     }
 
     private isWithin(pt: number, minv: number, maxv: number) {
-        console.log(`compare ${pt} ${minv - FormControl.fuzzyEdgeSpacing} ${maxv + FormControl.fuzzyEdgeSpacing}` )
         return pt > minv - FormControl.fuzzyEdgeSpacing && pt < maxv + FormControl.fuzzyEdgeSpacing ;
     }
 

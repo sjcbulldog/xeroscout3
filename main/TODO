@@ -9,6 +9,9 @@ Status is not working
 
 Central
 -------
+View: Form editor
+      - undo
+      - select when controls completely contain controls
 View: team status view
 View: team database view
       add conditional formatting
