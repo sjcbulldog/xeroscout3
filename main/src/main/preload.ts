@@ -81,7 +81,10 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 
         'get-single-team-data',
         'update-single-team-data',
-        'get-single-team-fields'
+        'get-single-team-fields',
+
+        'get-hint-db',
+        'set-hint-hidden',
       ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -149,7 +152,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-picklist-col-data',
         'send-picklist-notes',
         'send-single-team-data',
-        'send-single-team-fields'
+        'send-single-team-fields',
+        'send-hint-db'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));

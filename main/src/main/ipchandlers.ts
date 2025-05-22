@@ -813,6 +813,32 @@ export async function getSingleTeamData(cmd: string, ...args: any[]) {
     } 
 }
 
+export async function getHintDB(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        if (args.length === 0) {
+            let central : SCCentral = scappbase as SCCentral ;
+            central.sendHintDB() ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
+export async function setHintHidden(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'string') {       
+            central.setHintHidden(args[0] as string) ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    } 
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 export async function clientLog(cmd: string, ...args: any[]) {
     if (scappbase) {

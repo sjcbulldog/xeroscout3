@@ -15,7 +15,7 @@ export class ProjectInfo {
     public name_? : string ;                                            // The name of this event if a non-BA event (i.e. frcev_ === null)
     public locked_ : boolean ;                                          // If true, the event is locked and ready for scouting
 
-
+    public hidden_hints_: string[] = [] ;                                // The list of hints that are hidden
     public data_info_ : DataInfo = new DataInfo() ;                     // The data information for the project
     public dataset_info_ : DataSetInfo = new DataSetInfo() ;            // The data set information for the project
     public picklist_info_ : PickListData = new PickListData() ;         // The picklist information for the project

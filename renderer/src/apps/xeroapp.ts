@@ -17,6 +17,7 @@ import {   StatusOverlay   } from "../status/StatusOverlay.js";
 import {   XeroTeamDatabaseView   } from "../views/teamdbview.js";
 import {   XeroMatchDatabaseView   } from "../views/matchdbview.js";
 import {   IPCSetStatus, IPCSetView   } from "../ipc.js";
+import { HintManager } from "../hintmgr.js";
 
 document.addEventListener('DOMContentLoaded', function () {
     let mainapp = new XeroApp() ;
@@ -31,10 +32,15 @@ export class XeroApp extends XeroMainProcessInterface {
     private right_view_pane_ : XeroWidget ;
     private current_view_ : XeroView | undefined ;
 
+    private hintdb_ : HintManager ;
+
     private status_overlay_ : StatusOverlay ;
 
     constructor() {
         super() ;
+
+        this.hintdb_ = new HintManager() ;
+
         let body = document.getElementsByTagName("body")[0] ;
 
         this.left_nav_pane_ = new XeroNav() ;
@@ -56,6 +62,10 @@ export class XeroApp extends XeroMainProcessInterface {
 
     public get statusBar() {
         return this.status_.statusBar() ;
+    }
+
+    public get hintDB() {
+        return this.hintdb_ ;
     }
 
     private updateStatusBar(args: IPCSetStatus) {

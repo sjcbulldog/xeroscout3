@@ -10,9 +10,7 @@ import * as uuid from 'uuid' ;
 import * as winston from 'winston' ;
 
 import { BlueAlliance } from '../extnet/ba';
-import { TeamDataModel } from '../model/teammodel';
-import { MatchDataModel } from '../model/matchmodel';
-import { BAEvent, BAMatch, BATeam } from '../extnet/badata';
+import { BAEvent } from '../extnet/badata';
 import { StatBotics } from '../extnet/statbotics';
 import { DataGenerator } from './datagen';
 import { ProjectInfo } from './projectinfo';
@@ -26,6 +24,7 @@ import { TabletData, TabletManager } from './tabletmgr';
 import { ManualMatchData, MatchManager } from './matchmgr';
 import { ScoutingData } from '../comms/resultsifc';
 import { GraphManager } from './graphmgr';
+import { IPCHint } from '../../shared/ipc';
 
 export class Project {
     private static readonly keepLotsOfBackups = true ;
@@ -33,6 +32,7 @@ export class Project {
 
     private location_ : string ;
     private info_? : ProjectInfo ;
+    private hint_db_? : IPCHint[] ;
 
     private logger_ : winston.Logger ;
 
@@ -72,7 +72,9 @@ export class Project {
 
         let ret = new Promise<void>((resolve, reject) => {
             this.data_mgr_!.init()
-                .then(() => { resolve() ; })
+                .then(() => { 
+                    resolve() ; 
+                })
                 .catch((err) => {
                     this.logger_.error('Error initializing data manager', err) ;
                     reject(err) ;
@@ -101,6 +103,50 @@ export class Project {
 
     public get location() : string {
         return this.location_ ;
+    }
+
+    public setHintHidden(hint: string) {
+        if (this.info_) {
+            if (this.info_.hidden_hints_.indexOf(hint) === -1) {
+                this.info_.hidden_hints_.push(hint) ;
+                this.writeEventFile() ;
+            }
+
+            if (this.hint_db_) {
+                for(let hintdb of this.hint_db_) {
+                    if (hintdb.id === hint) {
+                        hintdb.hidden = true ;
+                    }
+                }
+            }
+        }
+    }
+
+    public getHintDb(contentdir: string) : any {
+        if (!this.hint_db_) {
+            let hintfile = path.join(contentdir, 'json', 'hintdb.json') ;
+            if (fs.existsSync(hintfile)) {
+                try {
+                    const rawData = fs.readFileSync(hintfile, 'utf-8');
+                    this.hint_db_ = JSON.parse(rawData) as IPCHint[] ;
+
+                    for(let hint of this.hint_db_) {
+                        if (this.info_ && this.info_.hidden_hints_.indexOf(hint.id) !== -1) {
+                            hint.hidden = true ;
+                        }
+                        else {
+                            hint.hidden = false ;
+                        }
+                    }
+                }
+                catch(err) {
+                    this.logger_.error('Error reading hint database', err) ;
+                    this.hint_db_ = [] ;
+                }
+            }
+        }
+
+        return this.hint_db_ ;
     }
 
     public generateRandomData() {
@@ -333,6 +379,10 @@ export class Project {
             try {
                 const rawData = fs.readFileSync(projfile, 'utf-8');
                 ret = JSON.parse(rawData) as ProjectInfo ;
+
+                if (ret.hidden_hints_ === undefined) {
+                    ret.hidden_hints_ = [] ;
+                }
             }
             catch(err) {
                 ret = err as Error ;

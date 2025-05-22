@@ -113,3 +113,9 @@ export interface IPCProjColumnsConfig
     columns: IPCProjectColumnCfg[],
     frozenColumnCount: number,
 } ;
+
+export interface IPCHint {
+    id: string,
+    text: string,
+    hidden: boolean
+}

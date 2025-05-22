@@ -139,6 +139,7 @@ export class SCCentral extends SCBase {
 			.then((p) => {
 				this.addRecent(p.location);
 				this.project_ = p;
+				this.sendHintDB() ;
 				this.updateMenuState(true);
 				if (this.project_.info?.locked_) {
 					this.startSyncServer();
@@ -307,6 +308,7 @@ export class SCCentral extends SCBase {
 							.then((p) => {
 								this.addRecent(p.location);
 								this.project_ = p;
+								this.sendHintDB() ;
 								this.updateMenuState(true);
 								if (this.project_  && this.project_.isLocked()) {
 									this.startSyncServer();
@@ -1804,6 +1806,7 @@ export class SCCentral extends SCBase {
 						.then((p) => {
 							this.addRecent(p.location);
 							this.project_ = p;
+							this.sendHintDB() ;
 							this.updateMenuState(true);
 							this.setView("info");
 						})
@@ -1959,6 +1962,7 @@ export class SCCentral extends SCBase {
 						.then((p) => {
 							this.addRecent(p.location);
 							this.project_ = p;
+							this.sendHintDB() ;
 							this.updateMenuState(true);
 							if (this.project_.info?.locked_) {
 								this.startSyncServer();
@@ -2651,4 +2655,16 @@ export class SCCentral extends SCBase {
 		return data ;
 	}
 
+	public sendHintDB(){
+		if (this.project_ && this.project_.isInitialized()) {
+			let db = this.project_!.getHintDb(this.content_dir_) ;
+			this.sendToRenderer('send-hint-db', db) ;
+		}
+	}
+
+	public setHintHidden(id: string) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.setHintHidden(id) ;
+		}
+	}
 }

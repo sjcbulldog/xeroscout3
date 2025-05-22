@@ -665,7 +665,10 @@ export class XeroEditFormView extends XeroView {
 
     private onGlobalKey(event: KeyboardEvent) {
         if (!this.edit_dialog_) {
-            if (event.key === 'Delete') {
+            if (event.key === 'Tab') {
+                this.selectFurther() ;
+            }
+            else if (event.key === 'Delete') {
                 this.deleteSelectedItems() ;
             }
             else if (event.key === 'Escape') {
@@ -1042,6 +1045,12 @@ export class XeroEditFormView extends XeroView {
             return ;
         }
 
+        //
+        // Set the cursor position to form coordinates (0, 0) is the top left
+        // of the form.
+        //
+        this.cursor_ = this.pageToForm(event.pageX, event.pageY) ;        
+
         if (!document.hasFocus()) {
             return ;
         }
@@ -1049,12 +1058,6 @@ export class XeroEditFormView extends XeroView {
         if (this.edit_dialog_ !== undefined || this.popup_menu_ !== undefined) {
             return ;
         }        
-
-        //
-        // Set the cursor position to form coordinates (0, 0) is the top left
-        // of the form.
-        //
-        this.cursor_ = this.pageToForm(event.pageX, event.pageY) ;
 
         //
         // Find any control under the cursor 
@@ -1076,18 +1079,14 @@ export class XeroEditFormView extends XeroView {
             //
             // Its ok if ctrl is undefined, highlight() handles this correctly
             //
-            for(let ctrl of ctrls) {
-                this.highlight(ctrl) ;
-            }
+            this.highlight(ctrls[ctrls.length - 1]) ;
             this.elem.style.cursor = 'default' ;
         }
         else if (this.dragging_ === 'none') {
             //
             // We have selected controls, but we are not dragging them
             //
-            for(let ctrl of ctrls) {
-                this.highlight(ctrl) ;
-            }          
+            this.highlight(ctrls[ctrls.length - 1]) ;
             this.mouseMoveControlsSelected() ;
         }
         else {
@@ -1111,33 +1110,36 @@ export class XeroEditFormView extends XeroView {
         this.selected_ctrls_.push(frmctrl) ;
     }
 
-    private selectByPoint() {
-        if (this.cursor_.distance(this.last_select_point_) < XeroEditFormView.kSelectSameSpot) {
-            if (this.select_group_.length > 1) {
-                //
-                // Cycle through the controls that are under the cursor
-                // and select the next one
-                //
-                this.unselectCurrent(this.select_group_[this.last_select_index_]) ;
-                this.last_select_index_++ ;
-                if (this.last_select_index_ >= this.select_group_.length) {
-                    this.last_select_index_ = 0 ;
-                }
-                this.select(this.select_group_[this.last_select_index_]) ;
+    private selectFurther() {
+        if (this.select_group_.length > 1) {
+            //
+            // Cycle through the controls that are under the cursor
+            // and select the next one
+            //
+            this.unselectCurrent(this.select_group_[this.last_select_index_]) ;
+            this.last_select_index_++ ;
+            if (this.last_select_index_ >= this.select_group_.length) {
+                this.last_select_index_ = 0 ;
             }
-        }
-        else {
-            //
-            // The mouse has moved, so select previous select groups is no longer valid
-            // and we need to create a new select group
-            //
-            let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
-            this.select_group_ = page.findControlsByPosition(this.cursor_) ;
-            this.last_select_index_ = 0 ;
+            this.select(this.select_group_[this.last_select_index_]) ;
+        }        
+    }
 
-            if(this.select_group_.length > 0) {
-                this.select(this.select_group_[0]) ;
-            }
+    private selectByPoint() {
+        //
+        // The mouse has moved, so select previous select groups is no longer valid
+        // and we need to create a new select group
+        //
+        let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
+        this.select_group_ = page.findControlsByPosition(this.cursor_) ;
+        this.last_select_index_ = 0 ;
+        if(this.select_group_.length > 0) {
+            this.select(this.select_group_[0]) ;
+        }
+
+        if (this.select_group_.length > 1) {
+            let pt = new XeroPoint(this.cursor_.x + 30, this.cursor_.y + 30) ;
+            this.displayHint('edit-form-multi-select', pt) ;
         }
     }
 

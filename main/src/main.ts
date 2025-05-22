@@ -10,7 +10,9 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getTeamList, saveTeamGraphSetup, getMatchList, getStoredGraphList, deleteStoredGraph, getForm, getPicklistData, getPicklistList,
          createNewPicklist, deletePicklist, clientLog, updatePicklistNotes, getPicklistNotes, getSingleTeamData, getFormulas, deleteFormula,
          renameFormula, updateFormula, getDataSets, updateDataSet, deleteDataSet, renameDataSet, getTeamFieldList, getMatchFieldList,
-         saveForm, getImages, importImage, getImageData, updatePicklistColumns, updatePicklistData, getPicklistColumns, getPicklistColData} from "./main/ipchandlers" ;
+         saveForm, getImages, importImage, getImageData, updatePicklistColumns, updatePicklistData, getPicklistColumns, getPicklistColData,
+         getHintDB,
+         setHintHidden} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -178,6 +180,8 @@ app.on("ready", () => {
     ipcMain.on('get-picklist-col-data', (event, ...args) => { getPicklistColData('get-picklist-col-data', ...args)}) ;
     ipcMain.on('client-log', (event, ...args) => { clientLog('client-log', ...args)}) ;
     ipcMain.on('get-single-team-data', (event, ...args) => { getSingleTeamData('get-single-team-data', ...args)}) ;
+    ipcMain.on('get-hint-db', (event, ...args) => { getHintDB('get-hint-db', ...args)}) ;
+    ipcMain.on('set-hint-hidden', (event, ...args) => { setHintHidden('get-hint-db', ...args)}) ;
     createWindow() ;
 }) ;
 
