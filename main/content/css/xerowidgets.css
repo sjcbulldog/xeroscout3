@@ -162,10 +162,11 @@
 
 .xero-popup-top {
 	z-index: 1010 ;
-	width: 200px ;
-	height: 200px ;
+	width: 400px ;
+	height: auto ;
 	background-color: rgb(230, 230, 230);
 	position: absolute ;
+	border-radius: 20px;
 
 	opacity: 1;
 	animation-name: fadeInOpacity;
@@ -188,13 +189,12 @@
 	height: 100%;
 	display: flex;
 	flex-direction: column;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .xero-popup-title {
 	font-size: 20px ;
 	flex-grow: 0 ;
-	color: white ;
-	background-color: blue ;
 	display: flex ;
 }
 
@@ -205,9 +205,6 @@
 .xero-popup-title-close {
 	flex-grow: 0;
 	cursor: pointer;
-	padding: 5px;
-	background-color: blue ;
-	color: white ;
 	font-size: 20px ;
 }
 
@@ -222,5 +219,5 @@
 }
 
 .xero-popup-checkbox {
-	padding-left: 5px;
+	margin-left: 10px;
 }

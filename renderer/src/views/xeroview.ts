@@ -12,7 +12,7 @@ export class XeroView extends XeroWidget {
         super('div', cname) ;
         this.app_ = app ;
         this.hint_popup_ = new XeroPopup() ;
-        this.hint_popup_.on('set-hint-hidden', this.hintClosed.bind(this)) ;    
+        this.hint_popup_.on('popup-closed', this.hintClosed.bind(this)) ;    
     }
 
     public get app() : XeroApp {
@@ -29,7 +29,7 @@ export class XeroView extends XeroWidget {
 
     private hintClosed(hidden: boolean) {
         if (hidden) {
-            this.request('set-hint-hidden', this.hintid_) ;
+            this.app_.hintDB.setHintClosed(this.hintid_!) ;
         }
     }
 

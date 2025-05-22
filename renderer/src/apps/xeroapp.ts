@@ -39,6 +39,7 @@ export class XeroApp extends XeroMainProcessInterface {
     constructor() {
         super() ;
 
+        console.log("XeroApp: constructor") ;
         this.hintdb_ = new HintManager() ;
 
         let body = document.getElementsByTagName("body")[0] ;

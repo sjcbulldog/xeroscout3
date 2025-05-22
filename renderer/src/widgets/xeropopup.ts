@@ -53,7 +53,7 @@ export class XeroPopup extends EventEmitter {
     }
 
     showPopup(parent: HTMLElement, title: string, text: string, chkbox: string, pt: XeroPoint) {
-        this.popup_title_text_.innerHTML = title ;
+        this.popup_title_text_.innerHTML = ''; 
         this.popup_text_.innerHTML = text ;
         this.chkbox_label_.innerHTML = chkbox ;
         this.chkbox_label_.appendChild(this.chkbox_) ;

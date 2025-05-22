@@ -1138,7 +1138,7 @@ export class XeroEditFormView extends XeroView {
         }
 
         if (this.select_group_.length > 1) {
-            let pt = new XeroPoint(this.cursor_.x + 30, this.cursor_.y + 30) ;
+            let pt = new XeroPoint(this.cursor_.x, this.cursor_.y) ;
             this.displayHint('edit-form-multi-select', pt) ;
         }
     }
