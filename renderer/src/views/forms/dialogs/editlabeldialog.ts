@@ -43,4 +43,15 @@ export class EditLabelDialog extends EditFormControlDialog {
         item.background = this.background_color_!.value ;
         item.transparent = this.transparent_!.checked ;
     }
+
+    setFocus() {
+        if (this.text_string_) {
+            this.text_string_.focus() ;
+            this.text_string_.select() ;
+        }
+    }
+
+    onInit() {
+        setTimeout(this.setFocus.bind(this), 100) ;
+    }    
 }

@@ -2,12 +2,18 @@ import { IPCSection } from "../../../ipc.js";
 import { XeroDialog } from "../../../widgets/xerodialog.js" ;
 
 export class EditSectionNameDialog extends XeroDialog {
-    private section_: IPCSection ;
     private section_name_?: HTMLInputElement ;
 
-    constructor(section: IPCSection) {
+    private oldname_ : string ;
+    private newname_ : string = '' ;
+
+    constructor(oldname: string) {
         super('Edit Section Name') ;
-        this.section_ = section ;
+        this.oldname_ = oldname ;
+    }
+
+    public get enteredName() : string {
+        return this.newname_ ;
     }
 
     async populateDialog(pdiv: HTMLDivElement) {
@@ -17,7 +23,7 @@ export class EditSectionNameDialog extends XeroDialog {
         this.section_name_ = document.createElement('input') ;
         this.section_name_.type = 'text' ;
         this.section_name_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.section_name_.value = this.section_.name ;
+        this.section_name_.value = this.oldname_ ;
 
         let label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;
@@ -36,12 +42,7 @@ export class EditSectionNameDialog extends XeroDialog {
     }
 
     okButton(event: Event) {
-        if (this.section_name_) {
-            let name = this.section_name_.value.trim() ;
-            if (name !== this.section_.name) {
-                this.section_.name = this.section_name_.value.trim() ;
-            }
-            super.okButton(event) ;
-        }
+        this.newname_ = this.section_name_!.value ;
+        super.okButton(event) ;
     }
 }

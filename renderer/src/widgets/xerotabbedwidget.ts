@@ -81,12 +81,7 @@ export class XeroTabbedWidget extends XeroWidget {
         this.tabbar_!.insertBefore(this.tabbar_!.children[index + 1], this.tabbar_!.children[index]) ;
     }
 
-    public addPage(name: string, page: HTMLElement) : void {
-        page.classList.add('xero-tabbed-widget-page') ;
-
-        this.names_.push(name) ;
-        this.pages_.push(page) ;
-
+    private createPageTab(name: string) : HTMLDivElement {
         let tab = document.createElement('div') ;
         tab.classList.add('xero-tabbed-widget-tab') ;        
         tab.classList.add('xero-tabbed-widget-tab-unselected') ;
@@ -113,12 +108,47 @@ export class XeroTabbedWidget extends XeroWidget {
             tab.style.color = this.options_.fontColor ;
         }
         
+        tab.addEventListener('click', this.tabButtonClicked.bind(this, tab)) ;  
+        tab.addEventListener('dblclick', this.tabButtonDoubleClicked.bind(this, tab)) ;         
+        
+        return tab ;
+    }
+
+    public insertPage(index: number, name: string, page: HTMLElement) : void {
+        if (index < 0 || index > this.names_.length) {
+            throw new Error('insertPage: invalid page index') ;
+        }
+
+        if (index === this.names_.length) {
+            this.addPage(name, page) ;
+            return ;
+        }
+
+        if (index === this.selected_page_) {
+            this.selected_page_++ ;
+        }
+
+        page.classList.add('xero-tabbed-widget-page') ;
+        this.names_.splice(index, 0, name) ;
+        this.pages_.splice(index, 0, page) ;
+
+        let tab = this.createPageTab(name) ;
+        this.tabbar_!.removeChild(this.filler_) ;
+        this.tabbar_!.insertBefore(tab, this.tabbar_!.children[index]) ;
+        this.tabbar_!.appendChild(this.filler_) ;
+    }
+
+    public addPage(name: string, page: HTMLElement) : void {
+        page.classList.add('xero-tabbed-widget-page') ;
+
+        this.names_.push(name) ;
+        this.pages_.push(page) ;
+
+        let tab = this.createPageTab(name) ;
+        
         this.tabbar_!.removeChild(this.filler_) ;
         this.tabbar_!.appendChild(tab) ;
         this.tabbar_!.appendChild(this.filler_) ;
-
-        tab.addEventListener('click', this.tabButtonClicked.bind(this, this.names_.length - 1)) ;  
-        tab.addEventListener('dblclick', this.tabButtonDoubleClicked.bind(this, this.names_.length - 1)) ; 
     }
 
     public removePage(which: number) : void {
@@ -126,13 +156,23 @@ export class XeroTabbedWidget extends XeroWidget {
             throw new Error('removePage: invalid page index') ;
         }
 
-        let changed = false ;
+        // Update the selected page if necessary
         if (which === this.selected_page_) {
-            changed = true ;
+            this.selected_page_ = -1 ;
+            this.selected_ = undefined ;
+        }        
+        else if (which < this.selected_page_) {
+            this.selected_page_-- ;
         }
 
+        this.elem.removeChild(this.pages_[which]) ;
+        this.pages_[which].classList.remove('xero-tabbed-widget-page') ;
+
+        // Remove the page and tab
         this.names_.splice(which, 1) ;
         this.pages_.splice(which, 1) ;
+
+
         this.tabbar_!.removeChild(this.tabbar_!.children[which]) ;
     }
 
@@ -140,10 +180,6 @@ export class XeroTabbedWidget extends XeroWidget {
         if (index < 0 || index >= this.pages_.length) {
             throw new Error('selectPage: invalid page index') ;
         }
-
-        if (index === this.selected_page_) {
-            return ;
-        }        
 
         this.emit('beforeSelectPage', index) ;
 
@@ -164,11 +200,13 @@ export class XeroTabbedWidget extends XeroWidget {
         this.emit('afterSelectPage', index) ;
     }
 
-    private tabButtonClicked(index: number) : void {
+    private tabButtonClicked(tab: HTMLDivElement) : void {
+        let index = Array.from(this.tabbar_!.children).indexOf(tab) ;
         this.selectPage(index) ;
     }
 
-    private tabButtonDoubleClicked(index: number) : void {
+    private tabButtonDoubleClicked(tab: HTMLDivElement) : void {
+        let index = Array.from(this.tabbar_!.children).indexOf(tab) ;
         this.emit('tabButtonDoubleClicked', index) ;
     }
 }

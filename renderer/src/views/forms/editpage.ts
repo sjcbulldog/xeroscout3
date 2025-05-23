@@ -1,3 +1,4 @@
+import { IPCSection } from "../../ipc.js";
 import { XeroPoint } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
@@ -20,6 +21,11 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
         this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;
         this.observer_.observe(this.elem) ;
+    }
+
+    public resetHTML() : void {
+        this.elem.innerHTML = '' ;
+        this.elem.appendChild(this.image_) ;
     }
 
     public doLayout() : void {

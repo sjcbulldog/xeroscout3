@@ -32,6 +32,16 @@ export class FormObject {
         return false ;
     }
 
+    public findSectionIndexByName(name: string) : number {
+        for(let i = 0; i < this.form_.sections.length; i++) {
+            if (this.form_.sections[i].name === name) {
+                return i ;
+            }
+        }
+
+        return -1 ;
+    }
+
     public findSectionByName(name: string) {
         for(let sect of this.form_.sections) {
             if (sect.name === name) {
