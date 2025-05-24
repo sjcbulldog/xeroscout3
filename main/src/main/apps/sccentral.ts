@@ -985,7 +985,7 @@ export class SCCentral extends SCBase {
 
 	public sendMatchDB(): void {
 		if (this.project_ && this.project_.match_mgr_!.hasMatches()) {
-			this.project_.data_mgr_?.getMatchColumns()
+			this.project_.data_mgr_?.getMatchColumnDescs()
 				.then((cols) => {
 					this.project_!.data_mgr_!.getAllMatchData()
 						.then((data) => {

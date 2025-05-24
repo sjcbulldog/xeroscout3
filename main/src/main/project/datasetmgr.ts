@@ -2,7 +2,7 @@ import winston from "winston" ;
 import { Manager } from "./manager";
 import { DataManager } from "./datamgr";
 import { DataValue } from "../model/datavalue";
-import { IPCDataValue } from "../../shared/ipc";
+import { IPCNamedDataValue } from "../../shared/ipc";
 
 //
 // MatchSet -
@@ -72,8 +72,8 @@ export class DataSetManager extends Manager {
         return ret ;
     }
 
-    public async getData(ds: DataSet, field: string, team: number) : Promise <IPCDataValue> {
-        let ret = new Promise<IPCDataValue>(async (resolve, reject) => {
+    public async getData(ds: DataSet, field: string, team: number) : Promise <IPCNamedDataValue> {
+        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             if (this.containsField(ds, field)) {
                 try {
                     let data = await this.datamgr_.getData(ds.matches, field, team) ;

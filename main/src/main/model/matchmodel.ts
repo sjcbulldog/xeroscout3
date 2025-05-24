@@ -6,7 +6,7 @@ import { ScoutingData } from '../comms/resultsifc';
 import { SCBase } from '../apps/scbase';
 import { DataRecord } from './datarecord';
 import { DataValue } from './datavalue';
-import { IPCDataValue } from '../../shared/ipc';
+import { IPCNamedDataValue } from '../../shared/ipc';
 
 export class MatchDataModel extends DataModel {
     public static readonly MatchTableName: string = 'matches' ;
@@ -137,7 +137,7 @@ export class MatchDataModel extends DataModel {
         return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ;
     }
 
-    private getDataValueFromObject(obj: any) : IPCDataValue {
+    private getDataValueFromObject(obj: any) : IPCNamedDataValue {
         let ret = DataValue.fromError(new Error('Invalid data type')) ;
 
         if (typeof obj === 'string') {

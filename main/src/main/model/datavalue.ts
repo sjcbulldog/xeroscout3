@@ -1,48 +1,48 @@
-import { IPCDataValue, IPCDataValueType } from "../../shared/ipc";
+import { IPCNamedDataValue, IPCDataValueType } from "../../shared/ipc";
 
 export class DataValue {
 
-    public static fromString(value: string): IPCDataValue {
+    public static fromString(value: string): IPCNamedDataValue {
         return {
             type: 'string',
             value: value
         };
     }
-    public static fromInteger(value: number): IPCDataValue {
+    public static fromInteger(value: number): IPCNamedDataValue {
         return {
             type: 'integer',
             value: value
         };
     }
-    public static fromReal(value: number): IPCDataValue {
+    public static fromReal(value: number): IPCNamedDataValue {
         return {
             type: 'real',
             value: value
         };
     } 
 
-    public static fromBoolean(value: boolean): IPCDataValue {
+    public static fromBoolean(value: boolean): IPCNamedDataValue {
         return {
             type: 'boolean',
             value: value
         };
     }
 
-    public static fromNull(): IPCDataValue {
+    public static fromNull(): IPCNamedDataValue {
         return {
             type: 'null',
             value: null
         };
     }
 
-    public static fromError(value: Error) : IPCDataValue {
+    public static fromError(value: Error) : IPCNamedDataValue {
         return {
             type: 'error',
             value: value.message
         };
     }
 
-    public static equals(a: IPCDataValue, b: IPCDataValue): boolean {  
+    public static equals(a: IPCNamedDataValue, b: IPCNamedDataValue): boolean {  
         if (a.type !== b.type) {
             return false;
         }
@@ -56,11 +56,11 @@ export class DataValue {
         }
 
         if (a.type === 'array') {
-            if (a.value.length !== b.value.length) {
+            if ((a.value as any[]).length !== (b.value as any[]).length) {
                 return false;
             }
-            for (let i = 0; i < a.value.length; i++) {
-                if (!DataValue.equals(a.value[i], b.value[i])) {
+            for (let i = 0; i < (a.value as any[]).length; i++) {
+                if (!DataValue.equals((a.value as any[])[i], (b.value as any[])[i])) {
                     return false;
                 }
             }
@@ -74,74 +74,74 @@ export class DataValue {
         return ['integer', 'real', 'string', 'boolean', 'error', 'array'].includes(type);
     }
 
-    public static isNull(a:IPCDataValue) : boolean {
+    public static isNull(a:IPCNamedDataValue) : boolean {
         return a.type === 'null' ;
     }
 
-    public static isInteger(a:IPCDataValue) : boolean {
+    public static isInteger(a:IPCNamedDataValue) : boolean {
         return a.type === 'integer';
     }
 
-    public static isReal(a:IPCDataValue) : boolean {
+    public static isReal(a:IPCNamedDataValue) : boolean {
         return a.type === 'real';
     }
 
-    public static isNumber(a:IPCDataValue) : boolean {
+    public static isNumber(a:IPCNamedDataValue) : boolean {
         return a.type === 'integer' || a.type === 'real';
     }   
 
-    public static isString(a:IPCDataValue) : boolean {
+    public static isString(a:IPCNamedDataValue) : boolean {
         return a.type === 'string';
     }
 
-    public static isBoolean(a:IPCDataValue) : boolean {
+    public static isBoolean(a:IPCNamedDataValue) : boolean {
         return a.type === 'boolean';
     }
 
-    public static isArray(a:IPCDataValue) : boolean {
+    public static isArray(a:IPCNamedDataValue) : boolean {
         return a.type === 'array';
     }
 
-    public static isError(a:IPCDataValue) : boolean {
+    public static isError(a:IPCNamedDataValue) : boolean {
         return a.type === 'error';
     }
 
-    public static toBoolean(a:IPCDataValue) : boolean {
+    public static toBoolean(a:IPCNamedDataValue) : boolean {
         if (a.type !== 'boolean') {
             throw new Error(`Cannot convert ${a.type} to boolean`);
         }
         return a.value as boolean;
     }
 
-    public static toString(a:IPCDataValue) : string {
+    public static toString(a:IPCNamedDataValue) : string {
         if (a.type !== 'string') {
             throw new Error(`Cannot convert ${a.type} to string`);
         }
         return a.value as string;
     }
 
-    public static toReal(a:IPCDataValue) : number {
+    public static toReal(a:IPCNamedDataValue) : number {
         if (a.type !== 'real' && a.type !== 'integer') {
             throw new Error(`Cannot convert ${a.type} to number`);
         }
         return a.value as number;
     }
 
-    public static toInteger(a:IPCDataValue) : number {
+    public static toInteger(a:IPCNamedDataValue) : number {
         if (a.type !== 'integer') {
             throw new Error(`Cannot convert ${a.type} to integer`);
         }
         return a.value as number;
     }
 
-    public static toArray(a:IPCDataValue) : Array<IPCDataValue> {
+    public static toArray(a:IPCNamedDataValue) : Array<IPCNamedDataValue> {
         if (a.type !== 'array') {
             throw new Error(`Cannot convert ${a.type} to array`);
         }
-        return a.value as Array<IPCDataValue>;
+        return a.value as Array<IPCNamedDataValue>;
     }
 
-    public static toDisplayString(a:IPCDataValue) : string {
+    public static toDisplayString(a:IPCNamedDataValue) : string {
         let ret = '' ;
 
         if (a.value === null) {
@@ -179,7 +179,7 @@ export class DataValue {
         return ret;
     }
 
-    public static toValueString(a: IPCDataValue) : string {
+    public static toValueString(a: IPCNamedDataValue) : string {
         let ret = '' ;
 
         if (a.value === null) {

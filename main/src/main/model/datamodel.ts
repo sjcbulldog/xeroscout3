@@ -4,13 +4,14 @@ import winston from 'winston';
 import { format } from '@fast-csv/format';
 import { EventEmitter } from 'events';
 import { DataRecord } from './datarecord';
-import { IPCDataValue, IPCDataValueType } from '../../shared/ipc';
+import { IPCChoice, IPCNamedDataValue, IPCDataValueType } from '../../shared/ipc';
 import { DataValue } from './datavalue';
 
 export interface ColumnDesc
 {
     name: string ;
     type: IPCDataValueType ;
+    choices?: IPCChoice[] ;            // For some string columns, the set of choices that are allowed
 } ;
 
 export abstract class DataModel extends EventEmitter {
@@ -89,7 +90,7 @@ export abstract class DataModel extends EventEmitter {
             let dr = new DataRecord() ;
             for(let key of Object.keys(row)) {
                 let col = this.getColumnDesc(key) ;
-                let v : IPCDataValue | undefined = undefined ;
+                let v : IPCNamedDataValue | undefined = undefined ;
 
                 if (col) {
                     try {
@@ -117,7 +118,7 @@ export abstract class DataModel extends EventEmitter {
                         }
                     }
                     catch(err) {
-                        v = { type: 'error' , value: err } ;
+                        v = { type: 'error' , value: err as Error } ;
                     }
                 }
                 else {
@@ -298,6 +299,13 @@ export abstract class DataModel extends EventEmitter {
                 .catch((err) => {
                     reject(err) ;
                 }) ;
+        }) ;
+        return ret ;
+    }
+
+    public getColumnDescs(table: string) : Promise<ColumnDesc[]> {
+        let ret = new Promise<ColumnDesc[]>((resolve, reject) => {
+            resolve(this.col_descs_) ;
         }) ;
         return ret ;
     }

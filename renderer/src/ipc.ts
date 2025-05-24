@@ -1,8 +1,9 @@
 export type IPCDataValueType = "integer" | "real" | "string" | "boolean" | "array" | "null" | "error"  ;
+export type IPCDataValue = number | string | boolean | null | any[] | Error ;
 
-export interface IPCDataValue {
+export interface IPCNamedDataValue {
     type: IPCDataValueType ;
-    value: any ;
+    value: IPCDataValue ;
 }
 
 export interface IPCSetView {

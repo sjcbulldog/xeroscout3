@@ -9,7 +9,7 @@ import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { ColumnDesc } from "../model/datamodel";
 import { MatchSet } from "./datasetmgr";
 import { DataValue } from "../model/datavalue";
-import { IPCDataValue, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCNamedDataValue, IPCProjColumnsConfig } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 
 
@@ -129,8 +129,8 @@ export class DataManager extends Manager {
     // field.  For match fields, the data is processes over all matches to get
     // an average.
     //   
-    public getData(m: MatchSet, field: string, team: number) : Promise<IPCDataValue> {
-        let ret = new Promise<IPCDataValue>(async (resolve, reject) => {
+    public getData(m: MatchSet, field: string, team: number) : Promise<IPCNamedDataValue> {
+        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let found = false ;
 
             let tcols = await this.teamdb_.getColumnNames(TeamDataModel.TeamTableName) ;
@@ -157,7 +157,7 @@ export class DataManager extends Manager {
             }
 
             if (!found) {
-                let v : IPCDataValue = {
+                let v : IPCNamedDataValue = {
                     type: 'error',
                     value: 'Field ' + field + ' is not a valid team, match, or formula field'
                 }
@@ -246,7 +246,11 @@ export class DataManager extends Manager {
     public hasMatchScoutingResult(type: string, set: number, match: number, team: string) : string {
         let str: string = 'sm-' + type + '-' + set + '-' + match + '-' + team ;
         return this.info_.scouted_match_.includes(str) ? 'Y' : 'N' ;
-    }    
+    }
+
+    public getMatchColumnDescs() : Promise<ColumnDesc[]> {
+        return this.matchdb_.getColumnDescs(MatchDataModel.MatchTableName) ;
+    }
 
     public getMatchColumns() : Promise<string[]> {
         return this.matchdb_.getColumnNames(MatchDataModel.MatchTableName) ;
@@ -276,6 +280,10 @@ export class DataManager extends Manager {
     public hasTeamScoutingResults(team: number) : boolean {
         return this.info_.scouted_team_.includes(team) ;
     }    
+
+    public getTeamColumnDescs() : Promise<ColumnDesc[]> {
+        return this.teamdb_.getColumnDescs(TeamDataModel.TeamTableName) ;
+    }
 
     public getTeamColumns() : Promise<string[]> {
         return this.teamdb_.getColumnNames(TeamDataModel.TeamTableName) ;
@@ -341,8 +349,8 @@ export class DataManager extends Manager {
 
     // #endregion
 
-    private getMatchData(m: MatchSet, field: string, team: number) : Promise<IPCDataValue> {
-        let ret = new Promise<IPCDataValue>(async (resolve, reject) => {
+    private getMatchData(m: MatchSet, field: string, team: number) : Promise<IPCNamedDataValue> {
+        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let fields = field + ', comp_level, set_number, match_number' ;
             let teamkey = 'frc' + team ;
             let query = 'select ' + fields + ' from ' + MatchDataModel.MatchTableName + ' where team_key = "' + teamkey + '" ;' ;
@@ -384,8 +392,8 @@ export class DataManager extends Manager {
         return ret ;
     }	
 
-    private getTeamData(field: string, team: number) : Promise<IPCDataValue> {
-        let ret = new Promise<IPCDataValue>(async (resolve, reject) => {
+    private getTeamData(field: string, team: number) : Promise<IPCNamedDataValue> {
+        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let query = 'select ' + field + ' from ' + TeamDataModel.TeamTableName + ' where team_number = ' + team + ' ;' ;
             this.teamdb_.all(query)
                 .then((data) => {
@@ -469,8 +477,8 @@ export class DataManager extends Manager {
         }
     }
     
-    private evalFormula(m: MatchSet, name: string, team: number) : Promise<IPCDataValue> {
-        let ret = new Promise<IPCDataValue>(async (resolve, reject) => {
+    private evalFormula(m: MatchSet, name: string, team: number) : Promise<IPCNamedDataValue> {
+        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let formula = this.formula_mgr_.findFormula(name) ;
             if (!formula) {
                 resolve(
@@ -491,7 +499,7 @@ export class DataManager extends Manager {
             }
             else {
                 let vars: string[] = formula.variables() ;
-                let varvalues: Map<string, IPCDataValue> = new Map() ;
+                let varvalues: Map<string, IPCNamedDataValue> = new Map() ;
                 for(let varname of vars) {
                     let v = await this.getData(m, varname, team) ;
                     if(v.type === 'error') {

@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import { DataManager } from "./datamgr";
 import { dialog } from "electron";
-import { IPCFormControlType } from "../../shared/ipc";
+import { IPCChoice, IPCChoicesItem, IPCFormControlType, IPCFormItem } from "../../shared/ipc";
 
 export interface TagSource {
   form: string;
@@ -647,14 +647,25 @@ export class FormManager extends Manager {
       let jsonobj = FormManager.readJSONFile(formfile);
       for (let section of jsonobj.sections) {
         if (section.items && Array.isArray(section.items)) {
-          for (let item of section.items) {
+          for (let obj of section.items) {
+            let item = obj as IPCFormItem ;
             if (item.type === "image" || item.type === "label" || item.type === "box") {
               // Skip any control that does not provide data, as these are not stored in the database
               continue;
             }
+
+            let choices: IPCChoice[] | undefined = undefined ;
+            if (item.type === "choice" || item.type === "select") {
+              let choice = item as IPCChoicesItem ;
+              if (choice.choices && Array.isArray(choice.choices)) {
+                choices = [...choice.choices] ;
+              }
+            }
+
             let field: ColumnDesc = {
               name: item.tag,
-              type: item.datatype
+              type: item.datatype,
+              choices: choices
             };
             ret.push(field);
           }
