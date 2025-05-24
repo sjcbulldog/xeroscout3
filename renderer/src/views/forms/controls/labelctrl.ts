@@ -64,6 +64,7 @@ export class LabelControl extends FormControl {
     }
 
     public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void {
+        super.createForScouting(parent, xoff, yoff) ;
         this.ctrl = document.createElement('span') ;
         this.setClassList(this.ctrl, 'scout') ;
         this.updateFromItem(false, xoff, yoff) ;

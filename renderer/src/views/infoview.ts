@@ -167,7 +167,7 @@ export class XeroInfoView extends XeroView {
         if (!info.locked_) {
             let icon = document.createElement('img');
             icon.className = "info-table-icon-import";
-            icon.src = `data:image/jpg;base64,${info.importicon}`
+            icon.src = `data:image/png;base64,${info.importicon}`
             icon.alt = 'Import' ;
             icon.title = 'Import' ;
             icon.width = 32 ;
@@ -177,7 +177,7 @@ export class XeroInfoView extends XeroView {
             
             icon = document.createElement('img');
             icon.className = "info-table-icon-create";
-            icon.src = `data:image/jpg;base64,${info.createicon}`
+            icon.src = `data:image/png;base64,${info.createicon}`
             icon.alt = 'Create' ;
             icon.title = 'Create' ;
             icon.width = 32 ;
@@ -188,7 +188,7 @@ export class XeroInfoView extends XeroView {
             if (info.teamform_) {
                 icon = document.createElement('img');
                 icon.className = "info-table-icon-edit";
-                icon.src = `data:image/jpg;base64,${info.editicon}`
+                icon.src = `data:image/png;base64,${info.editicon}`
                 icon.alt = 'Edit' ;
                 icon.title = 'Edit' ;
                 icon.width = 32 ;
@@ -233,7 +233,7 @@ export class XeroInfoView extends XeroView {
         if (!info.locked_) {
             let icon = document.createElement('img');
             icon.className = "info-table-icon-import";
-            icon.src = `data:image/jpg;base64,${info.importicon}`
+            icon.src = `data:image/png;base64,${info.importicon}`
             icon.alt = 'Import' ;
             icon.title = 'Import' ;
             icon.width = 32 ;
@@ -243,7 +243,7 @@ export class XeroInfoView extends XeroView {
             
             icon = document.createElement('img');
             icon.className = "info-table-icon-create";
-            icon.src = `data:image/jpg;base64,${info.createicon}`
+            icon.src = `data:image/png;base64,${info.createicon}`
             icon.alt = 'Create' ;
             icon.title = 'Create' ;
             icon.width = 32 ;
@@ -254,7 +254,7 @@ export class XeroInfoView extends XeroView {
             if (info.matchform_) {
                 icon = document.createElement('img');
                 icon.className = "info-table-icon-edit";
-                icon.src = `data:image/jpg;base64,${info.editicon}`
+                icon.src = `data:image/png;base64,${info.editicon}`
                 icon.alt = 'Edit' ;
                 icon.title = 'Edit' ;
                 icon.width = 32 ;

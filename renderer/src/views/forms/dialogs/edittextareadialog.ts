@@ -12,7 +12,7 @@ export class EditTextAreaDialog extends EditFormControlDialog {
     }
 
     protected async populateDialog(pdiv: HTMLElement) : Promise<void> {
-        let item = this.formctrl_.item as IPCTextItem ;
+        let item = this.formctrl_.item as IPCTextAreaItem ;
         let label ;
         let option: HTMLOptionElement ;
 
@@ -46,7 +46,7 @@ export class EditTextAreaDialog extends EditFormControlDialog {
         this.rows_ = document.createElement('input') ;
         this.rows_.type = 'text' ;
         this.rows_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.rows_.value = item.placeholder ;
+        this.rows_.value = item.rows.toString() ;
 
         label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;
@@ -57,7 +57,7 @@ export class EditTextAreaDialog extends EditFormControlDialog {
         this.cols_ = document.createElement('input') ;
         this.cols_.type = 'text' ;
         this.cols_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.cols_.value = item.placeholder ;
+        this.cols_.value = item.cols.toString() ;
 
         label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;

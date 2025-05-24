@@ -107,6 +107,7 @@ export class SCCentral extends SCBase {
 	private redMenuItem_ : MenuItem | undefined ;
 	private blueMenuItem_ : MenuItem | undefined ;
 	private reverseImage_: MenuItem | undefined ;
+	private importImage_ : MenuItem | undefined ;
 	private lastformview_? : string ;
 
 	constructor(win: BrowserWindow, args: string[]) {
@@ -341,6 +342,20 @@ export class SCCentral extends SCBase {
 		this.menuitems_.set('file/close', closeitem);
 
 		ret.append(filemenu);
+
+		let imagemenu: MenuItem = new MenuItem({
+			type: 'submenu',
+			label: 'Images',
+			submenu: new Menu()
+		}) ;
+
+		this.importImage_ = new MenuItem({
+			type: 'normal',
+			label: 'Import ...',
+			click: this.importImage.bind(this)
+		}) ;
+		imagemenu.submenu!.append(this.importImage_) ;
+		ret.append(imagemenu) ;
 
 		let optionmenu: MenuItem = new MenuItem({
 			type: 'submenu',
@@ -657,6 +672,7 @@ export class SCCentral extends SCBase {
 			comp_level: string;
 			set_number: number;
 			match_number: number;
+			played: boolean;
 			red1: number;
 			redtab1: string;
 			redst1: string;
@@ -693,6 +709,7 @@ export class SCCentral extends SCBase {
 						comp_level: one.comp_level,
 						set_number: one.set_number,
 						match_number: one.match_number,
+						played: (one.winning_alliance && one.winning_alliance.length > 0) ? true : false,
 						red1: this.keyToTeamNumber(r1),
 						redtab1: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,

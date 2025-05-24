@@ -49,21 +49,25 @@ export class XeroSelectEvent extends XeroView {
         cols.push({
             field: 'key',
             title: 'Event Key',
+            sorter: 'string'
         }) ;
     
         cols.push({
             field: 'name',
             title: 'Name',
+            sorter: 'string'
         }) ;
     
         cols.push({
             field: 'district.display_name',
             title: 'District',
+            sorter: 'string'
         }) ;
     
         cols.push({
             field: 'start_date',
             title: 'Date',
+            sorter: 'date'
         }) ;
 
         this.table_ = new TabulatorFull(this.table_div_,
@@ -74,11 +78,7 @@ export class XeroSelectEvent extends XeroView {
                 columns:cols
             });        
 
-        this.table_.on('tableBuilt', this.tableReady.bind(this)) ;
-        this.table_.on('cellClick', this.loadBAEvent.bind(this)) ;
-    }
-
-    private tableReady() : void {
+        this.table_.on('cellDblClick', this.loadBAEvent.bind(this)) ;
     }
 
     private loadBAEvent(e: Event, cell: CellComponent) : void {

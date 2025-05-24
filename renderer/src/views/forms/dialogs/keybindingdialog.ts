@@ -3,6 +3,7 @@ import { Keybinding } from "../keybindings.js";
 
 export class KeybindingDialog extends XeroDialog {
     private bindings_: Keybinding[] ;
+    private top_? : HTMLDivElement ;
     private binding_table_?: HTMLTableElement
 
     constructor(bindings: Keybinding[]) {
@@ -11,6 +12,10 @@ export class KeybindingDialog extends XeroDialog {
     }
 
     populateDialog(pdiv: HTMLDivElement) {
+        this.top_ = document.createElement('div') ;
+        this.top_.className = 'xero-form-keybinding-dialog-top' ;
+        pdiv.appendChild(this.top_) ;
+
         this.binding_table_ = document.createElement('table') ;
         this.binding_table_.className = 'xero-form-keybinding-table' ;
 
@@ -46,6 +51,6 @@ export class KeybindingDialog extends XeroDialog {
             this.binding_table_.appendChild(tr) ;
         }
 
-        pdiv.appendChild(this.binding_table_) ;
+        this.top_.appendChild(this.binding_table_) ;
     }
 }

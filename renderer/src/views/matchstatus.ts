@@ -1,4 +1,4 @@
-import { CellComponent, TabulatorFull } from "tabulator-tables";
+import { CellComponent, RowComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../apps/xeroapp.js";
 import {  XeroView  } from "./xeroview.js";
 
@@ -29,11 +29,13 @@ export class XeroMatchStatus extends XeroView {
         return ret;
     }
 
-    private sortMatchFunc(a: any, b: any): number {
+    private sortMatchFunc(a: any, b: any, arow: RowComponent, brow: RowComponent): number {
         let ret = 0;
+        let adata = arow.getData();
+        let bdata = brow.getData();
 
-        let atype = this.mapMatchType(a.comp_level);
-        let btype = this.mapMatchType(b.comp_level);
+        let atype = this.mapMatchType(adata.comp_level);
+        let btype = this.mapMatchType(bdata.comp_level);
 
         if (atype < btype) {
             ret = -1;
@@ -42,17 +44,17 @@ export class XeroMatchStatus extends XeroView {
             ret = 1;
         }
         else {
-            if (a.match_number < b.match_number) {
+            if (adata.match_number < bdata.match_number) {
                 ret = -1;
             }
-            else if (a.match_number > b.match_number) {
+            else if (adata.match_number > bdata.match_number) {
                 ret = 1;
             }
             else {
-                if (a.set_number < b.set_number) {
+                if (adata.set_number < bdata.set_number) {
                     ret = -1;
                 }
-                else if (a.set_number > b.set_number) {
+                else if (adata.set_number > bdata.set_number) {
                     ret = 1;
                 }
                 else {
@@ -71,10 +73,12 @@ export class XeroMatchStatus extends XeroView {
         this.table_ = new TabulatorFull(this.main_div_, {
             data: args,
             resizableColumnFit:true,
+            initialSort: [{ column : 'comp_level', dir: 'asc' }],
             columns: [
-                { title: 'Type', field: 'comp_level'},
+                { title: 'Type', field: 'comp_level' , sorter: this.sortMatchFunc.bind(this) },
                 { title: 'Match', field: 'match_number'},
                 { title: 'Set', field: 'set_number'},
+                { title: 'Played', field: 'played', formatter: 'tickCross'},
 
                 { title: 'Blue 1', field: 'blue1'},
                 { title: 'Blue Tablet 1', field: 'bluetab1'},
@@ -105,6 +109,7 @@ export class XeroMatchStatus extends XeroView {
 
     private cellFormatter(cell: CellComponent, params: any, onRendered: any) : HTMLElement{
         let val = cell.getValue();
+        let data = cell.getData();
         let el = cell.getElement();
 
         if (Math.random() > 0.75) {
@@ -113,10 +118,17 @@ export class XeroMatchStatus extends XeroView {
 
         if (val == 'Y') {
             el.style.fontSize = '16px';
-            el.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)' ;
-            el.style.borderRadius = '5px' ;
             el.style.textAlign = 'center' ;
+            el.style.backgroundColor = 'green' ;
+            el.style.color = 'white' ;            
             val = 'Scouted' ;
+        }
+        else if (data.played === true) {
+            el.style.fontSize = '16px';
+            el.style.textAlign = 'center' ;
+            el.style.backgroundColor = 'red' ;
+            el.style.color = 'white' ;
+            val = 'Missing' ;            
         }
         else {
             val = '' ;

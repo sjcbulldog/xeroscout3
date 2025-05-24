@@ -18,6 +18,7 @@ import {   XeroTeamDatabaseView   } from "../views/teamdbview.js";
 import {   XeroMatchDatabaseView   } from "../views/matchdbview.js";
 import {   IPCSetStatus, IPCSetView   } from "../ipc.js";
 import { HintManager } from "../hintmgr.js";
+import { ImageDataSource } from "./imagesrc.js";
 
 document.addEventListener('DOMContentLoaded', function () {
     let mainapp = new XeroApp() ;
@@ -35,11 +36,13 @@ export class XeroApp extends XeroMainProcessInterface {
     private hintdb_ : HintManager ;
 
     private status_overlay_ : StatusOverlay ;
+    private image_src_ : ImageDataSource ;
 
     constructor() {
         super() ;
 
         this.hintdb_ = new HintManager() ;
+        this.image_src_ = new ImageDataSource() ;
 
         let body = document.getElementsByTagName("body")[0] ;
 
@@ -58,6 +61,10 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('update-main-window-view', this.updateView.bind(this)) ;
         this.registerCallback('send-app-status', this.updateStatusBar.bind(this)) ;
         this.registerViews() ;
+    }
+
+    public get imageSource() {
+        return this.image_src_ ;
     }
 
     public get statusBar() {

@@ -648,6 +648,10 @@ export class FormManager extends Manager {
       for (let section of jsonobj.sections) {
         if (section.items && Array.isArray(section.items)) {
           for (let item of section.items) {
+            if (item.type === "image" || item.type === "label" || item.type === "box") {
+              // Skip any control that does not provide data, as these are not stored in the database
+              continue;
+            }
             let field: ColumnDesc = {
               name: item.tag,
               type: item.datatype
@@ -670,6 +674,13 @@ export class FormManager extends Manager {
       for (let section of jsonobj.sections) {
         if (section.items && Array.isArray(section.items)) {
           for (let item of section.items) {
+            if (item.type === "image" || item.type === "label" || item.type === "box") {
+              // Skip any control that does not provide data, as these are not stored in the database
+              // and do not need to be checked for duplicate tags
+              this.logger_.debug(`Skipping item ${item.name} of type ${item.type} in form ${formname} section ${section.name}`) ;
+              continue;
+            }
+            
             let tag = item.tag;
             if (tmap.has(tag)) {
               let info = tmap.get(tag);

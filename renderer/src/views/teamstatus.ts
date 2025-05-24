@@ -35,10 +35,9 @@ export class XeroTeamStatus extends XeroView {
 
         if (val == 'Y') {
             el.style.fontSize = '16px';
-            el.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)' ;
-            el.style.borderRadius = '5px' ;
-            el.style.margin = '3px' ;
             el.style.textAlign = 'center' ;
+            el.style.backgroundColor = 'green' ;
+            el.style.color = 'white' ;
             val = 'Scouted' ;
         }
         else {

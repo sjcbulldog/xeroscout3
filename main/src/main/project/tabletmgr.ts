@@ -170,8 +170,15 @@ export class TabletManager extends Manager {
     }
 
     public findTabletForMatch(complevel: string, setno: number, matchno: number, teamkey: string) : string {
-        // TODO: write me
-        return '' ;
+        let ret = '' ;
+        for(let ma of this.info_.matchassignements_) {
+            if (ma.comp_level === complevel && ma.set_number === setno && ma.match_number === matchno && ma.teamkey === teamkey) {
+                ret = ma.tablet ;
+                break ;
+            }
+        }
+
+        return ret ;
     }
     
     private generateTeamTabletSchedule() : boolean {

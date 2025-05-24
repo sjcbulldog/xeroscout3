@@ -49,6 +49,7 @@ export class EditChoiceDialog extends EditWithItemsDialog {
         item.radiosize = parseInt(this.radio_size_!.value) ;
         item.color = this.text_color_!.value ;
         item.background = this.background_color_!.value ;
+        item.transparent = this.transparent_!.checked ;
         item.fontFamily = this.font_name_!.value ;
         item.fontSize = parseInt(this.font_size_!.value) ;
         item.fontWeight = this.font_weight_!.value ;

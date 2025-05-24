@@ -33,7 +33,7 @@ export class XeroNav  extends XeroWidget {
             else if (item.type === 'icon') {
                 navItem.className = 'xero-nav-list-icon' ;
                 let icon = document.createElement('img') ;
-                icon.src = `data:image/jpg;base64,${item.icon}`
+                icon.src = `data:image/png;base64,${item.icon}`
                 icon.alt = item.title;
                 icon.title = item.title;
                 icon.width = item.width ;

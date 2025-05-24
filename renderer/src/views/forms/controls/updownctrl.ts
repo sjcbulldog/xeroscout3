@@ -60,7 +60,7 @@ export class UpDownControl extends FormControl {
             this.upbutton_!.style.fontStyle = this.item.fontStyle ;
             this.upbutton_!.style.fontWeight = this.item.fontWeight ;
             this.upbutton_!.style.color = this.item.color ;
-            this.upbutton_!.style.flexGrow = '0' ;
+            this.upbutton_!.style.flexGrow = '1' ;
 
             if (this.item.transparent) {
                 this.upbutton_!.style.backgroundColor = 'transparent' ;
@@ -74,7 +74,7 @@ export class UpDownControl extends FormControl {
             this.downbutton_!.style.fontStyle = this.item.fontStyle ;
             this.downbutton_!.style.fontWeight = this.item.fontWeight ;
             this.downbutton_!.style.color = this.item.color ;
-            this.downbutton_!.style.flexGrow = '0' ;
+            this.downbutton_!.style.flexGrow = '1' ;
 
             if (this.item.transparent) {
                 this.downbutton_!.style.backgroundColor = 'transparent' ;
@@ -88,7 +88,7 @@ export class UpDownControl extends FormControl {
             this.count_!.style.fontStyle = this.item.fontStyle ;
             this.count_!.style.fontWeight = this.item.fontWeight ;
             this.count_!.style.color = this.item.color ;
-            this.count_!.style.flexGrow = '1' ;      
+            this.count_!.style.flexGrow = '0' ;      
             if (this.item.transparent) {
                 this.count_!.style.backgroundColor = 'transparent' ;
             }

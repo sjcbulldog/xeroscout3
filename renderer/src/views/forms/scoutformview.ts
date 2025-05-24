@@ -7,6 +7,7 @@ import {  XeroView  } from "../xeroview.js";
 import {  BooleanControl  } from "./controls/booleanctrl.js";
 import {  BoxControl } from "./controls/boxctrl.js";
 import {  MultipleChoiceControl  } from "./controls/choicectrl.js";
+import { ImageControl } from "./controls/imagectrl.js";
 import {  LabelControl  } from "./controls/labelctrl.js";
 import {  SelectControl  } from "./controls/selectctrl.js";
 import {  TextAreaControl } from "./controls/textareactrl.js";
@@ -83,6 +84,8 @@ export class XeroScoutFormView extends XeroView {
     private form_? : FormObject ;
     private type_: string ;
 
+    private image_src_ ;
+
     private tabbed_ctrl_? : XeroTabbedWidget ;
     private section_pages_ : XeroFormScoutSectionPage[] = [] ;
     private titlediv_? : HTMLElement ;
@@ -94,6 +97,8 @@ export class XeroScoutFormView extends XeroView {
         super(app, 'xero-form-view');
 
         this.type_ = type;
+
+        this.image_src_ = 
 
         this.registerCallback('send-form', this.formCallback.bind(this));
         this.registerCallback('send-image-data', this.receiveImageData.bind(this)) ;    
@@ -235,6 +240,10 @@ export class XeroScoutFormView extends XeroView {
                 let formctrl ;
                 if (item.type === 'label') {
                     formctrl = new LabelControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'image') {
+                    formctrl = new ImageControl(this.app.imageSource, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else if (item.type === 'box') {

@@ -16,7 +16,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
-        this.image_.src = `data:image/jpg;base64,${data}` ;
+        this.image_.src = `data:image/png;base64,${data}` ;
         this.elem.appendChild(this.image_) ;
 
         this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;
@@ -91,7 +91,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
     }
 
     public setImage(data: string) : void {
-        this.image_.src = `data:image/jpg;base64,${data}` ;
+        this.image_.src = `data:image/png;base64,${data}` ;
     }
     
     public removeAllControls() : void {

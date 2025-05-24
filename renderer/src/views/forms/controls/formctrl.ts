@@ -3,7 +3,7 @@ import {  XeroPoint, XeroRect, XeroSize  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 
-export type FormDisplayStyle = 'none' | 'selected' | 'highlighted' ;
+export type FormDisplayStyle = 'none' | 'selected' | 'highlighted' | 'multiplesel' | 'editing' ;
 
 export abstract class FormControl {
     public static fuzzyEdgeSpacing = 10 ;
@@ -66,8 +66,14 @@ export abstract class FormControl {
                 case 'selected':
                     this.ctrl_.style.borderStyle = 'solid' ;
                     this.ctrl_.style.borderWidth = '4px' ;
-                    this.ctrl_.style.borderColor = 'red' ;
+                    this.ctrl_.style.borderColor = 'green' ;
                     this.ctrl_.style.margin = '0px' ;                            
+                    break ;
+                case 'multiplesel':
+                    this.ctrl_.style.borderStyle = 'dashed' ;
+                    this.ctrl_.style.borderWidth = '4px' ;
+                    this.ctrl_.style.borderColor = 'green' ;
+                    this.ctrl_.style.margin = '0px' ;
                     break ;
                 case 'highlighted':
                     this.ctrl_.style.borderStyle = 'dashed' ;
