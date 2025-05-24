@@ -34,4 +34,16 @@ export class EditTimerDialog extends EditFormControlDialog {
         item.fontStyle = this.font_style_!.value ;
         item.transparent = this.transparent_!.checked ;
     }
+
+    
+    setFocus() {
+        if (this.tag_) {
+            this.tag_.focus() ;
+            this.tag_.select() ;
+        }
+    }
+
+    onInit() {
+        setTimeout(this.setFocus.bind(this), 100) ;
+    }       
 }

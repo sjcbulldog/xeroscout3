@@ -1,10 +1,11 @@
-import {  IPCTextItem  } from "../../../ipc.js";
+import {  IPCTextAreaItem, IPCTextItem  } from "../../../ipc.js";
 import {  FormControl  } from "../controls/formctrl.js";
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 
-export class EditTextDialog extends EditFormControlDialog {
+export class EditTextAreaDialog extends EditFormControlDialog {
     private data_type_? : HTMLSelectElement ;
-    private placeholder_? : HTMLInputElement ;
+    private rows_? : HTMLInputElement ;
+    private cols_? : HTMLInputElement ;
 
     constructor(formctrl: FormControl) {
         super('Edit Text', formctrl);
@@ -42,16 +43,27 @@ export class EditTextDialog extends EditFormControlDialog {
         label.appendChild(this.data_type_) ;
         div.appendChild(label) ;
 
-        this.placeholder_ = document.createElement('input') ;
-        this.placeholder_.type = 'text' ;
-        this.placeholder_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.placeholder_.value = item.placeholder ;
+        this.rows_ = document.createElement('input') ;
+        this.rows_.type = 'text' ;
+        this.rows_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.rows_.value = item.placeholder ;
 
         label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;
-        label.innerText = 'Placeholder' ;
-        label.appendChild(this.placeholder_) ;
+        label.innerText = 'Rows' ;
+        label.appendChild(this.rows_) ;
         div.appendChild(label) ;
+
+        this.cols_ = document.createElement('input') ;
+        this.cols_.type = 'text' ;
+        this.cols_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.cols_.value = item.placeholder ;
+
+        label = document.createElement('label') ;
+        label.className = 'xero-popup-form-edit-dialog-label' ;
+        label.innerText = 'Cols' ;
+        label.appendChild(this.cols_) ;
+        div.appendChild(label) ;        
 
         this.populateColors(div) ;
         await this.populateFontSelector(div) ;
@@ -59,12 +71,13 @@ export class EditTextDialog extends EditFormControlDialog {
     }
 
     public extractData() {
-        if (this.tag_ && this.data_type_ && this.placeholder_ && this.font_name_ && this.font_size_ && this.text_color_) {
-            let item = this.formctrl_.item as IPCTextItem ;
+        if (this.tag_ && this.data_type_ && this.rows_ && this.cols_ && this.font_name_ && this.font_size_ && this.text_color_) {
+            let item = this.formctrl_.item as IPCTextAreaItem ;
 
             item.tag = this.tag_.value ;
             item.datatype = this.data_type_.value as 'string' | 'integer' | 'real' ;
-            item.placeholder = this.placeholder_.value ;
+            item.rows = parseInt(this.rows_.value) ;
+            item.cols = parseInt(this.cols_.value) ;
             item.fontFamily = this.font_name_.value ;
             item.fontSize = parseInt(this.font_size_.value) ;
             item.fontStyle = this.font_style_!.value ;

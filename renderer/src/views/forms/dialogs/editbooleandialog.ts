@@ -38,4 +38,15 @@ export class EditBooleanDialog extends EditFormControlDialog {
         this.formctrl_.item.background = this.background_color_?.value || 'white' ;
         item.accent = this.accent_color_?.value || 'lightgreen' ;
     }
+    
+    setFocus() {
+        if (this.tag_) {
+            this.tag_.focus() ;
+            this.tag_.select() ;
+        }
+    }
+
+    onInit() {
+        setTimeout(this.setFocus.bind(this), 100) ;
+    }     
 }

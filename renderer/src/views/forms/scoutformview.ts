@@ -1,21 +1,20 @@
 import {  XeroApp  } from "../../apps/xeroapp.js";
-import { IPCSection } from "../../ipc.js";
-import { XeroLogger } from "../../utils/xerologger.js";
+import {  IPCSection } from "../../ipc.js";
+import {  XeroLogger } from "../../utils/xerologger.js";
 import {  XeroRect  } from "../../widgets/xerogeom.js";
-import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
+import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import {  XeroView  } from "../xeroview.js";
 import {  BooleanControl  } from "./controls/booleanctrl.js";
-import { BoxControl } from "./controls/boxctrl.js";
+import {  BoxControl } from "./controls/boxctrl.js";
 import {  MultipleChoiceControl  } from "./controls/choicectrl.js";
-import {  FormControl  } from "./controls/formctrl.js";
 import {  LabelControl  } from "./controls/labelctrl.js";
 import {  SelectControl  } from "./controls/selectctrl.js";
+import {  TextAreaControl } from "./controls/textareactrl.js";
 import {  TextControl  } from "./controls/textctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
-import { XeroEditFormView } from "./editformview.js";
 import {  FormObject  } from "./formobj.js";
-import { XeroFormScoutSectionPage } from "./scoutpage.js";
+import {  XeroFormScoutSectionPage } from "./scoutpage.js";
 
 class TimerStatus {
     public readonly name: string ;
@@ -244,6 +243,10 @@ export class XeroScoutFormView extends XeroView {
                 }
                 else if (item.type === 'text') {
                     formctrl = new TextControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'textarea') {
+                    formctrl = new TextAreaControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else if (item.type === 'boolean') {  

@@ -386,3 +386,54 @@
     padding: 0px ;
     margin: 0px ;
 }
+/* 
+.xero-form-keybinding-table {
+}
+
+.xero-form-keybinding-table-header-row {
+}
+*/
+
+.xero-form-keybinding-table-header-cell {
+    font-size: 20px;
+    font-family: Arial;
+    font-weight: bold;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: rgba(38,137,13,1);
+    border: 1px solid rgba(134,188,37,1);
+    text-align: center;
+    color: white;    
+}
+
+.xero-form-keybinding-table-data-row:nth-of-type(even) {
+    background-color: white;
+    color: black ;
+}
+
+.xero-form-keybinding-table-data-row:nth-of-type(odd) {
+    background-color: rgba(220, 220, 220, 1);
+    color:black ;
+}
+.xero-form-keybinding-table-data-cell {
+    font-size: 18px;
+    font-family: Arial;    
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.xero-form-textarea {
+    z-index: 1000;
+    border: 1px solid black;
+}
+
+.xero-form-edit-textarea {
+    pointer-events: none;
+}
+
+.xero-form-textarea-textarea {
+    z-index: 999;
+    width: calc(100% - 6px);
+    height: calc(100% - 6px);
+    padding: 3px ;
+}

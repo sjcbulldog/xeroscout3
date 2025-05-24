@@ -57,4 +57,15 @@ export class EditChoiceDialog extends EditWithItemsDialog {
         item.datatype = this.extractDataType() ;
         item.choices = this.extractChoices() ;
     }
+
+    setFocus() {
+        if (this.tag_) {
+            this.tag_.focus() ;
+            this.tag_.select() ;
+        }
+    }
+
+    onInit() {
+        setTimeout(this.setFocus.bind(this), 100) ;
+    }       
 }

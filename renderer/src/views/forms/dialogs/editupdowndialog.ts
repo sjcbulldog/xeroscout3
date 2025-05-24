@@ -64,4 +64,16 @@ export class EditUpDownControlDialog extends EditFormControlDialog {
         item.minvalue = parseFloat(this.min_value_!.value) ;
         item.maxvalue = parseFloat(this.max_value_!.value) ;
     }
+
+    
+    setFocus() {
+        if (this.tag_) {
+            this.tag_.focus() ;
+            this.tag_.select() ;
+        }
+    }
+
+    onInit() {
+        setTimeout(this.setFocus.bind(this), 100) ;
+    }       
 }

@@ -1,0 +1,23 @@
+Key			        Function
+----			    ---------------------------------
+ctrl+shift+L 		move section left
+ctrl+shift+R		move section right
+Tab			        select next (stacked controls)
+Shift+Tab           add next (stacked conrols)
+Delete			    delete selected controls
+Escape			    unselect all and cancel any mode
+ctrl+z			    undo
+ctrl+a			    collect all
+ctrl+p			    select control properties
+left-arrow		    move control little left
+shift+left-arrow	move control more left
+ctrl+left-arrow		move control most left
+left-arrow		    move control little right
+shift+right-arrow	move control more right
+ctrl+right-arrow	move control most right
+up-arrow		    move control little up
+shift+up-arrow		move control more up
+ctrl+up-arrow		move control most up
+down-arrow		    move control little down
+shift+down-arrow	move control more down
+ctrl+down-arrow		move control most down
