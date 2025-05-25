@@ -120,6 +120,13 @@ export class DataValue {
         return a.value as string;
     }
 
+    public static toErrorString(a: IPCNamedDataValue) : string {
+        if (a.type !== 'error') {
+            throw new Error(`Cannot convert ${a.type} to error string`);
+        }
+        return (a.value as Error).message;
+    }   
+
     public static toReal(a:IPCNamedDataValue) : number {
         if (a.type !== 'real' && a.type !== 'integer') {
             throw new Error(`Cannot convert ${a.type} to number`);
@@ -170,7 +177,7 @@ export class DataValue {
             ret += ']' ;
         }
         else if (a.type === 'error') {
-            ret = `Error: ${DataValue.toString(a)}`;
+            ret = `Error: ${DataValue.toErrorString(a)}`;
         }
         else {
             ret = `Unknown type: ${a.type}`;
@@ -217,7 +224,7 @@ export class DataValue {
             ret += ']' ;
         }
         else if (a.type === 'error') {
-            ret = `Error: ${DataValue.toString(a)}`;
+            ret = `Error: ${DataValue.toErrorString(a)}`;
         }
         else {
             ret = `Unknown type: ${a.type}`;

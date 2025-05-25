@@ -45,7 +45,19 @@ export abstract class DataModel extends EventEmitter {
 
     public remove() : void {
         if (fs.existsSync(this.dbname_)) {
-            fs.unlinkSync(this.dbname_) ;
+            this.db_!.close((err) => {
+                if (err) {
+                    this.logger_.error('Error closing database \'' + this.dbname_ + '\'', err) ;
+                }
+                else {
+                    try {
+                        fs.unlinkSync(this.dbname_) ;
+                    }
+                    catch(err) {
+                        this.logger_.error('Error removing database file \'' + this.dbname_ + '\'', err) ;
+                    }                    
+                }
+            }) ;
         }
     }
 
@@ -75,7 +87,7 @@ export abstract class DataModel extends EventEmitter {
             query += ';' ;
 
             try {
-                let result = await this.all(query) ;
+                let result = await this.all(query, undefined) ;
                 resolve(this.convertToDataRecords(result)) ;
             }
             catch(err) {
@@ -201,24 +213,47 @@ export abstract class DataModel extends EventEmitter {
         return true ;
     }
 
-    public runQuery(query: string) : Promise<sqlite3.RunResult> {
+    public runQuery(query: string, params: any[] | undefined) : Promise<sqlite3.RunResult> {
         let ret = new Promise<sqlite3.RunResult>((resolve, reject) => {
             let qno = DataModel.queryno_++ ;
             this.logger_.debug('DATABASE: ' + qno + ': runQuery \'' + query + '\'') ;
-            this.db_?.run(query, (res: sqlite3.RunResult, err: Error) => {
-                if (err) {
-                    reject(err) ;
-                }
-                else {
-                    if (res) {
-                        let obj = res as any ;
-                        if (obj.code === 'SQLITE_ERROR') {
-                            reject(new Error(obj.message)) ;
-                        }
+            if (params) {
+                this.db_?.run(query, params, (res: sqlite3.RunResult, err: Error) => {
+                    if (err) {
+                        this.logger_.error('Error running query \'' + query + '\'', err) ;
+                        reject(err) ;
                     }
-                    resolve(res) ;
-                }
-            }) ;
+                    else {
+                        if (res) {
+                            let obj = res as any ;
+                            if (obj.code === 'SQLITE_ERROR') {
+                                this.logger_.error('Error running query \'' + query + '\'', obj.message) ;
+                                reject(new Error(obj.message)) ;
+                                return ;
+                            }
+                        }
+                        resolve(res) ;
+                    }
+                }) ;
+            } else {
+                this.db_?.run(query, (res: sqlite3.RunResult, err: Error) => {
+                    if (err) {
+                        this.logger_.error('Error running query \'' + query + '\'', err) ;
+                        reject(err) ;
+                    }
+                    else {
+                        if (res) {
+                            let obj = res as any ;
+                            if (obj.code === 'SQLITE_ERROR') {
+                                this.logger_.error('Error running query \'' + query + '\'', obj.message) ;
+                                reject(new Error(obj.message)) ;
+                                return ;
+                            }
+                        }
+                        resolve(res) ;
+                    }
+                }) ;
+            }
         }) ;
         return ret ;
     }
@@ -239,18 +274,32 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    public all(query: string) : Promise<DataRecord[]> {
+    public all(query: string, params: any[] | undefined) : Promise<DataRecord[]> {
         let ret = new Promise<DataRecord[]>((resolve, reject) => {
             let qno = DataModel.queryno_++ ;
             this.logger_.debug('DATABASE: ' + qno + ': all \'' + query + '\'') ;
-            this.db_?.all(query, (err, rows) => {
-                if (err) {
-                    reject(err) ;
-                }
-                else {
-                    resolve(this.convertToDataRecords(rows)) ;
-                }
-            }) ;
+            if (params) {
+                this.db_?.all(query, ...params!, (err: Error | null, rows: any[]) => {
+                    if (err) {
+                        this.logger_.error('Error running query \'' + query + '\'', err) ;
+                        reject(err) ;
+                    }
+                    else {
+                        resolve(this.convertToDataRecords(rows)) ;
+                    }
+                }) ;
+            }
+            else {
+                this.db_?.all(query, (err: Error | null, rows: any[]) => {
+                    if (err) {
+                        this.logger_.error('Error running query \'' + query + '\'', err) ;
+                        reject(err) ;
+                    }
+                    else {
+                        resolve(this.convertToDataRecords(rows)) ;
+                    }
+                }) ;                
+            }
         }) ;
         return ret ;
     }
@@ -258,7 +307,7 @@ export abstract class DataModel extends EventEmitter {
     public getAllData() : Promise<DataRecord[]> {
         let ret = new Promise<DataRecord[]>((resolve, reject) => {
             let query = 'select * from ' + this.table_name_ + ';' ;
-            this.all(query)
+            this.all(query, undefined)
                 .then((rows) => {
                     resolve(rows) ;
                 })
@@ -285,7 +334,7 @@ export abstract class DataModel extends EventEmitter {
             }
             
             query += ' from ' + table + ';' ;
-            this.all(query)
+            this.all(query, undefined)
                 .then((rows) => {
                     resolve(rows as any) ;
                 })
@@ -493,8 +542,9 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
     
-    private generateWhereClause(keys: string[], dr: DataRecord) : string {
+    private generateWhereClause(keys: string[], dr: DataRecord) : [string, any[]] {
         let query = ' WHERE ' ;
+        let params: any[] = [] ;
         let first = true ;
 
         for(let i = 0 ; i < keys.length ; i++) {
@@ -505,20 +555,19 @@ export abstract class DataModel extends EventEmitter {
             if (!first) {
                 query += ' AND ' ;
             }
-            query += keys[i] ;
-            query += ' = ' ;
-            query += DataValue.toValueString(dr.value(keys[i])!) ;
-
+            query += keys[i] + ' = ?' ;
+            params.push(DataValue.toSQLite3Value(dr.value(keys[i])!)) ;
             first = false ;
         }
 
-        return query ;
+        return [query, params] ;
     }
 
     public updateRecord(table: string, keys: string[], dr: DataRecord) : Promise<void> {
         let ret = new Promise<void>((resolve,reject) => {
             let query = 'update ' + table + ' SET ' ;
             let first = true ;
+            let params: any[] = [] ;
             for(let key of dr.keys()) {
                 if (!keys.includes(key)) {
                     let v = dr.value(key) ;
@@ -527,13 +576,15 @@ export abstract class DataModel extends EventEmitter {
                         query += ', ' ;
                     }
 
-                    query += key + '=' + DataValue.toValueString(v!) ;
+                    query += key + '= ?' ;
+                    params.push(DataValue.toSQLite3Value(v!)) ;
                     first = false ;
                 }
             }
 
-            query += ' ' + this.generateWhereClause(keys, dr) ;
-            this.runQuery(query)
+            let ret = this.generateWhereClause(keys, dr) ;
+            query += ' ' + ret[0] + ';' ;
+            this.runQuery(query, [...params, ...ret[1]])
             .then(()=> {
                 resolve()
             })
@@ -548,23 +599,26 @@ export abstract class DataModel extends EventEmitter {
     public insertRecord(table: string, dr: DataRecord) : Promise<void> {
         let ret = new Promise<void>((resolve,reject) => {
             let query = 'insert into ' + table + ' (' ;
-            let valstr = 'VALUES (' ;
             let first = true ;
+            let params: any[] = [] ;
+            let values = '' ;
             for(let key of dr.keys()) {
                 let v = dr.value(key) ;
 
                 if (!first) {
                     query += ',';
-                    valstr += ',' ;
+                    values += ',' ;
                 }
 
                 query += key ;
-                valstr += DataValue.toValueString(v!) ;
+                values += '?' ;
+
                 first = false ;
+                params.push(DataValue.toSQLite3Value(v!)) ;
             }
 
-            query += ') ' + valstr + ');' ;
-            this.runQuery(query)
+            query += `) VALUES (${values});` ;
+            this.runQuery(query, params)
                 .then(()=> { 
                     resolve() 
                 })
@@ -586,8 +640,9 @@ export abstract class DataModel extends EventEmitter {
             }
 
             try {
-                let query: string = 'select * from ' + table + this.generateWhereClause(keys, dr) ;
-                let rows = await this.all(query) ;
+                let results = this.generateWhereClause(keys, dr) ;
+                let query: string = 'select * from ' + table + results[0] + ';' ;
+                let rows = await this.all(query, results[1]) ;
                 if (rows.length > 0) {
                     await this.updateRecord(table, keys, dr)
                 }
@@ -611,8 +666,8 @@ export abstract class DataModel extends EventEmitter {
             for(let one of this.info_.col_descs_) {
                 if(pred(one)) {
                     cols.push(one) ;
-                    let query: string = 'alter table ' + this.table_name_ + ' drop column ' + one + ';' ;
-                    let pr = this.runQuery(query) ;
+                    let query: string = 'alter table ' + this.table_name_ + ' drop column ' + one.name + ';' ;
+                    let pr = this.runQuery(query, undefined) ;
                     all.push(pr) ;
                 }
             }
@@ -672,7 +727,7 @@ export abstract class DataModel extends EventEmitter {
             for(let one of toadd) {
                 let ctype
                 let query: string = 'alter table ' + table + ' add column ' + one.name + ' ' + this.translateColumnType(one.type) + ';' ;
-                let pr = this.runQuery(query) ;
+                let pr = this.runQuery(query, undefined) ;
                 allpromises.push(pr) ;
             }
 
@@ -712,7 +767,7 @@ export abstract class DataModel extends EventEmitter {
                         //
                         // create the table
                         //
-                        this.runQuery(this.createTableQuery())
+                        this.runQuery(this.createTableQuery(), undefined)
                             .then((result: sqlite3.RunResult) => {
                                 this.processInitialColumns(this.initialTableColumns()) ;
                                 resolve() ;

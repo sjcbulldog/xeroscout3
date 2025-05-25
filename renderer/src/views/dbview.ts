@@ -1,11 +1,12 @@
 import { ColumnDefinition, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../apps/xeroapp.js";
-import {  IPCProjColumnsConfig  } from "../ipc.js";
+import {  IPCColumnDesc, IPCDatabaseData, IPCProjColumnsConfig  } from "../ipc.js";
 import {  XeroView  } from "./xeroview.js";
 import { DataValue } from "../utils/datavalue.js";
 
 export class DatabaseView extends XeroView {
     private col_cfgs_? : IPCProjColumnsConfig ;
+    private col_descs_? : IPCColumnDesc[] ;
     private div_? : HTMLDivElement ;
     private top_? : HTMLDivElement ;
     private table_? : TabulatorFull ;
@@ -28,13 +29,11 @@ export class DatabaseView extends XeroView {
         this.checker_button_.innerText = 'Check All' ;
         this.top_.appendChild(this.checker_button_) ;
 
-
         this.table_div_ = document.createElement('div') ;
         this.table_div_.className = 'xero-db-view-table-div' ;
         this.div_.appendChild(this.table_div_) ;
 
         this.registerCallback('send-' + type + '-db', this.receiveData.bind(this));
-        this.registerCallback('send-' + type + '-col-config', this.receiveColConfig.bind(this));
         this.request('get-' + type + '-db') ;
     }
 
@@ -66,7 +65,6 @@ export class DatabaseView extends XeroView {
         return cols ;
     }
 
-
     private convertData(data: any[]) {
         let ret : any[] = [] ;
         for(let one of data) {
@@ -85,9 +83,12 @@ export class DatabaseView extends XeroView {
         return ret;
     }
 
-    private receiveData(data: any) {
+    private receiveData(data: IPCDatabaseData) {
+        this.col_cfgs_ = data.column_configurations ;
+        this.col_descs_ = data.column_definitions ;
+        let cdata = this.convertData(data.data) ;
         this.table_ = new TabulatorFull(this.table_div_!, {
-            data: this.convertData(data.data),
+            data: cdata,
             columns: this.createColumnDescs(),
             layout:"fitData",
             resizableColumnFit:true,
@@ -99,9 +100,5 @@ export class DatabaseView extends XeroView {
 
     private tableReady() {
         this.hideHiddenColumns() ;
-    }
-
-    private receiveColConfig(data: IPCProjColumnsConfig) {
-        this.col_cfgs_ = data;
     }
 }

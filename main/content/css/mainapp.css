@@ -444,7 +444,8 @@ xero-status-overlay-close-visible {
     margin: 5px ;
 }
 
-.xero-team-db-view-table {
+.xero-db-view-table-div {
     width: 100%;
     height: calc(100% - 50px);
+    overflow: auto;
 }

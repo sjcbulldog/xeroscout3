@@ -610,9 +610,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private createSectionPageObject(section: IPCSection) : XeroFormEditSectionPage { 
-        let image: string ;
-
-        let page = new XeroFormEditSectionPage(image!) ;
+        let page = new XeroFormEditSectionPage() ;
         this.updateControls(section, page) ;
 
         this.app.imageSource.getImageData(section.image)

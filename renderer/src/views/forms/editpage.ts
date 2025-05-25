@@ -11,12 +11,11 @@ export class XeroFormEditSectionPage extends XeroWidget {
     private image_ : HTMLImageElement ;
     private observer_ : ResizeObserver ;
 
-    public constructor(data: string) {
+    public constructor() {
         super('div', 'xero-form-section-page') ;
 
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
-        this.image_.src = `data:image/png;base64,${data}` ;
         this.elem.appendChild(this.image_) ;
 
         this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;

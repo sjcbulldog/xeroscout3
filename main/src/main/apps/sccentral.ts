@@ -23,7 +23,7 @@ import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
 import { DataValue } from "../model/datavalue";
-import { IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 
 export interface GraphDataRequest {
@@ -970,11 +970,11 @@ export class SCCentral extends SCBase {
 			let cols = this.project_.data_mgr_?.matchColumnDescriptors ;
 			this.project_!.data_mgr_!.getAllMatchData()
 				.then((data) => {
-					let dataobj = {
-						cols: cols,
+					let dataobj : IPCDatabaseData = {
+						column_configurations: this.project_!.data_mgr_!.getMatchColConfig()!,
+						column_definitions: cols!,
 						data: this.convertDataForDisplay(data),
 					};
-					this.sendToRenderer('send-match-col-config',this.project_!.data_mgr_!.getMatchColConfig()) ;
 					this.sendToRenderer('send-match-db', dataobj);
 				})
 				.catch((err) => {
@@ -2219,11 +2219,20 @@ export class SCCentral extends SCBase {
 				if (ans === 1) {
 					return ;
 				}
-				this.project_!.generateRandomData() ;
-				dialog.showMessageBox(this.win_, {
-					title: "Random Data",
-					message: "Random data generated",
-				});
+				this.project_!.generateRandomData()
+					.then(() => {
+						dialog.showMessageBox(this.win_, {
+							title: "Random Data",
+							message: "Random data generated",
+						});
+					})
+					.catch((err) => {
+						let errobj: Error = err as Error ;
+						dialog.showMessageBox(this.win_, {
+							title: "Random Data Error",
+							message: `Error generating random data - ${errobj.message}`
+						});
+					}) ;
 			} else {
 				dialog.showMessageBox(this.win_, {
 					title: "Random Data Error",

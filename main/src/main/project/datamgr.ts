@@ -168,45 +168,63 @@ export class DataManager extends Manager {
         return ret;
     }
 
-    public async processResults(obj: ScoutingData) {
-        if (!this.info_) {
-            this.logger_.error('project is not initialized, cannot process results') ;
-        }
-        else {
-            if (obj.purpose) {
-                if (obj.purpose === 'match') {
-                    this.info_.match_results_ = [] ;
-                    for(let res of obj.results) {
-                        if (res.item) {
-                            this.info_.match_results_.push(res) ;
-                        }
-                    }
-
-                    let status = await this.matchdb_.processScoutingResults(obj) ;
-                    for(let st of status) {
-                        if (!this.info_.scouted_match_.includes(st)) {
-                            this.info_.scouted_match_.push(st) ;
-                        }
-                    }
-                }
-                else {
-                    this.info_.team_results_ = [] ;
-                    for(let res of obj.results) {
-                        if (res.item) {
-                            this.info_.team_results_.push(res) ;
-                        }
-                    }
-
-                    let teams = await this.teamdb_.processScoutingResults(obj) ;
-                    for (let st of teams) {
-                        if (!this.info_.scouted_team_.includes(st)) {
-                            this.info_.scouted_team_.push(st) ;
-                        }
-                    }
-                }
+    public async processResults(obj: ScoutingData) : Promise<void> {
+        let ret = new Promise<void>(async (resolve, reject) => {
+            if (!this.info_) {
+                this.logger_.error('project is not initialized, cannot process results') ;
             }
-            this.write() ;
-        }
+            else {
+                if (obj.purpose) {
+                    if (obj.purpose === 'match') {
+                        this.info_.match_results_ = [] ;
+                        for(let res of obj.results) {
+                            if (res.item) {
+                                this.info_.match_results_.push(res) ;
+                            }
+                        }
+
+                        try {
+                            let status = await this.matchdb_.processScoutingResults(obj) ;
+                            for(let st of status) {
+                                if (!this.info_.scouted_match_.includes(st)) {
+                                    this.info_.scouted_match_.push(st) ;
+                                }
+                            }
+                        }
+                        catch(err) {
+                            this.logger_.error('error processing match scouting results: ' + err) ;
+                            reject(err) ;
+                            return ;
+                        }
+                    }
+                    else {
+                        this.info_.team_results_ = [] ;
+                        for(let res of obj.results) {
+                            if (res.item) {
+                                this.info_.team_results_.push(res) ;
+                            }
+                        }
+
+                        try {
+                            let teams = await this.teamdb_.processScoutingResults(obj) ;
+                            for (let st of teams) {
+                                if (!this.info_.scouted_team_.includes(st)) {
+                                    this.info_.scouted_team_.push(st) ;
+                                }
+                            }
+                        }
+                        catch(err) {
+                            this.logger_.error('error processing team scouting results: ' + err) ;
+                            reject(err) ;
+                            return ;
+                        }
+                    }
+                    resolve() ;
+                }
+                this.write() ;
+            }
+        }) ;
+        return ret;
     }     
 
     public async removeFormColumns() : Promise<void> {
@@ -348,7 +366,7 @@ export class DataManager extends Manager {
             let fields = field + ', comp_level, set_number, match_number' ;
             let teamkey = 'frc' + team ;
             let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" ;' ;
-            this.matchdb_.all(query)
+            this.matchdb_.all(query, undefined)
                 .then((data: any[]) => {
                     if (data.length !== 0) {
                         let sorted = this.sortData(data) ;
@@ -389,7 +407,7 @@ export class DataManager extends Manager {
     private getTeamData(field: string, team: number) : Promise<IPCNamedDataValue> {
         let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let query = 'select ' + field + ' from ' + this.teamdb_.tableName + ' where team_number = ' + team + ' ;' ;
-            this.teamdb_.all(query)
+            this.teamdb_.all(query, undefined)
                 .then((data) => {
                     let rec = data[0] as any ;
                     let v = rec.value(field) ;

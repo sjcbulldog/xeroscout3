@@ -140,3 +140,9 @@ export interface IPCColumnDesc
     editable: boolean ;             // If true, the column can be edited in the database view
     choices?: IPCChoice[] ;         // For some string columns, the set of choices that are allowed
 } ;
+
+export interface IPCDatabaseData {
+    column_configurations: IPCProjColumnsConfig ;
+    column_definitions: IPCColumnDesc[] ;
+    data: any[] ;                  // The actual data in the database, as an array of objects
+}

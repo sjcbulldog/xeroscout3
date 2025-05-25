@@ -314,8 +314,13 @@ export class TeamDataModel extends DataModel {
                 ret.push(DataValue.toInteger(dr.value('team_number')!)) ;
                 records.push(dr) ;
             }
-            await this.addColsAndData(['team_number'], records, true, 'form') ;
-            resolve(ret) ;
+            try {
+                await this.addColsAndData(['team_number'], records, true, 'form') ;
+                resolve(ret) ;
+            }
+            catch(err) {
+                reject(err) ;
+            }
         }) ;
         return ret ;
     }

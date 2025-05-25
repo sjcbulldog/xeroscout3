@@ -1,6 +1,7 @@
 import * as fs from 'fs' ;
 import { OneScoutResult, ScoutingData } from '../comms/resultsifc';
 import { DataValue } from '../model/datavalue';
+import { IPCTextAreaItem } from '../../shared/ipc';
 
 export class DataGenerator
 {
@@ -92,6 +93,18 @@ export class DataGenerator
                 let index = this.getRandomInt(DataGenerator.randomStrings.length) ;
                 value = DataValue.fromString(DataGenerator.randomStrings[index]) ;
             }
+        }
+        else if (item.type === 'textarea') {
+            let taitem = item as IPCTextAreaItem ;
+            value = '' ;
+            for(let i = 0; i < taitem.rows; i++) {
+                if (value.length > 0) {
+                    value += '\n' ;
+                }
+                let index = this.getRandomInt(DataGenerator.randomStrings.length) ;
+                value += (i + 1).toString() + ':' + index.toString() + ':' + DataGenerator.randomStrings[index] ;
+            }
+            value = DataValue.fromString(value) ;
         }
         else if (item.type === 'choice' || item.type === 'select') {
             let i = this.getRandomInt(item.choices.length) ;

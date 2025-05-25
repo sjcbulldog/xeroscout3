@@ -179,48 +179,26 @@ export class DataValue {
         return ret;
     }
 
-    public static toValueString(a: IPCNamedDataValue) : string {
-        let ret = '' ;
+    public static toSQLite3Value (a: IPCNamedDataValue) : any {
+        let ret : any = null ;
 
         if (a.value === null) {
-           ret = 'null' ; 
+           ret = null ;
         }
         else if (a.type === 'string') {
-            ret = `'` ;
-            for(const c of DataValue.toString(a)) {
-                if (c === "'") {
-                    ret += `''` ;
-                }
-                else {
-                    ret += c ;
-                }
-            }
-            ret += `'` ;
+            ret = DataValue.toString(a) ;
         }
         else if (a.type === 'boolean') {
-            ret = DataValue.toBoolean(a) ? '1' : '0' ;
+            ret = DataValue.toBoolean(a) ;
         }
         else if (a.type === 'integer') {
-            ret = DataValue.toInteger(a).toString() ;
+            ret = DataValue.toInteger(a) ;
         }
         else if (a.type === 'real') {
-            ret = DataValue.toReal(a).toString() ;
-        }
-        else if (a.type === 'array') {
-            ret = '[' ;
-            for(const v of DataValue.toArray(a)) {
-                ret += `${DataValue.toValueString(v)},` ;
-            }
-            if (ret.length > 1) {
-                ret = ret.slice(0, -1) ; // remove last comma
-            }
-            ret += ']' ;
-        }
-        else if (a.type === 'error') {
-            ret = `Error: ${DataValue.toString(a)}`;
+            ret = DataValue.toReal(a) ;
         }
         else {
-            ret = `Unknown type: ${a.type}`;
+            throw new Error(`Cannot convert ${a.type} to SQLITE3 value`);
         }
 
         return ret;

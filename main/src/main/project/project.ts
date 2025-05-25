@@ -139,40 +139,54 @@ export class Project {
         return this.hint_db_ ;
     }
 
-    public generateRandomData() {
-        if (this.team_mgr_ && this.match_mgr_ && this.form_mgr_ && this.form_mgr_.hasForms()) {
-            if (this.team_mgr_.hasTeams()) {
-                let teams = this.team_mgr_.getTeams().map((v)=> { return 'st-' + v.team_number}) ;
+    public async generateRandomData() : Promise<void> {
+        let ret = new Promise<void>(async (resolve, reject) => {
+            if (this.team_mgr_ && this.match_mgr_ && this.form_mgr_ && this.form_mgr_.hasForms()) {
+                if (this.team_mgr_.hasTeams()) {
+                    let teams = this.team_mgr_.getTeams().map((v)=> { return 'st-' + v.team_number}) ;
 
-                let gendata: DataGenerator = new DataGenerator(this.form_mgr_.getTeamFormFullPath()!) ;
-                let results : ScoutingData | null = gendata.generateData(teams) ;
-                if (results) {
-                    results.purpose = "team" ;
-                    this.data_mgr_!.processResults(results) ;
-                }
-            }
-
-            if (this.match_mgr_.hasMatches()) {
-                let matches:string[] = [] ;
-                for(let match of this.match_mgr_.getMatches()) {
-                    for(let i = 0 ; i < 3 ; i++) {
-                        let blue = 'sm-'+ match.comp_level + '-' + match.set_number + '-' + 
-                                match.match_number + '-' + match.alliances.blue.team_keys[i] ;
-                        matches.push(blue) ;
-                        let red = 'sm-'+match.comp_level + '-' + match.set_number + '-' + 
-                                match.match_number + '-' + match.alliances.red.team_keys[i] ;
-                        matches.push(red) ;
+                    let gendata: DataGenerator = new DataGenerator(this.form_mgr_.getTeamFormFullPath()!) ;
+                    let results : ScoutingData | null = gendata.generateData(teams) ;
+                    if (results) {
+                        results.purpose = "team" ;
+                        try {
+                            await this.data_mgr_!.processResults(results) ;
+                        }
+                        catch(err) {
+                            reject(err) ;
+                        }
                     }
                 }
 
-                let gendata: DataGenerator = new DataGenerator(this.form_mgr_.getMatchFormFullPath()!) ;
-                let results : ScoutingData | null  = gendata.generateData(matches) ;
-                if (results) {
-                    results.purpose = "match" ;
-                    this.data_mgr_!.processResults(results) ;
+                if (this.match_mgr_.hasMatches()) {
+                    let matches:string[] = [] ;
+                    for(let match of this.match_mgr_.getMatches()) {
+                        for(let i = 0 ; i < 3 ; i++) {
+                            let blue = 'sm-'+ match.comp_level + '-' + match.set_number + '-' + 
+                                    match.match_number + '-' + match.alliances.blue.team_keys[i] ;
+                            matches.push(blue) ;
+                            let red = 'sm-'+match.comp_level + '-' + match.set_number + '-' + 
+                                    match.match_number + '-' + match.alliances.red.team_keys[i] ;
+                            matches.push(red) ;
+                        }
+                    }
+
+                    let gendata: DataGenerator = new DataGenerator(this.form_mgr_.getMatchFormFullPath()!) ;
+                    let results : ScoutingData | null  = gendata.generateData(matches) ;
+                    if (results) {
+                        results.purpose = "match" ;
+                        try {
+                            await this.data_mgr_!.processResults(results) ;
+                            resolve() ;
+                        }
+                        catch(err) {
+                            reject(err) ;
+                        }
+                    }
                 }
             }
-        }
+        }) ;
+        return ret ;
     }
 
     public async lockEvent() : Promise<void> {
@@ -251,17 +265,26 @@ export class Project {
                     // Process the team data
                     //
                     await this.data_mgr_!.processTeamBAData(this.team_mgr_!.getTeams()) ;
-                    if (this.match_mgr_ && this.match_mgr_.hasMatches()) {
-                        //
-                        // Process the match data if it exists, this is not required and can be added
-                        // later
-                        //
-                        await this.data_mgr_!.processMatchBAData(this.match_mgr_.getMatches(), false) ;
-                    }
                 }
                 catch(err) {
                     this.data_mgr_!.removeDatabases() ;
                     reject(err) ;
+                    return ;
+                }
+
+                if (this.match_mgr_ && this.match_mgr_.hasMatches()) {
+                    //
+                    // Process the match data if it exists, this is not required and can be added
+                    // later
+                    //
+                    try {
+                        await this.data_mgr_!.processMatchBAData(this.match_mgr_.getMatches(), false) ;
+                    }
+                    catch(err) {
+                        this.data_mgr_!.removeDatabases() ;
+                        reject(err) ;
+                        return ;
+                    }
                 }
 
                 if (!this.tablet_mgr_!.generateTabletSchedule()) {
