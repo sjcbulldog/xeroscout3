@@ -129,3 +129,14 @@ export interface IPCHint {
     text: string,
     hidden: boolean
 }
+
+export type IPCColumnDefnSource = 'form' | 'bluealliance' | 'base' | 'statbotics' ;
+
+export interface IPCColumnDesc
+{
+    name: string ;                  // The name of the column, as it appears in the database
+    type: IPCDataValueType ;        // The type of data in the column
+    source: IPCColumnDefnSource ;   // Where the column definition comes from2
+    editable: boolean ;             // If true, the column can be edited in the database view
+    choices?: IPCChoice[] ;         // For some string columns, the set of choices that are allowed
+} ;

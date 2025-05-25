@@ -1,11 +1,12 @@
 import * as sqlite3 from 'sqlite3' ;
-import { DataModel, ColumnDesc } from "./datamodel";
+import { DataModel, DataModelInfo } from "./datamodel";
 import winston from 'winston';
 import { BAOprData, BARankingData, BARankings, BATeam } from '../extnet/badata';
 import { SCBase } from '../apps/scbase';
 import { ScoutingData } from '../comms/resultsifc';
 import { DataRecord } from './datarecord';
 import { DataValue } from './datavalue';
+import { IPCColumnDesc } from '../../shared/ipc';
 
 interface scoutvalue {
     tag: string,
@@ -14,21 +15,17 @@ interface scoutvalue {
 } ;
 
 export class TeamDataModel extends DataModel {
-    public static readonly TeamTableName: string = 'teams' ;
+    public static readonly TableName: string = 'teams' ;
 
-    public constructor(dbname: string, fields: ColumnDesc[], logger: winston.Logger) {
-        super(dbname, fields, logger) ;
-    }
-
-    public getColumns() : Promise<string[]> {
-        return this.getColumnNames(TeamDataModel.TeamTableName) ;
+    public constructor(dbname: string, info: DataModelInfo, logger: winston.Logger) {
+        super(dbname, TeamDataModel.TableName, info, logger) ;
     }
 
     public init() : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             super.init()
             .then(() => {
-                this.createTableIfNecessary(TeamDataModel.TeamTableName)
+                this.createTableIfNecessary(TeamDataModel.TableName)
                     .then(()=> {
                         resolve() ;
                     })
@@ -44,29 +41,32 @@ export class TeamDataModel extends DataModel {
         return ret;
     }
 
-    protected initialTableColumns() : ColumnDesc[] {
+    protected initialTableColumns() : IPCColumnDesc[] {
+        //
+        // Initial columns for the teams table.  These are the base columns that will be
+        // created when the table is created.  This list must match the columns in the
+        // createTableQuery() method.
+        // 
         return [
             {
+                name: 'key',
+                type: 'string',
+                source: 'base',
+                editable: false,
+            },
+            {
                 name: 'team_number',
-                type: 'integer'
+                type: 'integer',
+                source: 'base',
+                editable: false,
             }] ;
     }
 
     protected createTableQuery() : string {
-        let ret = 'create table ' + TeamDataModel.TeamTableName + ' (' ;
+        let ret = 'create table ' + TeamDataModel.TableName + ' (' ;
         ret += 'key TEXT';
         ret += ', team_number INTEGER NOT NULL' ;
         ret += ');' ;
-
-        this.emit('column-added', {
-            name: 'key',
-            type: 'string'
-        }) ;
-
-        this.emit('column-added', {
-            name: 'team_number',
-            type: 'integer'
-        }) ;
 
         return ret ;
     }
@@ -105,7 +105,7 @@ export class TeamDataModel extends DataModel {
             }
 
             try {
-                await this.addColsAndData(TeamDataModel.TeamTableName, ['team_number'], records) ;
+                await this.addColsAndData(['team_number'], records, false, 'bluealliance') ;
                 resolve() ;
             }
             catch(err) {
@@ -199,7 +199,7 @@ export class TeamDataModel extends DataModel {
             }
 
             try {
-                await this.addColsAndData(TeamDataModel.TeamTableName, ['team_number'], records) ;
+                await this.addColsAndData(['team_number'], records, false, 'statbotics') ;
                 resolve() ;
             }
             catch(err) {
@@ -218,7 +218,7 @@ export class TeamDataModel extends DataModel {
             }
 
             try {
-                await this.addColsAndData(TeamDataModel.TeamTableName, ['team_number'], records) ;
+                await this.addColsAndData(['team_number'], records, false, 'statbotics') ;
                 resolve() ;
             }
             catch(err) {
@@ -257,7 +257,7 @@ export class TeamDataModel extends DataModel {
             }
 
             try {
-                await this.addColsAndData(TeamDataModel.TeamTableName, ['team_number'], records) ;
+                await this.addColsAndData(['team_number'], records, false, 'bluealliance') ;
                 resolve() ;
             }
             catch(err) {
@@ -277,7 +277,7 @@ export class TeamDataModel extends DataModel {
             }
 
             try {
-                await this.addColsAndData(TeamDataModel.TeamTableName, ['team_number'], records) ;
+                await this.addColsAndData(['team_number'], records, false, 'bluealliance') ;
                 resolve() ;
             }
             catch(err) {
@@ -314,7 +314,7 @@ export class TeamDataModel extends DataModel {
                 ret.push(DataValue.toInteger(dr.value('team_number')!)) ;
                 records.push(dr) ;
             }
-            await this.addColsAndData(TeamDataModel.TeamTableName, ['team_number'], records) ;
+            await this.addColsAndData(['team_number'], records, true, 'form') ;
             resolve(ret) ;
         }) ;
         return ret ;

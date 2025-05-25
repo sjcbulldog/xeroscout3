@@ -311,7 +311,7 @@ export class SCCentral extends SCBase {
 								this.project_ = p;
 								this.sendHintDB() ;
 								this.updateMenuState(true);
-								if (this.project_  && this.project_.isLocked()) {
+								if (this.project_  && this.project_.isLocked) {
 									this.startSyncServer();
 								}
 								this.setView('info');
@@ -432,7 +432,7 @@ export class SCCentral extends SCBase {
 			label: 'Export Team Data',
 			enabled: false,
 			click: () => {
-				this.doExportData(TeamDataModel.TeamTableName);
+				this.doExportData(TeamDataModel.TableName);
 			},
 		});
 		datamenu.submenu?.append(exportTeamData);
@@ -443,7 +443,7 @@ export class SCCentral extends SCBase {
 			label: 'Export Match Data',
 			enabled: false,
 			click: () => {
-				this.doExportData(MatchDataModel.MatchTableName);
+				this.doExportData(MatchDataModel.TableName);
 			},
 		});
 		datamenu.submenu?.append(exportMatchData);
@@ -902,29 +902,11 @@ export class SCCentral extends SCBase {
 	}
 	
 	public sendTeamFieldList() : void {
-		this.project_?.data_mgr_?.getTeamColumns()
-			.then((cols) => {
-				this.sendToRenderer('send-team-field-list', cols);
-			})
-			.catch((err) => {
-				this.logger_.error(
-					'error getting columns from database for send-team-field-list',
-					err
-				);
-			});
+		this.sendToRenderer('send-team-field-list', this.project_!.data_mgr_!.teamColumnDescriptors) ;
 	}
 
 	public sendMatchFieldList() : void {
-		this.project_?.data_mgr_?.getMatchColumns()
-			.then((cols) => {
-				this.sendToRenderer('send-match-field-list', cols);
-			})
-			.catch((err) => {
-				this.logger_.error(
-					'error getting columns from database for send-match-field-list',
-					err
-				);
-			});
+		this.sendToRenderer('send-match-field-list', this.project_?.data_mgr_?.matchColumnDescriptors) ;
 	}
 
 	public sendDataSets() : void {
@@ -985,20 +967,22 @@ export class SCCentral extends SCBase {
 
 	public sendMatchDB(): void {
 		if (this.project_ && this.project_.match_mgr_!.hasMatches()) {
-			this.project_.data_mgr_?.getMatchColumnDescs()
-				.then((cols) => {
-					this.project_!.data_mgr_!.getAllMatchData()
-						.then((data) => {
-							let dataobj = {
-								cols: cols,
-								data: this.convertDataForDisplay(data),
-							};
-							this.sendToRenderer('send-match-col-config',this.project_!.data_mgr_!.getMatchColConfig()) ;
-							this.sendToRenderer('send-match-db', dataobj);
-						})
-						.catch((err) => {});
+			let cols = this.project_.data_mgr_?.matchColumnDescriptors ;
+			this.project_!.data_mgr_!.getAllMatchData()
+				.then((data) => {
+					let dataobj = {
+						cols: cols,
+						data: this.convertDataForDisplay(data),
+					};
+					this.sendToRenderer('send-match-col-config',this.project_!.data_mgr_!.getMatchColConfig()) ;
+					this.sendToRenderer('send-match-db', dataobj);
 				})
-				.catch((err) => {});
+				.catch((err) => {
+					this.logger_.error(
+						'error getting data from database for send-match-db',
+						err
+					);					
+				});
 		}
 	}
 
@@ -1017,27 +1001,19 @@ export class SCCentral extends SCBase {
 
 	public sendTeamDB(): void {
 		if (this.project_ && this.project_.team_mgr_!.hasTeams()) {
-			this.project_.data_mgr_?.getTeamColumns()
-				.then((cols) => {
-					this.project_?.data_mgr_!.getAllTeamData()
-						.then((data) => {
-							let dataobj = {
-								cols: cols,
-								data: this.convertDataForDisplay(data),
-							};
-							this.sendToRenderer('send-team-col-config', this.project_!.data_mgr_!.getTeamColConfig()) ;
-							this.sendToRenderer('send-team-db', dataobj);
-						})
-						.catch((err) => {
-							this.logger_.error(
-								'error getting data from database for send-team-db',
-								err
-							);
-						});
+			let cols = this.project_.data_mgr_?.teamColumnDescriptors ;
+			this.project_?.data_mgr_!.getAllTeamData()
+				.then((data) => {
+					let dataobj = {
+						cols: cols,
+						data: this.convertDataForDisplay(data),
+					};
+					this.sendToRenderer('send-team-col-config', this.project_!.data_mgr_!.getTeamColConfig()) ;
+					this.sendToRenderer('send-team-db', dataobj);
 				})
 				.catch((err) => {
 					this.logger_.error(
-						'error getting columns from database for send-team-db',
+						'error getting data from database for send-team-db',
 						err
 					);
 				});
@@ -1356,14 +1332,16 @@ export class SCCentral extends SCBase {
 				height: dims
 			});
 			treedata.push({ type: "separator", title: "Teams" });
-			treedata.push({
-				type: "icon",
-				command: SCCentral.viewTeamForm,
-				title: "Team Form",
-				icon: this.getIconData('form.png'),
-				width: dims,
-				height: dims
-			});
+			if (this.project_.form_mgr_?.hasTeamForm()) {
+				treedata.push({
+					type: "icon",
+					command: SCCentral.viewTeamForm,
+					title: "Team Form",
+					icon: this.getIconData('form.png'),
+					width: dims,
+					height: dims
+				});
+			}
 			if (this.project_.info?.locked_) {
 				treedata.push({
 					type: "icon",
@@ -1385,14 +1363,16 @@ export class SCCentral extends SCBase {
 
 			treedata.push({ type: "separator", title: "Match" });
 
-			treedata.push({
-				type: "icon",
-				command: SCCentral.viewMatchForm,
-				title: "MatchForm",
-				icon: this.getIconData('form.png'),
-				width: dims,
-				height: dims
-			});
+			if (this.project_.form_mgr_?.hasMatchForm()) {			
+				treedata.push({
+					type: "icon",
+					command: SCCentral.viewMatchForm,
+					title: "MatchForm",
+					icon: this.getIconData('form.png'),
+					width: dims,
+					height: dims
+				});
+			}
 			if (this.project_.info?.locked_) {
 				treedata.push({
 					type: "icon",
@@ -1492,10 +1472,8 @@ export class SCCentral extends SCBase {
 			this.showAbout();
 		} else if (cmd === SCCentral.createNewEvent) {
 			this.createEvent(this.year_!);
-			this.sendNavData();
 		} else if (cmd === SCCentral.openExistingEvent) {
 			this.openEvent(this.year_!);
-			this.sendNavData();
 		} else if (cmd === SCCentral.closeEvent) {
 			this.closeEvent();
 		} else if (cmd === SCCentral.selectMatchForm) {
@@ -1811,31 +1789,38 @@ export class SCCentral extends SCBase {
 		}
 	}
 
-	private createEvent(year: number) {
-		var path = dialog.showOpenDialog({
-			properties: ["openDirectory", "createDirectory"],
-		});
-
-		path
-			.then((pathname) => {
-				if (!pathname.canceled) {
-					Project.createEvent(this.logger_, pathname.filePaths[0], year)
-						.then((p) => {
-							this.addRecent(p.location);
-							this.project_ = p;
-							this.sendHintDB() ;
-							this.updateMenuState(true);
-							this.setView("info");
-						})
-						.catch((err) => {
-							let errobj: Error = err as Error;
-							dialog.showErrorBox("Create Project Error", errobj.message);
-						});
-				}
-			})
-			.catch((err) => {
-				dialog.showErrorBox("Create Event Error", err.message);
+	private createEvent(year: number) : Promise<void> {
+		let ret = new Promise<void>((resolve, reject) => {
+			var path = dialog.showOpenDialog({
+				properties: ["openDirectory", "createDirectory"],
 			});
+
+			path
+				.then((pathname) => {
+					if (!pathname.canceled) {
+						Project.createEvent(this.logger_, pathname.filePaths[0], year)
+							.then((p) => {
+								this.addRecent(p.location);
+								this.project_ = p;
+								this.sendHintDB() ;
+								this.updateMenuState(true);
+								this.setView("info");
+								this.sendNavData();
+								resolve() ;
+							})
+							.catch((err) => {
+								let errobj: Error = err as Error;
+								dialog.showErrorBox("Create Project Error", errobj.message);
+								reject(err) ;
+							});
+					}
+				})
+				.catch((err) => {
+					dialog.showErrorBox("Create Event Error", err.message);
+				});
+		}) ;
+
+		return ret ;
 	}
 
 	private addRecent(path: string) {
@@ -1856,29 +1841,6 @@ export class SCCentral extends SCBase {
 		}
 
 		this.setSetting(SCCentral.recentFilesSetting, recents);
-	}
-
-	private showError(filename: string, err: string) {
-		dialog.showErrorBox("Invalid Form", filename + ": " + err);
-	}
-
-	private showSectError(filename: string, num: number, err: string) {
-		dialog.showErrorBox(
-			"Invalid Form",
-			filename + ": section " + num + ": " + err
-		);
-	}
-
-	private showItemError(
-		filename: string,
-		sectno: number,
-		itemno: number,
-		err: string
-	) {
-		dialog.showErrorBox(
-			"Invalid Form",
-			filename + ": section " + sectno + ": item " + itemno + ":" + err
-		);
 	}
 
 	private selectTeamForm() {
@@ -1909,6 +1871,9 @@ export class SCCentral extends SCBase {
 					if (result instanceof Error) {
 						dialog.showErrorBox("Error", 'Error processing team form file: ' + result.message);
 					}
+					else {
+						this.sendNavData() ;
+					}					
 				}
 				this.setView("info");
 			}
@@ -1942,6 +1907,9 @@ export class SCCentral extends SCBase {
 					result = this.project_!.setMatchForm(pathname.filePaths[0]);
 					if (result instanceof Error) {
 						dialog.showErrorBox("Error", 'Error processing match form file: ' + result.message);
+					}
+					else {
+						this.sendNavData() ;
 					}
 				}
 				this.setView("info");
@@ -2240,7 +2208,7 @@ export class SCCentral extends SCBase {
 
 	public generateRandomData() {
 		if (this.lastview_ && this.lastview_ === 'info') {
-			if (this.project_ && this.project_.isInitialized() && this.project_.isLocked()) {
+			if (this.project_ && this.project_.isInitialized() && this.project_.isLocked) {
 				let ans = dialog.showMessageBoxSync(
 					{
 					  title: 'Generate Random Data',

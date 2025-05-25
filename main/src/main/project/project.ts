@@ -58,30 +58,20 @@ export class Project {
         return false ;
     }
 
-    public init(info: ProjectInfo) : Promise<void> {
+    public init(info: ProjectInfo) {
         this.info_ = info ;
         this.team_mgr_ = new TeamManager(this.logger_, this.writeEventFile.bind(this), this.info_.team_info_) ;
         this.match_mgr_ = new MatchManager(this.logger_, this.writeEventFile.bind(this), this.info_.match_info_) ;
         this.formula_mgr_ = new FormulaManager(this.logger_, this.writeEventFile.bind(this), this.info_.formula_info_) ;
-        this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.formula_mgr_) ;
+        this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.info_.team_db_info_, this.info_.match_db_info_, this.formula_mgr_) ;
         this.form_mgr_ = new FormManager(this.logger_, this.writeEventFile.bind(this), this.info_.form_info_, this.location_, this.data_mgr_) ;
         this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.data_mgr_) ;
         this.picklist_mgr_ = new PicklistMgr(this.logger_, this.writeEventFile.bind(this), this.info_.picklist_info_, this.team_mgr_, this.dataset_mgr_) ;
         this.tablet_mgr_ = new TabletManager(this.logger_, this.writeEventFile.bind(this), this.info_.tablet_info_, this.team_mgr_, this.match_mgr_) ;
         this.graph_mgr_ =  new GraphManager(this.logger_, this.writeEventFile.bind(this), this.info_.graph_info_, this.data_mgr_) ;
 
-        let ret = new Promise<void>((resolve, reject) => {
-            this.data_mgr_!.init()
-                .then(() => { 
-                    resolve() ; 
-                })
-                .catch((err) => {
-                    this.logger_.error('Error initializing data manager', err) ;
-                    reject(err) ;
-                }) ;
-        }) ;
-
-        return ret;
+        this.writeEventFile() ;
+        this.logger_.info('Project initialized in directory \'' + this.location_ + '\'') ;
     }
 
     public closeEvent() {
@@ -89,7 +79,7 @@ export class Project {
         this.info_ = undefined ;
     }
 
-    public isLocked() : boolean {
+    public get isLocked() : boolean {
         if (this.info_) {
             return this.info_.locked_ ;
         }
@@ -191,63 +181,106 @@ export class Project {
                 reject(new Error('event is not initialized, cannot lock event')) ;
             }
             else {
-                if (this.team_mgr_ && this.team_mgr_.hasTeams() && 
-                        this.form_mgr_ && this.form_mgr_.hasForms() && 
-                        this.tablet_mgr_ && this.tablet_mgr_.areTabletsValid()) {
+                //
+                // Check that all the managers are initialized and have the required data
+                //
+                if (!this.team_mgr_ || !this.team_mgr_.hasTeams()) {
+                    reject(new Error('event is not ready to be locked, missing teams')) ;
+                }
 
-                    let tags = this.form_mgr_!.checkDuplicateTags() ;
-                    if (tags.length > 0) {
-                        let msg = 'Multiple form items with identical tags found in form definitions:' ;
-                        for (let tag of tags) {
-                            msg += '<br>' + tag.tag ;
-                            for(let src of tag.sources) {
-                                msg += '<br>&nbsp;&nbsp;&nbsp;&nbsp;form: ' + src.form + ', section: ' + src.section + ', type \'' + src.type + '\'';
-                            }
+                if (!this.match_mgr_) {
+                    reject(new Error('event is not ready to be locked, missing matches')) ;
+                }
+
+                if (!this.form_mgr_ || !this.form_mgr_.hasForms()) {
+                    reject(new Error('event is not ready to be locked, missing forms')) ;
+                }
+
+                if (!this.tablet_mgr_ || !this.tablet_mgr_.areTabletsValid()) {
+                    reject(new Error('event is not ready to be locked, missing tablets')) ;
+                }
+
+                //
+                // Check for duplicate tags in the form definitions
+                //
+                let duplicates = this.form_mgr_!.checkDuplicateTags() ;
+                if (duplicates.length > 0) {
+                    let msg = 'Multiple form items with identical tags found in form definitions:' ;
+                    for (let tag of duplicates) {
+                        msg += '<br>' + tag.tag ;
+                        for(let src of tag.sources) {
+                            msg += '<br>&nbsp;&nbsp;&nbsp;&nbsp;form: ' + src.form + ', section: ' + src.section + ', type \'' + src.type + '\'';
                         }
-                        msg += '<br><br>Please correct the form definitions and try again' ;
-                        reject(new Error(msg)) ;
-                        return ;
-                    }                            
+                    }
+                    msg += '<br><br>Please correct the form definitions and try again' ;
+                    reject(new Error(msg)) ;
+                    return ;
+                }
 
-                    try {
-                        await this.data_mgr_!.processTeamBAData(this.team_mgr_.getTeams()) ;
-                        if (this.match_mgr_ && this.match_mgr_.hasMatches()) {
-                            await this.data_mgr_!.processMatchBAData(this.match_mgr_.getMatches(), false) ;
+                //
+                // Check that none of the tags are of the form tag_#### where #### is a number.  This is the
+                // default tag name and should not be used in the form definitions to make the data meaningful.
+                //
+                let misnamed = this.form_mgr_!.checkMisnamedTags() ;
+                if (misnamed.length > 0) {
+                    let msg = 'Form items with tags of the form tag_#### found in form definitions:' ;
+                    for (let tag of misnamed) {
+                        msg += '<br>' + tag.tag ;
+                        for(let src of tag.sources) {
+                            msg += '<br>&nbsp;&nbsp;&nbsp;&nbsp;form: ' + src.form + ', section: ' + src.section + ', type \'' + src.type + '\'';
                         }
                     }
-                    catch(err) {
-                        this.data_mgr_!.removeDatabases() ;
-                        reject(err) ;
-                    }
+                    msg += '<br><br>Please correct the form definitions and try again' ;
+                    reject(new Error(msg)) ;
+                    return ;
+                }
 
-                    let res = this.form_mgr_.lock() ;
-                    if (res) {
-                        this.data_mgr_!.removeDatabases() ;
-                        reject(res as Error) ;                        
-                    }
+                //
+                // Initialize the data manager, which creates or opens the databases
+                //
+                try {
+                    await this.data_mgr_!.init() ;
+                }
+                catch(err) {
+                    reject(err) ;
+                    return ;
+                }
 
-                    if (this.tablet_mgr_.generateTabletSchedule()) {
-                        this.form_mgr_.populateDBWithForms()
-                            .then(()=> {
-                                this.info_!.locked_ = true ;
-                                this.info_!.uuid_ = uuid.v4() ;
-                                this.writeEventFile() ;
-                                resolve() ;
-                            })
-                            .catch((err) => {
-                                this.data_mgr_!.removeDatabases() ;
-                                this.tablet_mgr_!.clearScoutingSchedules() ;
-                                reject(err) ;
-                            }) ;
+                try {
+                    //
+                    // Process the team data
+                    //
+                    await this.data_mgr_!.processTeamBAData(this.team_mgr_!.getTeams()) ;
+                    if (this.match_mgr_ && this.match_mgr_.hasMatches()) {
+                        //
+                        // Process the match data if it exists, this is not required and can be added
+                        // later
+                        //
+                        await this.data_mgr_!.processMatchBAData(this.match_mgr_.getMatches(), false) ;
                     }
-                    else {
+                }
+                catch(err) {
+                    this.data_mgr_!.removeDatabases() ;
+                    reject(err) ;
+                }
+
+                if (!this.tablet_mgr_!.generateTabletSchedule()) {
+                    this.data_mgr_!.removeDatabases() ;                    
+                    reject(new Error('could not generate tablet schedule for scouting')) ;
+                }
+
+                this.form_mgr_!.populateDBWithForms()
+                    .then(()=> {
+                        this.info_!.locked_ = true ;
+                        this.info_!.uuid_ = uuid.v4() ;
+                        this.writeEventFile() ;
+                        resolve() ;
+                    })
+                    .catch((err) => {
+                        this.data_mgr_!.removeDatabases() ;
                         this.tablet_mgr_!.clearScoutingSchedules() ;
-                        reject(new Error('could not generate tablet schedule for scouting')) ;
-                    }
-                }
-                else {
-                    reject(new Error('event is not ready to be locked, missing matches, teams, forms, or table assignments')) ;
-                }
+                        reject(err) ;
+                    }) ;
             }
         }) ;
 
@@ -287,17 +320,8 @@ export class Project {
             }
 
             let proj: Project = new Project(logger, dir, year) ;
-            proj.init(new ProjectInfo())
-                .then(() => {
-                    let err = proj.writeEventFile() ;
-                    if (err) {
-                        reject(err) ;
-                    }
-                    resolve(proj) ;
-                })
-                .catch((err) => {
-                    reject(err) ;
-                }) ;
+            proj.init(new ProjectInfo()) ;
+            resolve(proj) ;
         }) ;
 
         return ret ;
@@ -330,13 +354,24 @@ export class Project {
             if (info instanceof Error) {
                 reject(info as Error) ;
             }
-            proj.init(info as ProjectInfo)
-                .then(() => {
-                    resolve(proj) ;
-                })
-                .catch((err) => {
-                    reject(err) ;
-                }) ;
+            proj.init(info as ProjectInfo) ;
+
+            if (proj.isLocked) {
+                //
+                // The project is locked, we need to initialize the databases
+                //
+                proj.data_mgr_!.init()
+                    .then(() => {
+                        resolve(proj) ;
+                    })
+                    .catch((err) => {
+                        logger.error('Error initializing project', err) ;
+                        reject(err) ;
+                    }) ;
+            } else {
+                resolve(proj) ;
+            }
+
         }) ;
 
         return ret ;
@@ -498,7 +533,7 @@ export class Project {
                         if (callback) {
                             callback('Inserting ' + type + ' into database ... ');
                         }
-                        this.data_mgr_!.processMatchBAData(matches, results) ;
+                        await this.data_mgr_!.processMatchBAData(matches, results) ;
                         if (callback) {
                             callback('inserted ' + matches.length + ' matches<br>') ;
                         }

@@ -109,21 +109,25 @@ export class XeroMatchStatus extends XeroView {
 
     private cellFormatter(cell: CellComponent, params: any, onRendered: any) : HTMLElement{
         let val = cell.getValue();
-        let data = cell.getData();
+        let played = cell.getRow().getData().played;
         let el = cell.getElement();
-
-        if (Math.random() > 0.75) {
-            val = 'Y' ;
-        }
 
         if (val == 'Y') {
             el.style.fontSize = '16px';
             el.style.textAlign = 'center' ;
-            el.style.backgroundColor = 'green' ;
-            el.style.color = 'white' ;            
-            val = 'Scouted' ;
+         
+            if (played === true) {
+                el.style.backgroundColor = 'green' ;
+                el.style.color = 'white' ;         
+                val = 'Scouted/BA' ;                        
+            }
+            else {
+                el.style.backgroundColor = 'lightgreen' ;
+                el.style.color = 'black' ; 
+                val = 'Scouted' ;
+            }
         }
-        else if (data.played === true) {
+        else if (played === true) {
             el.style.fontSize = '16px';
             el.style.textAlign = 'center' ;
             el.style.backgroundColor = 'red' ;

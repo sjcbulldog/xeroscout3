@@ -6,20 +6,20 @@ import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
 import { OneScoutResult, ScoutingData } from "../comms/resultsifc";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
-import { ColumnDesc } from "../model/datamodel";
 import { MatchSet } from "./datasetmgr";
 import { DataValue } from "../model/datavalue";
-import { IPCNamedDataValue, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCColumnDesc, IPCNamedDataValue, IPCProjColumnsConfig } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
+import { DataModelInfo } from "../model/datamodel";
 
 
 export class DataInfo {
     public matchdb_col_config_? : IPCProjColumnsConfig ;       // List of hidden columns in match data
     public teamdb_col_config_? : IPCProjColumnsConfig ;        // List of hidden columns in team data
+    
     public scouted_team_: number[] = [] ;               // The list of teams that have scouting data
     public scouted_match_: string[] = [] ;              // The list of matches that have scouring data
-    public team_db_cols_ : ColumnDesc[] = [] ;            // The list of fields from the team form currently in the database
-    public match_db_cols_ : ColumnDesc[] = [] ;           // The list of fields from the match form currently in the database
+
     public match_results_ : OneScoutResult[] = [] ;           // The list of match results that have been processed
     public team_results_ : OneScoutResult[] = [] ;            // The list of team results that have been processed
 } ;
@@ -32,7 +32,7 @@ export class DataManager extends Manager {
     private formula_mgr_ : FormulaManager ;
     private info_ : DataInfo ;
 
-    constructor(logger: winston.Logger, writer: () => void, dir: string, info: DataInfo, formula_mgr: FormulaManager) {
+    constructor(logger: winston.Logger, writer: () => void, dir: string, info: DataInfo, teaminfo: DataModelInfo, matchinfo: DataModelInfo, formula_mgr: FormulaManager) {
         super(logger, writer) ;
 
         this.info_ = info ;
@@ -41,12 +41,12 @@ export class DataManager extends Manager {
         let filename: string ;
 
         filename = path.join(dir, 'team.db') ;
-        this.teamdb_ = new TeamDataModel(filename, info.team_db_cols_, logger) ;
+        this.teamdb_ = new TeamDataModel(filename, teaminfo, logger) ;
         this.teamdb_.on('column-added', this.teamColumnAdded.bind(this)) ;
         this.teamdb_.on('column-removed', this.teamColumnRemoved.bind(this)) ;
 
         filename = path.join(dir, 'match.db') ;
-        this.matchdb_ = new MatchDataModel(filename, info.match_db_cols_, logger) ;
+        this.matchdb_ = new MatchDataModel(filename, matchinfo, logger) ;
         this.matchdb_.on('column-added', this.matchColumnAdded.bind(this));
         this.matchdb_.on('column-removed', this.matchColumnRemoved.bind(this));
 
@@ -101,17 +101,17 @@ export class DataManager extends Manager {
         this.matchdb_.remove() ;
     }
 
-    public createFormColumns(teamfields: ColumnDesc[], matchfields: ColumnDesc[]) : Promise<void> {
+    public createFormColumns(teamfields: IPCColumnDesc[], matchfields: IPCColumnDesc[]) : Promise<void> {
         let ret = new Promise<void>(async (resolve, reject) => {
             try {
-                await this.teamdb_.addNecessaryCols(TeamDataModel.TeamTableName, teamfields) ;
+                await this.teamdb_.addNecessaryCols(teamfields) ;
             }
             catch(err) {
                 reject(err) ;
             }
 
             try {
-                await this.matchdb_.addNecessaryCols(MatchDataModel.MatchTableName, matchfields) ;
+                await this.matchdb_.addNecessaryCols(matchfields) ;
             }
             catch(err) {
                 reject(err) ;
@@ -133,7 +133,7 @@ export class DataManager extends Manager {
         let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let found = false ;
 
-            let tcols = await this.teamdb_.getColumnNames(TeamDataModel.TeamTableName) ;
+            let tcols = await this.teamdb_.getColumnNames() ;
             if (tcols.includes(field)) {
                 let v = await this.getTeamData(field, team) ;
                 found = true ;
@@ -141,7 +141,7 @@ export class DataManager extends Manager {
                 return ;
             }
 
-            let mcols = await this.matchdb_.getColumnNames(MatchDataModel.MatchTableName) ;
+            let mcols = await this.matchdb_.getColumnNames() ;
             if (mcols.includes(field)) {
                 let v = await this.getMatchData(m, field, team) ;
                 found = true ;
@@ -208,18 +208,14 @@ export class DataManager extends Manager {
             this.write() ;
         }
     }     
-    
-    public async removeFormColumns(teamcols: ColumnDesc[], matchcols: ColumnDesc[]) : Promise<void> {
+
+    public async removeFormColumns() : Promise<void> {
         let ret = new Promise<void>(async (resolve, reject) => {
-            this.teamdb_.removeColumns(TeamDataModel.TeamTableName, teamcols.map((one) => one.name), this.info_.team_db_cols_)
-                .then(async () => {
-                    this.matchdb_.removeColumns(MatchDataModel.MatchTableName, matchcols.map((one) => one.name), this.info_.match_db_cols_)
-                        .then(() => {
-                            resolve() ;
-                        })
-                        .catch((err) => {
-                            reject(err) ;
-                        })
+            let p1 = this.teamdb_.removeColumns((one) => { return one.source === 'form'}) ;
+            let p2 = this.matchdb_.removeColumns((one) => { return one.source === 'form'}) ;
+            Promise.all([p1, p2])
+                .then(() => {
+                    resolve() ;
                 })
                 .catch((err) => {
                     reject(err) ;
@@ -248,20 +244,19 @@ export class DataManager extends Manager {
         return this.info_.scouted_match_.includes(str) ? 'Y' : 'N' ;
     }
 
-    public getMatchColumnDescs() : Promise<ColumnDesc[]> {
-        return this.matchdb_.getColumnDescs(MatchDataModel.MatchTableName) ;
-    }
+    public get matchColumnDescriptors() : IPCColumnDesc[] {
+        return this.matchdb_.colummnDescriptors ;
+    }    
 
-    public getMatchColumns() : Promise<string[]> {
-        return this.matchdb_.getColumnNames(MatchDataModel.MatchTableName) ;
+    public get matchColumnNames() : string[] {
+        return this.matchdb_.columnNames ;
     }
 
     public getAllMatchData() : Promise<any[]> {
-        return this.matchdb_.getAllData(MatchDataModel.MatchTableName) ;
+        return this.matchdb_.getAllData() ;
     }
 
     // #endregion
-
 
     // #region team related methods
     public setTeamColConfig(data: IPCProjColumnsConfig) {
@@ -281,17 +276,17 @@ export class DataManager extends Manager {
         return this.info_.scouted_team_.includes(team) ;
     }    
 
-    public getTeamColumnDescs() : Promise<ColumnDesc[]> {
-        return this.teamdb_.getColumnDescs(TeamDataModel.TeamTableName) ;
+    public get teamColumnDescriptors() : IPCColumnDesc[] {
+        return this.teamdb_.colummnDescriptors ;
     }
 
-    public getTeamColumns() : Promise<string[]> {
-        return this.teamdb_.getColumnNames(TeamDataModel.TeamTableName) ;
+    public get teamColumnNames() : string[] {
+        return this.teamdb_.columnNames ;
     }
 
     public getAllTeamData() : Promise<DataRecord[]> {
-        return this.teamdb_.getAllData(TeamDataModel.TeamTableName) ;
-    }
+        return this.teamdb_.getAllData() ;
+    }    
 
     // #endregion
 
@@ -304,7 +299,6 @@ export class DataManager extends Manager {
     public async processStatboticsYearToDateData(data: any) {
         return this.teamdb_.processStatboticsYearToDateData(data) ;
     }
-
 
     public async processOPRData(data: BAOprData) : Promise<void> {
         return this.teamdb_.processOPR(data) ;
@@ -320,7 +314,7 @@ export class DataManager extends Manager {
 
     public exportToCSV(filename: string, table: string) : Promise<void> {
         let ret : Promise<void> ;
-        if (table === TeamDataModel.TeamTableName) {
+        if (table === this.teamdb_.tableName) {
             ret = this.teamdb_.exportToCSV(filename, table);
         } else {
             ret = this.matchdb_.exportToCSV(filename, table);
@@ -353,7 +347,7 @@ export class DataManager extends Manager {
         let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
             let fields = field + ', comp_level, set_number, match_number' ;
             let teamkey = 'frc' + team ;
-            let query = 'select ' + fields + ' from ' + MatchDataModel.MatchTableName + ' where team_key = "' + teamkey + '" ;' ;
+            let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" ;' ;
             this.matchdb_.all(query)
                 .then((data: any[]) => {
                     if (data.length !== 0) {
@@ -394,7 +388,7 @@ export class DataManager extends Manager {
 
     private getTeamData(field: string, team: number) : Promise<IPCNamedDataValue> {
         let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
-            let query = 'select ' + field + ' from ' + TeamDataModel.TeamTableName + ' where team_number = ' + team + ' ;' ;
+            let query = 'select ' + field + ' from ' + this.teamdb_.tableName + ' where team_number = ' + team + ' ;' ;
             this.teamdb_.all(query)
                 .then((data) => {
                     let rec = data[0] as any ;
@@ -412,7 +406,7 @@ export class DataManager extends Manager {
         return ret ;
     }    
     
-    private teamColumnAdded(coldesc: ColumnDesc) {
+    private teamColumnAdded(coldesc: IPCColumnDesc) {
         this.logger_.silly('added new column \'' + coldesc.name + '\' to team database') ;
 
         if (!this.info_.teamdb_col_config_) {
@@ -428,23 +422,17 @@ export class DataManager extends Manager {
             hidden: false
         } ;
         this.info_.teamdb_col_config_?.columns.push(colcfg) ;
-        this.info_.team_db_cols_.push(coldesc) ;
     }
 
-    private teamColumnRemoved(coldesc: ColumnDesc) {
+    private teamColumnRemoved(coldesc: IPCColumnDesc) {
         this.logger_.silly('removed column \'' + coldesc.name + '\' from the team database') ;
         let i = this.info_.teamdb_col_config_?.columns.findIndex((one) => one.name === coldesc.name) ;
         if (i !== undefined && i >= 0) {
             this.info_.teamdb_col_config_?.columns.splice(i, 1) ;
         }
+    }
 
-        i = this.info_.team_db_cols_.findIndex((one) => one.name === coldesc.name) ;
-        if (i !== undefined && i >= 0) {
-            this.info_.team_db_cols_.splice(i, 1) ;
-        }
-    }    
-
-    private matchColumnAdded(coldesc: ColumnDesc) {
+    private matchColumnAdded(coldesc: IPCColumnDesc) {
         this.logger_.silly('added new ColumnDesc \'' + coldesc.name + '\' to match database') ;
 
         if (!this.info_.matchdb_col_config_) {
@@ -460,20 +448,14 @@ export class DataManager extends Manager {
             hidden: false
         } ;
         this.info_.matchdb_col_config_?.columns.push(colcfg) ;
-        this.info_.match_db_cols_.push(coldesc) ;
     }    
 
-    private matchColumnRemoved(coldesc: ColumnDesc) {
+    private matchColumnRemoved(coldesc: IPCColumnDesc) {
         this.logger_.silly('removed column \'' + coldesc.name + '\' from the match database') ;
 
         let i = this.info_.matchdb_col_config_?.columns.findIndex((one) => one.name === coldesc.name) ;
         if (i !== undefined && i >= 0) {
             this.info_.matchdb_col_config_?.columns.splice(i, 1) ;
-        }
-
-        i = this.info_.match_db_cols_.findIndex((one) => one.name === coldesc.name) ;
-        if (i !== undefined && i >= 0) {
-            this.info_.match_db_cols_.splice(i, 1) ;
         }
     }
     

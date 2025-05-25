@@ -1,3 +1,4 @@
+import { Key } from "readline";
 import {  XeroApp  } from "../apps/xeroapp.js";
 import {  IPCSetView  } from "../ipc.js";
 import {  XeroView  } from "./xeroview.js";
@@ -7,11 +8,26 @@ export class XeroInfoView extends XeroView {
     private main_div_?: HTMLDivElement ;
     private table_?: HTMLTableElement ;
     private evname_?: HTMLTableCellElement ;
+    private keybind_ : (ev: KeyboardEvent) => void ;
 
     public constructor(app: XeroApp, args: any[]) {
         super(app, 'xero-info-view') ;
         this.registerCallback('send-info-data', this.receivedProjectInfoData.bind(this)) ;
         this.request('get-info-data') ;
+
+        this.keybind_ = this.keyDown.bind(this) ;
+        document.addEventListener('keydown', this.keybind_) ;
+    }
+
+    public close() {
+        super.close() ;
+        document.removeEventListener('keydown', this.keybind_) ;
+    }
+    
+    private keyDown(event: KeyboardEvent) {
+        if (event.key === 'F1' && event.ctrlKey && event.altKey) {
+            this.request('generate-random-data') ;
+        }
     }
 
     private receivedProjectInfoData(info: any) {
@@ -461,5 +477,6 @@ export class XeroInfoView extends XeroView {
     
         return row;
     }
+
 
 }

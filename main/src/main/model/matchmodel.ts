@@ -1,26 +1,21 @@
 import * as sqlite3 from 'sqlite3' ;
-import { ColumnDesc, DataModel } from "./datamodel";
+import { DataModel, DataModelInfo } from "./datamodel";
 import winston from 'winston';
 import { BAMatch } from '../extnet/badata';
 import { ScoutingData } from '../comms/resultsifc';
 import { SCBase } from '../apps/scbase';
 import { DataRecord } from './datarecord';
 import { DataValue } from './datavalue';
-import { IPCNamedDataValue } from '../../shared/ipc';
+import { IPCColumnDesc, IPCNamedDataValue } from '../../shared/ipc';
 
 export class MatchDataModel extends DataModel {
-    public static readonly MatchTableName: string = 'matches' ;
+    public static readonly TableName: string = 'matches' ;
     private static readonly BlueAlliancePrefix: string = 'ba_' ;
     private static readonly fixedcols = ['comp_level', 'match_number', 'set_number'] ;
 
-    public constructor(dbname: string, coldescs: ColumnDesc[], logger: winston.Logger) {
-        super(dbname, coldescs, logger) ;
+    public constructor(dbname: string, info: DataModelInfo, logger: winston.Logger) {
+        super(dbname, MatchDataModel.TableName, info, logger) ;
     }
-
-    public getColumns() : Promise<string[]> {
-        return this.getColumnNames(MatchDataModel.MatchTableName, (a, b) => { return this.compareCols(a, b) ;}) ;
-    }
-
 
     private compareCols(a: string, b: string) : number {
         let ra = MatchDataModel.fixedcols.indexOf(a) ;
@@ -59,7 +54,7 @@ export class MatchDataModel extends DataModel {
         let ret = new Promise<void>((resolve, reject) => {
             super.init()
             .then(() => {
-                this.createTableIfNecessary(MatchDataModel.MatchTableName)
+                this.createTableIfNecessary(MatchDataModel.TableName)
                     .then(()=> {
                         resolve() ;
                     })
@@ -75,60 +70,54 @@ export class MatchDataModel extends DataModel {
         return ret;
     }
 
-    protected initialTableColumns() : ColumnDesc[] {
+    protected initialTableColumns() : IPCColumnDesc[] {
+        //
+        // Initial columns for the teams table.  These are the base columns that will be
+        // created when the table is created.  This list must match the columns in the
+        // createTableQuery() method.
+        //         
         return [
             {
+                name: 'key',
+                type: 'string',
+                source: 'base',
+                editable: false,
+            },            
+            {
                 name: 'comp_level',
-                type: 'string'
+                type: 'string',
+                source: 'base',
+                editable: false,
             },
             {
                 name: 'set_number',
-                type: 'integer'
+                type: 'integer',
+                source: 'base',
+                editable: false,                
             }, 
             {
                 name: 'match_number',
-                type: 'integer'
+                type: 'integer',
+                source: 'base',
+                editable: false,                
             }, 
             {
                 name: 'team_key',
-                type: 'string'
+                type: 'string',
+                source: 'base',
+                editable: false,                
             }
         ] ;
     }
 
     protected createTableQuery() : string {
-        let ret = 'create table ' + MatchDataModel.MatchTableName + ' (' ;
+        let ret = 'create table ' + MatchDataModel.TableName + ' (' ;
         ret += 'key TEXT' ;
         ret += ', comp_level TEXT NOT NULL' ;
         ret += ', set_number REAL NOT NULL' ;
         ret += ', match_number REAL NOT NULL'
         ret += ', team_key TEXT NOT NULL' ;
         ret += ');' ;
-
-        this.emit('column-added', {
-            name: 'key',
-            type: 'string'
-        }) ;
-
-        this.emit('column-added', {
-            name: 'comp_level',
-            type: 'string'
-        }) ;
-
-        this.emit('column-added', {
-            name: 'set_number',
-            type: 'integer'
-        }) ;
-
-        this.emit('column-added', {
-            name: 'match_number',
-            type: 'integer'
-        }) ;
-
-        this.emit('column-added', {
-            name: 'team_key',
-            type: 'string'
-        }) ;
 
         return ret ;
     }
@@ -244,7 +233,7 @@ export class MatchDataModel extends DataModel {
             }
 
             try {
-                await this.addColsAndData(MatchDataModel.MatchTableName, ['comp_level', 'set_number', 'match_number', 'team_key'], records) ;
+                await this.addColsAndData(['comp_level', 'set_number', 'match_number', 'team_key'], records, false, 'bluealliance') ;
                 resolve() ;
             }
             catch(err) {
@@ -299,7 +288,7 @@ export class MatchDataModel extends DataModel {
                 ret.push(record.item!) ;
                 records.push(dr) ;
             }
-            await this.addColsAndData(MatchDataModel.MatchTableName, ['comp_level', 'set_number', 'match_number', 'team_key'], records) ;
+            await this.addColsAndData(['comp_level', 'set_number', 'match_number', 'team_key'], records, true, 'form') ;
             resolve(ret) ;
         }) ;
         return ret ;

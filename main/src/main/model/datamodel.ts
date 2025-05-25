@@ -4,30 +4,43 @@ import winston from 'winston';
 import { format } from '@fast-csv/format';
 import { EventEmitter } from 'events';
 import { DataRecord } from './datarecord';
-import { IPCChoice, IPCNamedDataValue, IPCDataValueType } from '../../shared/ipc';
+import { IPCChoice, IPCNamedDataValue, IPCDataValueType, IPCColumnDesc, IPCColumnDefnSource } from '../../shared/ipc';
 import { DataValue } from './datavalue';
+import { TeamDataModel } from './teammodel';
 
-export interface ColumnDesc
-{
-    name: string ;
-    type: IPCDataValueType ;
-    choices?: IPCChoice[] ;            // For some string columns, the set of choices that are allowed
-} ;
+export class DataModelInfo {
+    public col_descs_ : IPCColumnDesc[] = [] ;
+}
 
 export abstract class DataModel extends EventEmitter {
     private static readonly ColummTableName: string = 'cols' ;
     private static queryno_ : number = 0 ;
 
+    private table_name_ : string ;
     private dbname_ : string ;
     private db_? : sqlite3.Database ;
     private logger_ : winston.Logger ;
-    private col_descs_ : ColumnDesc[] = [] ;
+    private info_ : DataModelInfo ;
 
-    constructor(dbname: string, coldescs: ColumnDesc[], logger: winston.Logger) {
+
+    constructor(dbname: string, tname: string, info: DataModelInfo, logger: winston.Logger) {
         super() ;
-        this.col_descs_ = coldescs ;
         this.dbname_ = dbname ;
+        this.table_name_ = tname ;
+        this.info_ = info ;
         this.logger_ = logger ;
+    }
+
+    public get colummnDescriptors() : IPCColumnDesc[] {
+        return this.info_.col_descs_ ;
+    }
+
+    public get columnNames() : string[] {
+        return this.info_.col_descs_.map((col) => col.name) ;
+    }
+
+    public get tableName() : string {
+        return this.table_name_ ;
     }
 
     public remove() : void {
@@ -73,8 +86,8 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    private getColumnDesc(field: string) : ColumnDesc | undefined {
-        for(let col of this.col_descs_) {
+    private getColumnDesc(field: string) : IPCColumnDesc | undefined {
+        for(let col of this.info_.col_descs_) {
             if (col.name === field) {
                 return col ;
             }
@@ -149,7 +162,7 @@ export abstract class DataModel extends EventEmitter {
     public exportToCSV(filename: string, table: string) : Promise<void> {
         let ret = new Promise<void>(async (resolve, reject) => {
             try {
-                let cols = await this.getColumnNames(table) ;
+                let cols = await this.getColumnNames() ;
 
                 const csvStream = format(
                     { 
@@ -161,7 +174,7 @@ export abstract class DataModel extends EventEmitter {
                     csvStream.end() ;
                     resolve()
                 }) ;
-                let records = await this.getAllData(table) ;
+                let records = await this.getAllData() ;
                 for(let record of records) {
                     csvStream.write(record) ;
                 }
@@ -242,9 +255,9 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    public getAllData(table: string) : Promise<DataRecord[]> {
+    public getAllData() : Promise<DataRecord[]> {
         let ret = new Promise<DataRecord[]>((resolve, reject) => {
-            let query = 'select * from ' + table + ';' ;
+            let query = 'select * from ' + this.table_name_ + ';' ;
             this.all(query)
                 .then((rows) => {
                     resolve(rows) ;
@@ -303,30 +316,8 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    public getColumnDescs(table: string) : Promise<ColumnDesc[]> {
-        let ret = new Promise<ColumnDesc[]>((resolve, reject) => {
-            resolve(this.col_descs_) ;
-        }) ;
-        return ret ;
-    }
-
-    public getColumnNames(table: string, comparefn? : ((a: string, b: string) => number)) : Promise<string[]> {
-        let ret = new Promise<string[]>((resolve, reject) => {
-            let query = 'SELECT * FROM sqlite_schema where name=\'' + table + '\';' ;
-            this.allRaw(query)
-                .then((rows) => {
-                    let one = rows[0] as any ;
-                    let cols = this.parseSql(one.sql) ;
-                    if (comparefn) {
-                        cols.sort(comparefn) ;
-                    }
-                    resolve(cols) ;
-                })
-                .catch((err) => {
-                    reject(err) ;
-                }) ;
-        }) ;
-        return ret ;
+    public getColumnNames(comparefn? : ((a: string, b: string) => number)) : string[] {
+        return this.info_.col_descs_.map((col) => col.name) ;
     }
 
     public init() : Promise<void> {
@@ -344,35 +335,47 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    private containsField(fields: ColumnDesc[], name: string) {
-        for(let f of fields) {
-            if (f.name === name)
-                return true ;
-        }
-
-        return false ;
+    public containsColumn(name: string) {
+        return this.info_.col_descs_.findIndex((col) => col.name === name) !== -1 ;
+    }
+    
+    public listContainsColumn(list: IPCColumnDesc[], name: string) : boolean {
+        return list.findIndex((col) => col.name === name) !== -1 ;
     }
 
-    protected addColsAndData(table: string, keys: string[], records: DataRecord[]) : Promise<void> {
-        let fields: ColumnDesc[] = [] ;
+    protected addColsAndData(keys: string[], records: DataRecord[], editable: boolean, source: IPCColumnDefnSource) : Promise<void> {
+        let fields: IPCColumnDesc[] = [] ;
 
         //
         // Find the unique set of fields across all records and associated type
         //
         for(let r of records) {
             for (let f of r.keys()) {
-                if (!this.containsField(fields, f)) {
+                if (!this.containsColumn(f) && !this.listContainsColumn(fields, f)) {
                     let type = this.extractType(f, records) ;
-                    fields.push({name: f, type: type}) ;
+                    fields.push(
+                        {
+                            name: f, 
+                            type: type,
+                            choices: undefined,
+                            source: source,
+                            editable: editable,
+                        }
+                    ) ;
                 }
             }
         }
 
         let ret = new Promise<void>(async (resolve, reject) => {
-            await this.addNecessaryCols(table, fields) ;
+            try {
+                await this.addNecessaryCols(fields) ;
+            }
+            catch(err) {
+                reject(err) ;
+            }
             for(let record of records) {
                 try {
-                    await this.insertOrUpdate(table, keys, record) ;
+                    await this.insertOrUpdate(this.table_name_, keys, record) ;
                 }
                 catch(err) {
                     reject(err) ;
@@ -399,27 +402,29 @@ export abstract class DataModel extends EventEmitter {
         return field ;
     }
 
-    public addNecessaryCols(table: string, fields: ColumnDesc[]) : Promise<void> {
+    public addNecessaryCols(fields: IPCColumnDesc[]) : Promise<void> {
         let ret = new Promise<void>(async (resolve, reject) => {
-            let existing: string[] = [] ;
-                
-            try {
-                existing = await this.getColumnNames(table) ;
-            }
-            catch(err) {
-                reject(err) ;
-            }
-
-            let toadd: ColumnDesc[] = [] ;
+            let toadd: IPCColumnDesc[] = [] ;
+ 
             for(let key of fields) {
-                if (!existing.includes(key.name)) {
+                let index = this.info_.col_descs_.findIndex((one) => { return one.name === key.name})
+                if (index === -1) {
                     toadd.push(key) ;
+                }
+                else if (this.info_.col_descs_[index].editable != key.editable) {
+                    reject(new Error(`column ${key.name} is being added, but already exists with a different 'editable' value`)) ;
+                }
+                else if (this.info_.col_descs_[index].source != key.source) {
+                    reject(new Error(`column ${key.name} is being added, but already exists with a different 'source' value`)) ;                    
+                }
+                else if (this.info_.col_descs_[index].type != key.type) {
+                    reject(new Error(`column ${key.name} is being added, but already exists with a different 'type' value`)) ;                       
                 }
             }
 
             if (toadd.length > 0) {
                 try {
-                    await this.createColumns(table, toadd) ;
+                    await this.createColumns(this.table_name_, toadd) ;
                 }
                 catch(err) {
                     reject(err) ;
@@ -598,13 +603,15 @@ export abstract class DataModel extends EventEmitter {
         return ret;
     }
 
-    public removeColumns(table: string, cols: string[], desc: ColumnDesc[]): Promise<void> {
+    public removeColumns(pred: (one: IPCColumnDesc) => boolean): Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             let all : Promise<sqlite3.RunResult>[] = [] ;
 
-            for(let one of cols) {
-                if (desc.find((col => col.name === one)) !== undefined) {
-                    let query: string = 'alter table ' + table + ' drop column ' + one + ';' ;
+            let cols: IPCColumnDesc[] = [] ;
+            for(let one of this.info_.col_descs_) {
+                if(pred(one)) {
+                    cols.push(one) ;
+                    let query: string = 'alter table ' + this.table_name_ + ' drop column ' + one + ';' ;
                     let pr = this.runQuery(query) ;
                     all.push(pr) ;
                 }
@@ -617,12 +624,17 @@ export abstract class DataModel extends EventEmitter {
                 Promise.all(all)
                     .then(() => {
                         for(let col of cols) {
+                            let index = this.info_.col_descs_.indexOf(col) ;
+                            this.info_.col_descs_.splice(index, 1) ;
+                        }
+
+                        for(let col of cols) {
                             this.emit('column-removed', col) ;
                         }
                         resolve();
                     })
                     .catch((err) => {
-                        this.logger_.error('error removing columns in table \'' + table + '\'', err) ;
+                        this.logger_.error('error removing columns in table \'' + this.table_name_ + '\'', err) ;
                         reject(err)
                     }) ;      
                 }      
@@ -653,7 +665,7 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    public createColumns(table: string, toadd:ColumnDesc[]) : Promise<void> {
+    public createColumns(table: string, toadd:IPCColumnDesc[]) : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             let allpromises = [] ;
 
@@ -667,6 +679,7 @@ export abstract class DataModel extends EventEmitter {
             Promise.all(allpromises)
                 .then(() => {
                     for(let col of toadd) {
+                        this.info_.col_descs_.push(col) ;
                         this.emit('column-added', col) ;
                     }
                     resolve();
@@ -681,7 +694,15 @@ export abstract class DataModel extends EventEmitter {
     }
 
     protected abstract createTableQuery() : string ;
-    protected abstract initialTableColumns() : ColumnDesc[] ;
+    protected abstract initialTableColumns() : IPCColumnDesc[] ;
+
+    private processInitialColumns(cols: IPCColumnDesc[]) : void {
+        this.info_.col_descs_ = [] ;
+        for(let col of cols) {
+            this.info_.col_descs_.push(col) ;
+            this.emit('column-added', col) ;
+        }
+    }
 
     protected createTableIfNecessary(table: string) : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
@@ -693,9 +714,7 @@ export abstract class DataModel extends EventEmitter {
                         //
                         this.runQuery(this.createTableQuery())
                             .then((result: sqlite3.RunResult) => {
-                                for(let col of this.initialTableColumns()) {
-                                    this.emit('column-added', col) ;
-                                }
+                                this.processInitialColumns(this.initialTableColumns()) ;
                                 resolve() ;
                             })
                             .catch((err) => {
