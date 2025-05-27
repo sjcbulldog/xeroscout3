@@ -46,6 +46,15 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         }
     }
 
+    public getControlByTag(tag: string) : FormControl | undefined {
+        for(let control of this.controls_) {
+            if (control.item.tag === tag) {
+                return control ;
+            }
+        }
+        return undefined ;
+    }   
+
     private onResize(entries: ResizeObserverEntry[]) : void {
         for(let entry of entries) {
             if (entry.target === this.elem) {

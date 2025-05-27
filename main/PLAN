@@ -1,0 +1,54 @@
+3.0.9 (RELEASED)
+-----
+- DONE: Get rid of the top of the dbview
+- DONE: Add context menu with save changes, restore changes, hide/unhide columns, formulas (not implemented)
+- DONE: Send freeze, width, show/hide, and column order information back to main
+- DONE: Honor freeze, width, show/hide, and column order information in table setup
+- DONE: Figure out hidden column user interaction
+- DONE: Send hidden column choices back to main
+- DONE: Honor hidden column choices
+- DONE: Defer close of dbview if there is changed data (prompt - there are 3 changed cells, do you want to save or discard)\
+- DONE: Add save command from menu
+- DONE: Add revert command from menu 
+
+3.0.10
+------
+- DONE: Get scouting application up and running
+- DONE: syncing working via direct network connection
+- DONE: Get syncing working via cable
+- DONE: Fix scouting form look/feel, provide team or match # with color
+- DONE: Prompt before scouting a new team or match and generating data
+- Form scaling to tablet size
+
+3.0.11
+------
+- dbview bad data formulas
+  o Highlighting
+  o Report
+    - horizontal splitter to dbview
+    - database up top
+    - report on bottom, click on line item goes to table cell
+
+3.0.12
+------
+- Data Set Editor
+- Single Team Viewer
+- More general formula editing
+
+3.0.13
+------
+- Picklist Editor
+
+3.0.14
+------
+- Multi team View
+- Team Graphs
+- Spider Graphs (look at graphing package)
+
+Bugs
+----
+Fix scrolling problem on the bottom status window when lines exceed size of window.
+Select event view, make cell text not-selectable
+Make hint window look better
+Catch when closing the entire application if there is modified data in the database view.
+Remember left splitter value and restore (per central, scout, coach)

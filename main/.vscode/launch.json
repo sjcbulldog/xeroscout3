@@ -67,6 +67,15 @@
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
-    }
+    },
   ],
+  "compounds": [
+    {
+      "name": "Debug Central & Scout",
+      "configurations": [
+        "Debug Central",
+        "Debug Scout",
+      ]
+    }
+  ]
 }

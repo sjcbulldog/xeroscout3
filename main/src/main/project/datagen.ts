@@ -1,7 +1,6 @@
 import * as fs from 'fs' ;
-import { OneScoutResult, ScoutingData } from '../comms/resultsifc';
 import { DataValue } from '../model/datavalue';
-import { IPCTextAreaItem } from '../../shared/ipc';
+import { IPCScoutResults, IPCTextAreaItem } from '../../shared/ipc';
 
 export class DataGenerator
 {
@@ -39,7 +38,7 @@ export class DataGenerator
         this.formpath_ = formpath;
     }
 
-    public generateData(ids: string[]) : ScoutingData | null {
+    public generateData(ids: string[]) : IPCScoutResults | null {
         let results = [] ;
         if (!this.parseForm()) {
             return null ;

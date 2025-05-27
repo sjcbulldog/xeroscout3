@@ -1,4 +1,4 @@
-import { IPCBoxItem } from "../../../ipc.js";
+import { IPCBoxItem, IPCTypedDataValue } from "../../../ipc.js";
 import { XeroRect } from "../../../widgets/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { EditBoxDialog } from "../dialogs/editboxdialog.js";
@@ -89,10 +89,10 @@ export class BoxControl extends FormControl {
         return new EditBoxDialog(this) ;
     }
 
-    public getData() : any {
+    public getData() : IPCTypedDataValue | undefined {
         return undefined ;
     }
 
-    public setData(data: any) : void {
+    public setData(data:IPCTypedDataValue) : void {
     }
 }

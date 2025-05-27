@@ -1,4 +1,4 @@
-import {  IPCForm, IPCSection  } from "../../ipc.js";
+import {  IPCForm, IPCFormControlType, IPCFormItem, IPCSection, IPCTypedDataValue  } from "../../ipc.js";
 
 export class FormObject {
     private form_ : IPCForm ;
@@ -105,5 +105,17 @@ export class FormObject {
         if (!this.form_.images.includes(image)) {
             this.form_.images.push(image) ;
         }
+    }
+
+    public getItemFromTag(tag: string) : IPCFormItem | undefined {
+        for(let section of this.form_.sections) {
+            for(let item of section.items) {
+                if(item.tag === tag) {
+                    return item ;
+                }
+            }
+        }
+
+        return undefined ;
     }
 }

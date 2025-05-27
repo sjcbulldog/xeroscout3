@@ -181,7 +181,9 @@ export class XeroTabbedWidget extends XeroWidget {
             throw new Error('selectPage: invalid page index') ;
         }
 
-        this.emit('beforeSelectPage', index) ;
+        let oldno = this.selected_page_ ;
+
+        this.emit('beforeSelectPage', oldno, index) ;
 
         if (this.selected_ !== undefined) {
             this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-selected') ;
@@ -197,7 +199,7 @@ export class XeroTabbedWidget extends XeroWidget {
         this.tabbar_!.children[this.selected_page_].classList.add('xero-tabbed-widget-tab-selected') ;
         this.tabbar_!.children[this.selected_page_].classList.remove('xero-tabbed-widget-tab-unselected') ;
 
-        this.emit('afterSelectPage', index) ;
+        this.emit('afterSelectPage', oldno, index) ;
     }
 
     private tabButtonClicked(tab: HTMLDivElement) : void {

@@ -1,4 +1,5 @@
-import {  IPCBooleanItem  } from "../../../ipc.js";
+import {  IPCBooleanItem, IPCTypedDataValue  } from "../../../ipc.js";
+import { DataValue } from "../../../utils/datavalue.js";
 import {  XeroRect  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditBooleanDialog  } from "../dialogs/editbooleandialog.js";
@@ -83,13 +84,15 @@ export class BooleanControl extends FormControl {
         return new EditBooleanDialog(this) ;
     }
 
-    public getData() : any {
-        return this.input_?.checked ;
+    public getData() : IPCTypedDataValue {
+        return DataValue.fromBoolean(this.input_!.checked) ;
     }
 
-    public setData(data: any) : void {
+    public setData(data:IPCTypedDataValue) : void {
         if (this.input_) {
-            this.input_.checked = data ? true : false ;
+            if (DataValue.isBoolean(data)) {
+                this.input_.checked = DataValue.toBoolean(data) ;
+            }
         }
     }
 }

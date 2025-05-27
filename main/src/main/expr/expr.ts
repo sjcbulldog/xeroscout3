@@ -1,8 +1,8 @@
-import { IPCNamedDataValue, IPCDataValueType } from "../../shared/ipc";
+import { IPCTypedDataValue, IPCDataValueType } from "../../shared/ipc";
 import { DataValue } from "../model/datavalue";
 
 export class ExprNode {
-  public getValue(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
+  public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
     return {
       type: "error",
       value: new Error("Not implemented"),
@@ -13,14 +13,14 @@ export class ExprNode {
 }
 
 export class ExprValue extends ExprNode {
-  private value_: IPCNamedDataValue;
+  private value_: IPCTypedDataValue;
 
-  constructor(public value: IPCNamedDataValue) {
+  constructor(public value: IPCTypedDataValue) {
     super();
     this.value_ = value;
   }
 
-  public getValue(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
+  public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
     return this.value_;
   }
 }
@@ -39,7 +39,7 @@ export class ExprVariable extends ExprNode {
     }
   }
 
-  public getValue(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
+  public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
     if (varvalues.has(this.name_)) {
       return varvalues.get(this.name_)!;
     }
@@ -54,19 +54,19 @@ export class ExprVariable extends ExprNode {
 export class ExprFunctionDef {
   private name_: string;
   private argcnt_: number;
-  private func_: (args: IPCNamedDataValue[]) => IPCNamedDataValue;
+  private func_: (args: IPCTypedDataValue[]) => IPCTypedDataValue;
 
   public constructor(
     name: string,
     argcnt: number,
-    func: (args: IPCNamedDataValue[]) => IPCNamedDataValue
+    func: (args: IPCTypedDataValue[]) => IPCTypedDataValue
   ) {
     this.name_ = name;
     this.argcnt_ = argcnt;
     this.func_ = func;
   }
 
-  public getValue(args: IPCNamedDataValue[]): IPCNamedDataValue {
+  public getValue(args: IPCTypedDataValue[]): IPCTypedDataValue {
     return this.func_(args);
   }
 
@@ -99,7 +99,7 @@ export class ExprFunction extends ExprNode {
     }
   }
 
-  public getValue(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
+  public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
     if (!this.args_) {
       return {
         type: "error",
@@ -107,7 +107,7 @@ export class ExprFunction extends ExprNode {
       };
     }
 
-    const args: IPCNamedDataValue[] = [];
+    const args: IPCTypedDataValue[] = [];
     for (const arg of this.args_) {
       args.push(arg.getValue(varvalues));
     }
@@ -178,7 +178,7 @@ export class ExprOperator extends ExprNode {
     return 0;
   }
 
-  public getValue(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
+  public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
     if (!this.args_) {
       return {
         type: "error",
@@ -186,12 +186,12 @@ export class ExprOperator extends ExprNode {
       };
     }
 
-    const args: IPCNamedDataValue[] = [];
+    const args: IPCTypedDataValue[] = [];
     for (const arg of this.args_) {
       args.push(arg.getValue(varvalues));
     }
 
-    let ret: IPCNamedDataValue = {
+    let ret: IPCTypedDataValue = {
       type: "error",
       value: new Error("invalid operator " + this.which_),
     };
@@ -246,8 +246,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operPlus(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operPlus(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -281,8 +281,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operMinus(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operMinus(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -308,8 +308,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operMul(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operMul(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -335,8 +335,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operDiv(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operDiv(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -377,8 +377,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operMod(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operMod(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -418,8 +418,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operPow(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operPow(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -469,8 +469,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operEqual(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operEqual(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -496,8 +496,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operNotEqual(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operNotEqual(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -523,8 +523,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operLess(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operLess(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -546,8 +546,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operLessEqual(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operLessEqual(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -573,8 +573,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operGreater(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operGreater(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -600,8 +600,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operGreaterEqual(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operGreaterEqual(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -627,8 +627,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operAnd(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operAnd(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -646,8 +646,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operOr(a: IPCNamedDataValue, b: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operOr(a: IPCTypedDataValue, b: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -665,8 +665,8 @@ export class ExprOperator extends ExprNode {
     return ret;
   }
 
-  private operNot(a: IPCNamedDataValue): IPCNamedDataValue {
-    let ret: IPCNamedDataValue = {
+  private operNot(a: IPCTypedDataValue): IPCTypedDataValue {
+    let ret: IPCTypedDataValue = {
       type: "error" as IPCDataValueType,
       value: new Error("operatorn + invalid argument types"),
     };
@@ -698,8 +698,8 @@ class ExprArray extends ExprNode {
     }
   }
 
-  public getValue(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
-    const args: IPCNamedDataValue[] = [];
+  public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
+    const args: IPCTypedDataValue[] = [];
     for (const arg of this.args_) {
       args.push(arg.getValue(varvalues));
     }
@@ -731,7 +731,7 @@ export class Expr {
   public static registerFunction(
     name: string,
     argcnt: number,
-    func: (args: IPCNamedDataValue[]) => IPCNamedDataValue
+    func: (args: IPCTypedDataValue[]) => IPCTypedDataValue
   ): void {
     if (Expr.functions_.has(name)) {
       throw new Error("Function already registered");
@@ -758,7 +758,7 @@ export class Expr {
     return this.str_;
   }
 
-  public evaluate(varvalues: Map<string, IPCNamedDataValue>): IPCNamedDataValue {
+  public evaluate(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
     if (this.hasError()) {
       return {
         type: "error",
@@ -796,8 +796,8 @@ export class Expr {
   }
 
   private static initFunctions(): void {
-    Expr.registerFunction("int", 1, (args: IPCNamedDataValue[]) => {
-      let ret: IPCNamedDataValue;
+    Expr.registerFunction("int", 1, (args: IPCTypedDataValue[]) => {
+      let ret: IPCTypedDataValue;
 
       if (args.length !== 1) {
         return {
@@ -839,8 +839,8 @@ export class Expr {
       return ret;
     });
 
-    Expr.registerFunction("abs", 1, (args: IPCNamedDataValue[]) => {
-      let ret: IPCNamedDataValue;
+    Expr.registerFunction("abs", 1, (args: IPCTypedDataValue[]) => {
+      let ret: IPCTypedDataValue;
 
       if (args.length !== 1) {
         ret = {
@@ -866,7 +866,7 @@ export class Expr {
       return ret;
     });
 
-    Expr.registerFunction("ceil", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("ceil", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -879,7 +879,7 @@ export class Expr {
       };
     });
 
-    Expr.registerFunction("floor", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("floor", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -892,7 +892,7 @@ export class Expr {
       };
     });
 
-    Expr.registerFunction("round", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("round", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -905,7 +905,7 @@ export class Expr {
       }
     }) ;
 
-    Expr.registerFunction("sqrt", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("sqrt", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -919,7 +919,7 @@ export class Expr {
       }
     }) ;
 
-    Expr.registerFunction("sin", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("sin", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -932,7 +932,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("cos", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("cos", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -946,7 +946,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("tan", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("tan", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -959,7 +959,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("asin", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("asin", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -972,7 +972,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("acos", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("acos", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -985,7 +985,7 @@ export class Expr {
         }
     });
 
-    Expr.registerFunction("atan", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("atan", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -998,7 +998,7 @@ export class Expr {
         }
     });
 
-    Expr.registerFunction("atan2", 2, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("atan2", 2, (args: IPCTypedDataValue[]) => {
       if (args.length !== 2) {
         return {
           type: "error",
@@ -1011,7 +1011,7 @@ export class Expr {
         }
     });
 
-    Expr.registerFunction("exp", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("exp", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -1024,7 +1024,7 @@ export class Expr {
         }
     });
 
-    Expr.registerFunction("log", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("log", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -1037,7 +1037,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("log10", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("log10", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -1050,7 +1050,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("log2", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("log2", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -1063,7 +1063,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("ln", 1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("ln", 1, (args: IPCTypedDataValue[]) => {
       if (args.length !== 1) {
         return {
           type: "error",
@@ -1076,7 +1076,7 @@ export class Expr {
         }
     });
 
-    Expr.registerFunction("logn", 2, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("logn", 2, (args: IPCTypedDataValue[]) => {
       if (args.length !== 2) {
         return {
           type: "error",
@@ -1089,7 +1089,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("average", -1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("average", -1, (args: IPCTypedDataValue[]) => {
       if (args.length === 0) {
         return {
           type: "error",
@@ -1097,7 +1097,7 @@ export class Expr {
         };
       }
 
-      let result: IPCNamedDataValue[] = [];
+      let result: IPCTypedDataValue[] = [];
       Expr.flatten(args, result);
       let sum = 0.0;
       for (let i = 0; i < result.length; i++) {
@@ -1120,7 +1120,7 @@ export class Expr {
 
     Expr.inited_ = true;
 
-    Expr.registerFunction("sum", -1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("sum", -1, (args: IPCTypedDataValue[]) => {
       if (args.length === 0) {
         return {
           type: "error",
@@ -1128,7 +1128,7 @@ export class Expr {
         };
       }
 
-      let result: IPCNamedDataValue[] = [];
+      let result: IPCTypedDataValue[] = [];
       Expr.flatten(args, result);
       let sum = 0.0;
       for (let i = 0; i < result.length; i++) {
@@ -1149,7 +1149,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("median", -1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("median", -1, (args: IPCTypedDataValue[]) => {
       if (args.length === 0) {
         return {
           type: "error",
@@ -1157,7 +1157,7 @@ export class Expr {
         };
       }
 
-      let result: IPCNamedDataValue[] = [];
+      let result: IPCTypedDataValue[] = [];
       Expr.flatten(args, result);
 
       for (let i = 0; i < result.length; i++) {
@@ -1171,7 +1171,7 @@ export class Expr {
         }
       }
 
-      result.sort((a: IPCNamedDataValue, b: IPCNamedDataValue) => {
+      result.sort((a: IPCTypedDataValue, b: IPCTypedDataValue) => {
         return (a.value as number) - (b.value as number) ;
       });
 
@@ -1189,7 +1189,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("variance", -1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("variance", -1, (args: IPCTypedDataValue[]) => {
       if (args.length === 0) {
         return {
           type: "error",
@@ -1197,7 +1197,7 @@ export class Expr {
         };
       }
 
-      let result: IPCNamedDataValue[] = [];
+      let result: IPCTypedDataValue[] = [];
       Expr.flatten(args, result);
 
       let sum = 0.0;
@@ -1224,7 +1224,7 @@ export class Expr {
       }
     });
 
-    Expr.registerFunction("stddev", -1, (args: IPCNamedDataValue[]) => {
+    Expr.registerFunction("stddev", -1, (args: IPCTypedDataValue[]) => {
       if (args.length === 0) {
         return {
           type: "error",
@@ -1232,7 +1232,7 @@ export class Expr {
         };
       }
 
-      let result: IPCNamedDataValue[] = [];
+      let result: IPCTypedDataValue[] = [];
       Expr.flatten(args, result);
 
       let sum = 0.0;
@@ -1263,7 +1263,7 @@ export class Expr {
     Expr.inited_ = true;
   }
 
-  private static flatten(args: IPCNamedDataValue[], result: IPCNamedDataValue[]): void {
+  private static flatten(args: IPCTypedDataValue[], result: IPCTypedDataValue[]): void {
     for (let arg of args) {
       if (arg.type === "array") {
         Expr.flatten(arg.value as any[], result);
@@ -1347,7 +1347,7 @@ export class Expr {
 
       let num = str.substring(start, index);
 
-      let v: IPCNamedDataValue = {
+      let v: IPCTypedDataValue = {
         type: "error",
         value: new Error("Invalid number"),
       };

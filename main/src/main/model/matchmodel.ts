@@ -2,11 +2,10 @@ import * as sqlite3 from 'sqlite3' ;
 import { DataModel, DataModelInfo } from "./datamodel";
 import winston from 'winston';
 import { BAMatch } from '../extnet/badata';
-import { ScoutingData } from '../comms/resultsifc';
 import { SCBase } from '../apps/scbase';
 import { DataRecord } from './datarecord';
 import { DataValue } from './datavalue';
-import { IPCColumnDesc, IPCNamedDataValue } from '../../shared/ipc';
+import { IPCColumnDesc, IPCScoutResults, IPCTypedDataValue } from '../../shared/ipc';
 
 export class MatchDataModel extends DataModel {
     public static readonly TableName: string = 'matches' ;
@@ -126,7 +125,7 @@ export class MatchDataModel extends DataModel {
         return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ;
     }
 
-    private getDataValueFromObject(obj: any) : IPCNamedDataValue {
+    private getDataValueFromObject(obj: any) : IPCTypedDataValue {
         let ret = DataValue.fromError(new Error('Invalid data type')) ;
 
         if (typeof obj === 'string') {
@@ -279,7 +278,7 @@ export class MatchDataModel extends DataModel {
         return dr ;
     }
 
-    public async processScoutingResults(data: ScoutingData) : Promise<string[]> {
+    public async processScoutingResults(data: IPCScoutResults) : Promise<string[]> {
         let ret = new Promise<string[]>(async (resolve, reject) => {
             let ret: string[] = [] ;
             let records: DataRecord[] = [] ;

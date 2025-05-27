@@ -1,5 +1,6 @@
 
-import {  IPCSelectItem  } from "../../../ipc.js";
+import {  IPCSelectItem, IPCTypedDataValue  } from "../../../ipc.js";
+import { DataValue } from "../../../utils/datavalue.js";
 import {  XeroRect  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -98,15 +99,25 @@ export class SelectControl extends FormControl {
         return new EditSelectDialog(this) ;
     }
     
-    public getData() : any {
+    public getData() :  IPCTypedDataValue | undefined  {
+        let ret : IPCTypedDataValue | undefined = undefined ;
         let ctrl = this.ctrl as HTMLSelectElement ;
-        return ctrl?.value ;
+        if (this.item.datatype === 'integer') {
+            ret = DataValue.fromInteger(parseInt(ctrl.value)) ;
+        }
+        else if (this.item.datatype === 'real') {
+            ret = DataValue.fromReal(parseFloat(ctrl.value)) ;
+        }
+        else if (this.item.datatype === 'string') {
+            ret = DataValue.fromString(ctrl.value) ;
+        }
+        return ret ;
     }
 
-    public setData(data: any) : void {
+    public setData(data:IPCTypedDataValue) : void {
         let ctrl = this.ctrl as HTMLSelectElement ;
-        if (ctrl) {
-            ctrl.value = data ;
+        if (ctrl && DataValue.isString(data)) {
+            ctrl.value = DataValue.toString(data) ;
         }
     }
 }

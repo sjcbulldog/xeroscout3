@@ -1,10 +1,10 @@
 import {  XeroApp  } from "../apps/xeroapp.js";
-import {  IPCSetView, IPCTabletDefn  } from "../ipc.js";
+import {  IPCFormPurpose, IPCSetView, IPCTabletDefn  } from "../ipc.js";
 import {  XeroView  } from "./xeroview.js";
 
 export class XeroAssignTablets extends XeroView {
-    private static tabletTeam = "team";
-    private static tabletMatch = "match";
+    private static tabletTeam : IPCFormPurpose = "team";
+    private static tabletMatch : IPCFormPurpose = "match";
     
     private frctablets_ : IPCTabletDefn[] = [] ;
     private tabletdiv_ : HTMLElement | undefined ;
@@ -107,7 +107,7 @@ export class XeroAssignTablets extends XeroView {
         }
     }
 
-    private setTabletToType(tablet: string, type: string) {
+    private setTabletToType(tablet: string, type: IPCFormPurpose) {
         if (this.frctablets_) {
             for (let i = 0; i < this.frctablets_.length; i++) {
                 if (this.frctablets_[i].name === tablet) {

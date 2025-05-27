@@ -1,4 +1,4 @@
-import { IPCImageItem } from "../../../ipc.js";
+import { IPCImageItem, IPCTypedDataValue } from "../../../ipc.js";
 import { XeroRect } from "../../../widgets/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";
@@ -88,10 +88,10 @@ export class ImageControl extends FormControl {
         return new EditImageDialog(this, this.image_src_.getImageNames()) ;
     }
 
-    public getData() : any {
+    public getData() : IPCTypedDataValue | undefined {
         return undefined ;
     }
 
-    public setData(data: any) : void {
+    public setData(data:IPCTypedDataValue) : void {
     }    
 }

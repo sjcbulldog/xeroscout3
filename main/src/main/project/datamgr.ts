@@ -4,11 +4,10 @@ import { TeamDataModel } from "../model/teammodel";
 import * as path from 'path' ;
 import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
-import { OneScoutResult, ScoutingData } from "../comms/resultsifc";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { MatchSet } from "./datasetmgr";
 import { DataValue } from "../model/datavalue";
-import { IPCColumnDesc, IPCNamedDataValue, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
 
@@ -20,8 +19,8 @@ export class DataInfo {
     public scouted_team_: number[] = [] ;               // The list of teams that have scouting data
     public scouted_match_: string[] = [] ;              // The list of matches that have scouring data
 
-    public match_results_ : OneScoutResult[] = [] ;           // The list of match results that have been processed
-    public team_results_ : OneScoutResult[] = [] ;            // The list of team results that have been processed
+    public match_results_ : IPCScoutResult[] = [] ;           // The list of match results that have been processed
+    public team_results_ : IPCScoutResult[] = [] ;            // The list of team results that have been processed
 } ;
 
 export class DataManager extends Manager {
@@ -129,8 +128,8 @@ export class DataManager extends Manager {
     // field.  For match fields, the data is processes over all matches to get
     // an average.
     //   
-    public getData(m: MatchSet, field: string, team: number) : Promise<IPCNamedDataValue> {
-        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
+    public getData(m: MatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
+        let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let found = false ;
 
             let tcols = await this.teamdb_.getColumnNames() ;
@@ -157,7 +156,7 @@ export class DataManager extends Manager {
             }
 
             if (!found) {
-                let v : IPCNamedDataValue = {
+                let v : IPCTypedDataValue = {
                     type: 'error',
                     value: 'Field ' + field + ' is not a valid team, match, or formula field'
                 }
@@ -168,7 +167,7 @@ export class DataManager extends Manager {
         return ret;
     }
 
-    public async processResults(obj: ScoutingData) : Promise<void> {
+    public async processResults(obj: IPCScoutResults) : Promise<void> {
         let ret = new Promise<void>(async (resolve, reject) => {
             if (!this.info_) {
                 this.logger_.error('project is not initialized, cannot process results') ;
@@ -274,6 +273,10 @@ export class DataManager extends Manager {
         return this.matchdb_.getAllData() ;
     }
 
+    public updateMatchDB(changes: IPCChange[]) {
+        this.matchdb_.update(changes) ;
+    }    
+
     // #endregion
 
     // #region team related methods
@@ -305,6 +308,10 @@ export class DataManager extends Manager {
     public getAllTeamData() : Promise<DataRecord[]> {
         return this.teamdb_.getAllData() ;
     }    
+
+    public updateTeamDB(changes: IPCChange[]) {
+        this.teamdb_.update(changes) ;
+    }
 
     // #endregion
 
@@ -341,7 +348,7 @@ export class DataManager extends Manager {
         return ret ;
     }
 
-    public getMatchResult(match: string) : OneScoutResult | undefined {
+    public getMatchResult(match: string) : IPCScoutResult | undefined {
         for(let res of this.info_.match_results_) {
             if (res.item === match) {
                 return res ;
@@ -350,7 +357,7 @@ export class DataManager extends Manager {
         return undefined ;
     }
 
-    public getTeamResult(team: string) : OneScoutResult | undefined {
+    public getTeamResult(team: string) : IPCScoutResult | undefined {
         for(let res of this.info_.team_results_) {
             if (res.item === team) {
                 return res ;
@@ -361,8 +368,8 @@ export class DataManager extends Manager {
 
     // #endregion
 
-    private getMatchData(m: MatchSet, field: string, team: number) : Promise<IPCNamedDataValue> {
-        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
+    private getMatchData(m: MatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
+        let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let fields = field + ', comp_level, set_number, match_number' ;
             let teamkey = 'frc' + team ;
             let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" ;' ;
@@ -404,8 +411,8 @@ export class DataManager extends Manager {
         return ret ;
     }	
 
-    private getTeamData(field: string, team: number) : Promise<IPCNamedDataValue> {
-        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
+    private getTeamData(field: string, team: number) : Promise<IPCTypedDataValue> {
+        let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let query = 'select ' + field + ' from ' + this.teamdb_.tableName + ' where team_number = ' + team + ' ;' ;
             this.teamdb_.all(query, undefined)
                 .then((data) => {
@@ -477,8 +484,8 @@ export class DataManager extends Manager {
         }
     }
     
-    private evalFormula(m: MatchSet, name: string, team: number) : Promise<IPCNamedDataValue> {
-        let ret = new Promise<IPCNamedDataValue>(async (resolve, reject) => {
+    private evalFormula(m: MatchSet, name: string, team: number) : Promise<IPCTypedDataValue> {
+        let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let formula = this.formula_mgr_.findFormula(name) ;
             if (!formula) {
                 resolve(
@@ -499,7 +506,7 @@ export class DataManager extends Manager {
             }
             else {
                 let vars: string[] = formula.variables() ;
-                let varvalues: Map<string, IPCNamedDataValue> = new Map() ;
+                let varvalues: Map<string, IPCTypedDataValue> = new Map() ;
                 for(let varname of vars) {
                     let v = await this.getData(m, varname, team) ;
                     if(v.type === 'error') {

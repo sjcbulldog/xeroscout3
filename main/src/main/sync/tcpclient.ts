@@ -55,6 +55,7 @@ export class TCPClient extends SyncClient {
 
     public send(p: PacketObj) : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
+            this.logger_.debug(`TCPClient sending packet ${p.type_} to ${this.host_}`) ;
             let buffer = this.convertToBytes(p) ;
             this.socket_.write(buffer, (err) => {
                 if (err) {

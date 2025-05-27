@@ -246,11 +246,13 @@ export abstract class SCBase {
   public sendToRenderer(ev: string, ...args: any) {
     let argval: any[] = args ;
 
+    let argstr = JSON.stringify(argval) ;
+
     this.logger_.silly({
       message: "main -> renderer",
       args: {
         event: ev,
-        evargs: argval,
+        eventArgs: argstr.substring(0, 128)
       },
     });
 

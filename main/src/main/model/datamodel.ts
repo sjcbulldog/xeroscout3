@@ -4,9 +4,8 @@ import winston from 'winston';
 import { format } from '@fast-csv/format';
 import { EventEmitter } from 'events';
 import { DataRecord } from './datarecord';
-import { IPCChoice, IPCNamedDataValue, IPCDataValueType, IPCColumnDesc, IPCColumnDefnSource } from '../../shared/ipc';
+import { IPCChoice, IPCTypedDataValue, IPCDataValueType, IPCColumnDesc, IPCColumnDefnSource, IPCChange } from '../../shared/ipc';
 import { DataValue } from './datavalue';
-import { TeamDataModel } from './teammodel';
 
 export class DataModelInfo {
     public col_descs_ : IPCColumnDesc[] = [] ;
@@ -115,7 +114,7 @@ export abstract class DataModel extends EventEmitter {
             let dr = new DataRecord() ;
             for(let key of Object.keys(row)) {
                 let col = this.getColumnDesc(key) ;
-                let v : IPCNamedDataValue | undefined = undefined ;
+                let v : IPCTypedDataValue | undefined = undefined ;
 
                 if (col) {
                     try {
@@ -503,45 +502,6 @@ export abstract class DataModel extends EventEmitter {
         return type ;
     }
 
-    private parseSql(sql: string) : string [] {
-        let ret: string[] = [] ;
-        let index: number ;
-
-        index = sql.indexOf('(') ;
-        if (index !== -1) {
-            index++ ;
-            while (index < sql.length) {
-                let colname = '' ;
-
-                while (index < sql.length) {
-                    let ch = sql.charAt(index) ;
-                    if (!ch.match(/[a-z_0-9]/i)) {
-                        break ;
-                    }
-                    colname += ch ;
-                    index++ ;
-                }
-                ret.push(colname) ;
-
-                index = sql.indexOf(',', index) ;
-                if (index === -1) {
-                    break ;
-                }
-                index++ ;
-
-                while (index < sql.length) {
-                    let ch = sql.charAt(index) ;
-                    if (ch !== ' ') {
-                        break ;
-                    }
-                    index++ ;
-                }
-            }
-        }
-
-        return ret ;
-    }
-    
     private generateWhereClause(keys: string[], dr: DataRecord) : [string, any[]] {
         let query = ' WHERE ' ;
         let params: any[] = [] ;
@@ -785,5 +745,18 @@ export abstract class DataModel extends EventEmitter {
                 })
             }) ;
         return ret ;
+    }
+
+    public update(changes:IPCChange[]) {
+        for(let change of changes) {
+            let dr = new DataRecord() ;
+            let fields: string[] = [] ;
+            for(let key of Object.keys(change.search)) {
+                dr.addfield(key, change.search[key]) ;
+                fields.push(key) ;
+            }
+            dr.addfield(change.column, change.newvalue) ;
+            this.insertOrUpdate(this.table_name_, fields, dr)
+        }
     }
 }

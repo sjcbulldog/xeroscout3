@@ -1,5 +1,5 @@
 import {  XeroApp  } from "../../apps/xeroapp.js";
-import {  IPCSection } from "../../ipc.js";
+import {  IPCFormScoutData, IPCNamedDataValue, IPCSection } from "../../ipc.js";
 import {  XeroLogger } from "../../utils/xerologger.js";
 import {  XeroRect  } from "../../widgets/xerogeom.js";
 import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
@@ -7,6 +7,7 @@ import {  XeroView  } from "../xeroview.js";
 import {  BooleanControl  } from "./controls/booleanctrl.js";
 import {  BoxControl } from "./controls/boxctrl.js";
 import {  MultipleChoiceControl  } from "./controls/choicectrl.js";
+import { FormControl } from "./controls/formctrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
 import {  LabelControl  } from "./controls/labelctrl.js";
 import {  SelectControl  } from "./controls/selectctrl.js";
@@ -14,6 +15,7 @@ import {  TextAreaControl } from "./controls/textareactrl.js";
 import {  TextControl  } from "./controls/textctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
+import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
 import {  XeroFormScoutSectionPage } from "./scoutpage.js";
 
@@ -82,14 +84,15 @@ export class XeroScoutFormView extends XeroView {
 
     private nameToImageMap_: Map<string, string> = new Map<string, string>() ;    
     private form_? : FormObject ;
+    private data_? : XeroFormDataValues ;
     private type_: string ;
-
-    private image_src_ ;
 
     private tabbed_ctrl_? : XeroTabbedWidget ;
     private section_pages_ : XeroFormScoutSectionPage[] = [] ;
     private titlediv_? : HTMLElement ;
     private tabdiv_? : HTMLElement ;    
+
+    private form_info_? : IPCFormScoutData
 
     private timer_map_: Map<string, TimerStatus> = new Map<string, TimerStatus>() ;
 
@@ -98,10 +101,10 @@ export class XeroScoutFormView extends XeroView {
 
         this.type_ = type;
 
-        this.image_src_ = 
-
         this.registerCallback('send-form', this.formCallback.bind(this));
-        this.registerCallback('send-image-data', this.receiveImageData.bind(this)) ;    
+        this.registerCallback('send-image-data', this.receiveImageData.bind(this)) ;   
+        this.registerCallback('request-results', this.provideResults.bind(this)) ;
+        this.registerCallback('send-initial-values', this.initForm.bind(this)) ;
         this.request('get-form', this.type_);        
     }
 
@@ -154,6 +157,31 @@ export class XeroScoutFormView extends XeroView {
     public setTimerValue(tag: string, value: number) : void {
     }
 
+    private findControlByTag(tag: string) : FormControl | undefined {
+        for(let page of this.section_pages_) {
+            let control = page.getControlByTag(tag) ;
+            if (control) {
+                return control ;
+            }
+        }
+        return undefined ;
+    }
+
+    private provideResults() {
+        this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;
+        this.request('provide-result', this.data_!.values) ;
+    }
+
+    private initForm(values: IPCNamedDataValue[]) : void {
+        this.data_ = new XeroFormDataValues(values) ;
+        for(let one of values) {
+            let ctrl = this.findControlByTag(one.tag) ;
+            if (ctrl) {
+                ctrl.setData(one.value) ;
+            }
+        }
+    }
+
     private setCurrentSectionByIndex(sectionIndex: number) : boolean {
         if (!this.form_ || sectionIndex < 0 || sectionIndex >= this.form_.sections.length) {
             return false ;
@@ -163,16 +191,19 @@ export class XeroScoutFormView extends XeroView {
         return true ;
     }    
 
-    private formCallback(args: any) : void {
+    private formCallback(args: IPCFormScoutData) : void {
+        this.form_info_ = args ;
         this.initDisplay() ;
 
-        this.form_ = new FormObject(args.form.json) ;
-        if (this.form_) {
-                // Make sure we have the images for the sections.
-            this.updateImages() ;
-            this.createSectionPages() ;
-            this.setCurrentSectionByIndex(0) ;
-        }        
+        if (this.form_info_.form) {
+            this.form_ = new FormObject(args.form!) ;
+            if (this.form_) {
+                    // Make sure we have the images for the sections.
+                this.updateImages() ;
+                this.createSectionPages() ;
+                this.setCurrentSectionByIndex(0) ;
+            }        
+        }
     }
 
     private createSectionPages() {
@@ -197,8 +228,10 @@ export class XeroScoutFormView extends XeroView {
 
         this.titlediv_ = document.createElement('div') ;
         this.titlediv_.className = 'xero-form-title' ;
-        let tname = this.type_.charAt(0).toUpperCase() + this.type_.slice(1) ;
-        this.titlediv_.innerText = tname + ' Form' ;
+        this.titlediv_.innerText = this.form_info_!.title || 'Xero Form - Untilted' ;
+        if (this.form_info_?.color) {
+            this.titlediv_.style.color = this.form_info_!.color ;
+        }
         this.elem.append(this.titlediv_) ;
 
         this.tabdiv_ = document.createElement('div') ;
@@ -208,7 +241,8 @@ export class XeroScoutFormView extends XeroView {
         this.tabbed_ctrl_ = new XeroTabbedWidget() ;
         this.tabbed_ctrl_.setParent(this.tabdiv_) ;        
 
-        this.tabbed_ctrl_.on('afterSelectPage', this.sectionChanged.bind(this)) ;        
+        this.tabbed_ctrl_.on('beforeSelectPage', this.beforeSectionChanged.bind(this)) ;
+        this.tabbed_ctrl_.on('afterSelectPage', this.afterSectionChanged.bind(this)) ;        
     }
 
     private receiveImageData(args: any) : void {
@@ -288,11 +322,28 @@ export class XeroScoutFormView extends XeroView {
                 }
             }
         }
+    }
+
+    private beforeSectionChanged(oldpage: number, newpage: number) : void {
+        if (oldpage !== -1) {
+            for(let ctrl of this.section_pages_[oldpage].controls) {
+                let value = ctrl.getData() ;
+                if (value) {
+                    this.data_!.set(ctrl.item.tag, value) ;
+                }
+            }
+        }
     }    
 
-    private sectionChanged() : void {
-        if (this.tabbed_ctrl_!.selectedPageNumber !== -1) {
-            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].doLayout() ;
+    private afterSectionChanged(oldpage: number, newpage: number) : void {
+        if (newpage !== -1) {
+            this.section_pages_[newpage].doLayout() ;
+            for(let ctrl of this.section_pages_[newpage].controls) {
+                let data = this.data_!.get(ctrl.item.tag) ;
+                if (data) {
+                    ctrl.setData(data) ;
+                }
+            }
         }        
     }
 }

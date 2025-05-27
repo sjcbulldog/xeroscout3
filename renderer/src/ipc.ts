@@ -1,10 +1,16 @@
 export type IPCDataValueType = "integer" | "real" | "string" | "boolean" | "array" | "null" | "error"  ;
 export type IPCDataValue = number | string | boolean | null | any[] | Error ;
+export type IPCFormPurpose = "match" | "team" ;
 
-export interface IPCNamedDataValue {
+export interface IPCTypedDataValue {
     type: IPCDataValueType ;
     value: IPCDataValue ;
 }
+
+export interface IPCNamedDataValue {
+    tag: string ;
+    value: IPCTypedDataValue ;
+} ;
 
 export interface IPCSetView {
     view: string;
@@ -19,7 +25,7 @@ export interface IPCSetStatus {
 
 export interface IPCTabletDefn {
     name: string ;
-    purpose: string | undefined;
+    purpose: IPCFormPurpose | undefined;
 }
 
 export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'box' | 'image' ;
@@ -146,4 +152,30 @@ export interface IPCDatabaseData {
     column_definitions: IPCColumnDesc[] ;               // The data definitions for each column in the database
     keycols: string[] ;                                 // The columns that are used as keys in the database
     data: any[] ;                                       // The actual data in the database, as an array of objects
+}
+
+export interface IPCChange {
+    column: string ;                    // The column that was changed
+    oldvalue: IPCTypedDataValue ;       // The old value of the column
+    newvalue: IPCTypedDataValue ;       // The new value of the column
+    search : any ;                      // The search object that is used to find the row that was changed
+}
+
+export interface IPCFormScoutData {
+    message?: string ;
+    form?: IPCForm ;
+    reversed? : boolean ;
+    color? : string ;
+    title? : string ;
+}
+
+export interface IPCScoutResult {
+    item?: string ;
+    data: IPCNamedDataValue[] ;
+}
+
+export interface IPCScoutResults {
+    tablet: string ;
+    purpose: string ;
+    results: IPCScoutResult[] ;
 }

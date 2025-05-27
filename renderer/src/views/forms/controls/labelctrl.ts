@@ -1,4 +1,4 @@
-import {  IPCLabelItem  } from "../../../ipc.js";
+import {  IPCLabelItem, IPCTypedDataValue  } from "../../../ipc.js";
 import {  XeroRect  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -75,10 +75,10 @@ export class LabelControl extends FormControl {
         return new EditLabelDialog(this) ;
     }
 
-    public getData() : any {
+    public getData() : IPCTypedDataValue | undefined {
         return undefined ;
     }
 
-    public setData(data: any) : void {
+    public setData(data:IPCTypedDataValue) : void {
     }
 }

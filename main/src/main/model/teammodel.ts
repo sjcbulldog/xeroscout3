@@ -3,10 +3,9 @@ import { DataModel, DataModelInfo } from "./datamodel";
 import winston from 'winston';
 import { BAOprData, BARankingData, BARankings, BATeam } from '../extnet/badata';
 import { SCBase } from '../apps/scbase';
-import { ScoutingData } from '../comms/resultsifc';
 import { DataRecord } from './datarecord';
 import { DataValue } from './datavalue';
-import { IPCColumnDesc } from '../../shared/ipc';
+import { IPCColumnDesc, IPCScoutResults } from '../../shared/ipc';
 
 interface scoutvalue {
     tag: string,
@@ -305,7 +304,7 @@ export class TeamDataModel extends DataModel {
         return dr ;
     }
 
-    public async processScoutingResults(data: ScoutingData) : Promise<number[]> {
+    public async processScoutingResults(data: IPCScoutResults) : Promise<number[]> {
         let ret = new Promise<number[]>(async (resolve, reject) => {
             let ret: number[] = [] ;
             let records: DataRecord[] = [] ;

@@ -1,4 +1,5 @@
-import {  IPCUpDownItem  } from "../../../ipc.js";
+import {  IPCTypedDataValue, IPCUpDownItem  } from "../../../ipc.js";
+import { DataValue } from "../../../utils/datavalue.js";
 import {  XeroRect  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -193,13 +194,13 @@ export class UpDownControl extends FormControl {
         return new EditUpDownControlDialog(this) ;
     }
 
-    public getData() : any {
-        return this.count_value_
+    public getData() :  IPCTypedDataValue | undefined  {
+        return DataValue.fromInteger(this.count_value_) ;
     }
 
-    public setData(data: any) : void {
-        if (this.count_) {
-            this.count_value_ = data ;
+    public setData(data:IPCTypedDataValue) : void {
+        if (this.count_ && DataValue.isInteger(data)) {
+            this.count_value_ = DataValue.toInteger(data) ;
             this.displayCount() ;
         }
     }    

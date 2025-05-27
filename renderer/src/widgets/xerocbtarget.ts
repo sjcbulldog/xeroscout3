@@ -83,7 +83,17 @@ export class XeroMainProcessInterface extends EventEmitter {
     dispatchCallback(name: string, arg: any) {
         if (XeroMainProcessInterface.verbose_) {
             let logger = XeroLogger.getInstance() ;
-            let argstr = (arg === null) ? 'null' : JSON.stringify(arg) ;
+            let argstr ;
+            if (arg === null) {
+                argstr = 'null' ;
+            }
+            else if (arg === undefined) {
+                argstr = 'undefined' ;
+            }
+            else {
+                argstr = JSON.stringify(arg) ;
+            }   
+
             if (argstr.length > 80) {
                 argstr = argstr.substring(0, 80) + '...' ;
             }

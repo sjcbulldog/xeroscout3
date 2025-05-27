@@ -17,7 +17,7 @@ export class XeroView extends XeroWidget {
         this.hint_popup_.on('popup-closed', this.hintClosed.bind(this)) ;
     }
 
-    public get okToClose() : boolean {
+    public get isOkToClose() : boolean {
         return true ;
     }
 

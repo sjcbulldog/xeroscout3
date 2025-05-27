@@ -50,6 +50,10 @@ export class TCPSyncServer extends SyncServer {
     }
 
     private connected(socket: net.Socket) {
+        if (this.socket_) {
+            this.logger_.info('TCPSyncServer: client connected, but already have a client connected - disallowing new connection') ;
+            socket.destroy() ;
+        }
         this.socket_ = socket ;
         this.logger_.info('TCPSyncServer: client connected', { 
             address: socket.address,

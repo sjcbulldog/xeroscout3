@@ -12,8 +12,6 @@ import { MatchDataModel } from "../model/matchmodel";
 import { BAEvent, BAMatch, BATeam } from "../extnet/badata";
 import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
-import { FormInfo } from "../comms/formifc";
-import { OneScoutResult, ScoutingData } from "../comms/resultsifc";
 import { DataSet } from "../project/datasetmgr";
 import { TabletData } from "../project/tabletmgr";
 import { TeamNickNameNumber } from "../project/teammgr";
@@ -23,7 +21,7 @@ import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
 import { DataValue } from "../model/datavalue";
-import { IPCProjColumnsConfig, IPCDatabaseData } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCForm, IPCScoutResult, IPCScoutResults } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 
 export interface GraphDataRequest {
@@ -97,7 +95,6 @@ export class SCCentral extends SCBase {
 	private baloading_: boolean;
 	private bacount_ : number ;
 	private tcpsyncserver_?: TCPSyncServer = undefined;
-	private previewfile_?: string = undefined;
 	private baevents_?: BAEvent[];
 	private menuitems_: Map<string, MenuItem> = new Map<string, MenuItem>();
 	private year_?: number;
@@ -109,6 +106,7 @@ export class SCCentral extends SCBase {
 	private reverseImage_: MenuItem | undefined ;
 	private importImage_ : MenuItem | undefined ;
 	private lastformview_? : string ;
+	private synctype_ : string = 'data' ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'server');
@@ -589,8 +587,6 @@ export class SCCentral extends SCBase {
 				let name = this.image_mgr_.addImage(result.filePaths[0]) ;
 				if (typeof name === 'string') {
 					this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
-					this.sendImageData(name) ;
-					this.sendToRenderer("send-form-image", name) ;
 				}
 				else {
 					dialog.showErrorBox(
@@ -603,25 +599,17 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendForm(arg: string) {
-		let ret : FormInfo = {
-			message: undefined,
-			form: undefined,
-			reversed: undefined,
-			color: undefined
+		let ret : IPCFormScoutData = {
 		} ;
 
 		let filename: string ;
 		let title: string ;
 		let good: boolean = true ;
 
-		if (arg === 'preview') {
-			filename = this.previewfile_! ;
-			title = 'Preview Form' ;
-		}
-		else if (arg === 'team') {
+		if (arg === 'team') {
 			if (this.project_ && this.project_.isInitialized() && this.project_.form_mgr_!.hasForms()) {
 				filename = this.project_.form_mgr_!.getTeamFormFullPath()! ;
-				title = 'Team Form' ;
+				ret.title = 'Team Form' ;
 			}
 			else {
 				good = false ;
@@ -631,7 +619,7 @@ export class SCCentral extends SCBase {
 		else if (arg === 'match') {
 			if (this.project_ && this.project_.isInitialized() && this.project_.form_mgr_!.hasForms()) {
 				filename = this.project_.form_mgr_!.getMatchFormFullPath()! ;
-				title = 'Match Form' ;
+				ret.title = 'Match Form' ;
 			}
 			else {
 				good = false ;
@@ -646,13 +634,8 @@ export class SCCentral extends SCBase {
 		if (good) {
 			let jsonstr = fs.readFileSync(filename!).toString();
 			try {
-				let jsonobj = JSON.parse(jsonstr);
-				ret.form = {
-					json: jsonobj,
-					type: arg,
-					title: title!,
-				} ;
-
+				let jsonobj = JSON.parse(jsonstr) as IPCForm ;
+				ret.form = jsonobj ;
 				ret.color = this.color_ ;
 				ret.reversed = this.reversed_ ;
 
@@ -989,6 +972,10 @@ export class SCCentral extends SCBase {
 		}
 	}
 
+	public updateMatchDB(changes: IPCChange[]) {
+		this.project_!.data_mgr_!.updateMatchDB(changes);
+	}
+
 	private convertDataForDisplay(data: DataRecord[]) {
 		let ret: any[] = [];
 		for (let d of data) {
@@ -1022,6 +1009,10 @@ export class SCCentral extends SCBase {
 					);
 				});
 		}
+	}
+
+	public updateTeamDB(changes: IPCChange[]) {
+		this.project_!.data_mgr_!.updateTeamDB(changes);
 	}
 
 	public sendMatchData(): void {
@@ -1974,6 +1965,7 @@ export class SCCentral extends SCBase {
 		let resp: PacketObj | undefined;
 
 		if (p.type_ === PacketType.Hello) {
+			this.synctype_ = 'data' ;
 			if (p.data_.length > 0) {
 				try {
 					let obj = JSON.parse(p.payloadAsString());
@@ -2019,7 +2011,7 @@ export class SCCentral extends SCBase {
 		}
 		else if (p.type_ === PacketType.RequestMatchResults) {
 			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
-			let results : OneScoutResult[] = [] ;
+			let results : IPCScoutResult[] = [] ;
 
 			for(let match of obj) {
 				let one = this.project_!.data_mgr_!.getMatchResult(match) ;
@@ -2031,7 +2023,7 @@ export class SCCentral extends SCBase {
 			resp = new PacketObj(PacketType.ProvideMatchResults, Buffer.from(msg, "utf-8"));
 		} else if (p.type_ === PacketType.RequestTeamResults) {
 			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
-			let results : OneScoutResult[] = [] ;
+			let results : IPCScoutResult[] = [] ;
 
 			for(let team of obj) {
 				let one = this.project_!.data_mgr_!.getTeamResult(team) ;
@@ -2042,6 +2034,7 @@ export class SCCentral extends SCBase {
 			let msg: string = JSON.stringify(results) ;
 			resp = new PacketObj(PacketType.ProvideTeamResults, Buffer.from(msg, "utf-8"));
 		} else if (p.type_ === PacketType.RequestTablets) {
+			this.synctype_ = "initialize" ;
 			let data: Uint8Array = new Uint8Array(0);
 			if (this.project_ && this.project_.tablet_mgr_?.areTabletsValid()) {
 				let tablets: any[] = [];
@@ -2117,7 +2110,7 @@ export class SCCentral extends SCBase {
 			}
 		} else if (p.type_ === PacketType.ProvideResults) {
 			try {
-				let obj : ScoutingData = JSON.parse(p.payloadAsString()) as ScoutingData ;
+				let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
 				this.project_!.data_mgr_?.processResults(obj)
 					.then(() => {
 						if (this.project_!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
@@ -2151,8 +2144,13 @@ export class SCCentral extends SCBase {
 			}
 		} else if (p.type_ === PacketType.Goodbye) {
 			resp = undefined;
-			let msg: string =
-				"Tablet '" + p.payloadAsString() + "' has completed sync";
+			let msg: string ;
+			if (this.synctype_ === "initialize") {
+				msg = "Tablet '" + p.payloadAsString() + "' has sucessfully completed synchronization and is ready to use";
+			}
+			else {
+				msg = "Tablet '" + p.payloadAsString() + "' has sucessfully synchronized scouting data with this host" ;
+			}
 
 			dialog.showMessageBox(this.win_, {
 				title: "Synchronization Complete",

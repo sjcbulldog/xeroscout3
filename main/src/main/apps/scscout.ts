@@ -1,14 +1,13 @@
+import * as path from 'path' ;
+import * as fs from 'fs' ;
 import { BrowserWindow, dialog, Menu, MenuItem } from "electron";
 import { SCBase, XeroAppType } from "./scbase";
 import { SyncClient } from "../sync/syncclient";
 import { TCPClient } from "../sync/tcpclient";
 import { PacketObj } from "../sync/packetobj";
-import * as path from 'path' ;
-import * as fs from 'fs' ;
 import { PacketType } from "../sync/packettypes";
-import { FormInfo } from "../comms/formifc";
-import { OneScoutField, OneScoutResult, ScoutingData } from "../comms/resultsifc";
 import { MatchTablet, TeamTablet } from "../project/tabletmgr";
+import { IPCFormScoutData, IPCNamedDataValue, IPCScoutResult, IPCScoutResults, IPCTabletDefn } from "../../shared/ipc";
 
 export class MatchInfo {
     public type_? : string ;
@@ -25,7 +24,7 @@ export class SCScoutInfo {
     public matchform_? : any ;
     public teamlist_? : TeamTablet[] ;
     public matchlist_? : MatchTablet[] ;
-    public results_ : OneScoutResult[] ;
+    public results_ : IPCScoutResult[] ;
 
     constructor() {
         this.results_ = [] ;
@@ -44,7 +43,7 @@ export class SCScout extends SCBase {
 
     private info_ : SCScoutInfo = new SCScoutInfo() ;
 
-    private tablets_?: any[] ;
+    private tablets_?: IPCTabletDefn[] ;
     private conn_?: SyncClient ;
     private current_scout_? : string ;
     private alliance_? : string ;
@@ -247,7 +246,7 @@ export class SCScout extends SCBase {
             //
             // About to scout a new team, be sure that is what we want to do.
             //
-            let data: OneScoutResult | undefined = this.getResults(team) ;
+            let data: IPCScoutResult | undefined = this.getResults(team) ;
             if (!data) {
                 let ans = dialog.showMessageBoxSync(
                     {
@@ -265,7 +264,7 @@ export class SCScout extends SCBase {
 
             this.sendToRenderer('send-nav-highlight', team) ;
             this.current_scout_ = team;
-            this.setView('formview', 'team') ;
+            this.setView('form-scout', 'team') ;
         }
     }
 
@@ -289,7 +288,7 @@ export class SCScout extends SCBase {
                 //
                 // About to scout a new match, be sure that is what we want to do.
                 //
-                let data: OneScoutResult | undefined = this.getResults(match) ;
+                let data: IPCScoutResult | undefined = this.getResults(match) ;
                 if (!data) {
                     let ans = dialog.showMessageBoxSync(
                         {
@@ -306,7 +305,7 @@ export class SCScout extends SCBase {
                 }
                 this.sendToRenderer('send-nav-highlight', match) ;
                 this.current_scout_ = match ;
-                this.setView('formview', 'match') ;
+                this.setView('form-scout', 'match') ;
             }
         }
     }
@@ -325,8 +324,8 @@ export class SCScout extends SCBase {
         return ret;
     }
 
-    private filterResults(res: OneScoutField[]) : OneScoutField[] {
-        let ret: OneScoutField[] = [] ;
+    private filterResults(res: IPCNamedDataValue[]) : IPCNamedDataValue[] {
+        let ret: IPCNamedDataValue[] = [] ;
 
         for(let r of res) {
             if (r.value !== undefined) {
@@ -337,7 +336,7 @@ export class SCScout extends SCBase {
         return ret ;
     }
 
-    public provideResults(res: OneScoutField[]) {
+    public provideResults(res: IPCNamedDataValue[]) {
         this.addResults(this.current_scout_!, this.filterResults(res)) ;
         this.writeEventFile() ;
         this.logger_.silly('provideResults:' + this.current_scout_, res) ;
@@ -350,29 +349,23 @@ export class SCScout extends SCBase {
     }
 
     public sendForm(type: string) {
+        if (this.current_scout_ === undefined) {
+            throw new Error('No current scout set - cannot send form') ;
+        }
+
         let good : boolean = true ;
-        let ret : FormInfo = {
+        let ret : IPCFormScoutData = {
             message: undefined,
-            form: undefined,
             reversed: this.reversed_,
             color: this.alliance_,
+            title: this.current_scout_,
         }
 
         if (type === 'team') {
-            ret.form = 
-            {
-                type: 'team',
-                title: 'Team Form',
-                json: this.info_.teamform_
-            }
+            ret.form = this.info_.teamform_
         }
         else if (type === 'match') {
-            ret.form = 
-            {
-                type: 'match',
-                title: 'Match Form',
-                json: this.info_.matchform_
-            }
+            ret.form = this.info_.matchform_ ;
         }
         else {
             ret.message = 'Invalid form type requested' ;
@@ -380,7 +373,7 @@ export class SCScout extends SCBase {
         }
 
         if (good) {
-            let images = ret.form!.json.images ;
+            let images = ret.form!.images ;
             if (images) {
                 for(let image of images) {
                     this.sendImageData(image) ;
@@ -389,7 +382,7 @@ export class SCScout extends SCBase {
         }
         this.sendToRenderer('send-form', ret);
 
-        let data: OneScoutResult | undefined = this.getResults(this.current_scout_!) ;
+        let data: IPCScoutResult | undefined = this.getResults(this.current_scout_!) ;
         if (data) {
             this.sendToRenderer('send-initial-values', data.data) ;
         }
@@ -424,7 +417,7 @@ export class SCScout extends SCBase {
         }
     }
 
-    private getResults(scout: string) : OneScoutResult | undefined {
+    private getResults(scout: string) : IPCScoutResult | undefined {
         for(let result of this.info_.results_) {
             if (result.item === scout) {
                 return result ;
@@ -442,8 +435,8 @@ export class SCScout extends SCBase {
         }
     }
     
-    private addResults(scout: string, result: OneScoutField[]) {
-        let resobj : OneScoutResult = {
+    private addResults(scout: string, result: IPCNamedDataValue[]) {
+        let resobj : IPCScoutResult = {
             item: scout,
             data: result
         } ;
@@ -469,12 +462,14 @@ export class SCScout extends SCBase {
                     }
                     data = Buffer.from(JSON.stringify(obj)) ;
                 }
-                let p: PacketObj = new PacketObj(PacketType.Hello, data) ;
-                await this.conn_!.send(p) ;
 
                 this.conn_!.on('close', () => {
                     this.conn_ = undefined ;
                 }) ;
+
+                let p: PacketObj = new PacketObj(PacketType.Hello, data) ;
+                await this.conn_!.send(p) ;
+
 
                 this.conn_!.on('error', (err: Error) => {
                     let msg: string = "" ;
@@ -581,10 +576,12 @@ export class SCScout extends SCBase {
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideMatchResults) {
-            let obj = JSON.parse(p.payloadAsString()) ;
-            for(let res of obj) {
-                if (!this.getResults(res.item)) {
-                    this.addResults(res.item, res.data) ;
+            if (this.info_.purpose_ === 'match') {
+                let obj = JSON.parse(p.payloadAsString()) ;
+                for(let res of obj) {
+                    if (!this.getResults(res.item)) {
+                        this.addResults(res.item, res.data) ;
+                    }
                 }
             }
             this.match_results_received_ = true ;
@@ -592,10 +589,12 @@ export class SCScout extends SCBase {
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideTeamResults) {
-            let obj = JSON.parse(p.payloadAsString()) ;
-            for(let res of obj) {
-                if (!this.getResults(res.item)) {
-                    this.addResults(res.item, res.data) ;
+            if (this.info_.purpose_ === 'team') {
+                let obj = JSON.parse(p.payloadAsString()) ;
+                for(let res of obj) {
+                    if (!this.getResults(res.item)) {
+                        this.addResults(res.item, res.data) ;
+                    }
                 }
             }
             this.team_results_received_ = true ;
@@ -618,7 +617,7 @@ export class SCScout extends SCBase {
     }
 
     private sendScoutingData() {
-        let obj : ScoutingData = {
+        let obj : IPCScoutResults = {
             tablet: this.info_.tablet_!,
             purpose: this.info_.purpose_!,
             results: this.info_.results_
@@ -649,7 +648,7 @@ export class SCScout extends SCBase {
         for(let m of this.info_.matchlist_!) {
             let cmd: string = 'sm-' + m.comp_level + '-' + m.set_number + '-' + m.match_number + '-' + m.teamkey ;
             if (this.info_.results_) {
-                let res: OneScoutResult | undefined = this.getResults(cmd) ;
+                let res: IPCScoutResult | undefined = this.getResults(cmd) ;
                 if (!res) {
                     ret.push(cmd) ;
                 }
@@ -664,7 +663,7 @@ export class SCScout extends SCBase {
         for(let t of this.info_.teamlist_!) {
             let cmd: string = 'st-' + t.team ;
             if (this.info_.results_) {
-                let res: OneScoutResult | undefined = this.getResults(cmd) ;
+                let res: IPCScoutResult | undefined = this.getResults(cmd) ;
                 if (!res) {
                     ret.push(cmd) ;
                 }
@@ -714,13 +713,25 @@ export class SCScout extends SCBase {
         return ret ;
     }
 
+    public mainWindowLoaded(): void {
+        this.sendToRenderer('xero-app-init', 'scout') ;
+
+        this.setViewString() ;
+        
+        let v = this.getVersion('application') ;
+        this.sendToRenderer('send-app-status', { 
+            left: `Xero Scouter ${this.versionToString(v)}`,
+            middle: this.info_.evname_ ? this.info_.evname_ : 'No Event Loaded',
+            right: this.info_.uuid_ ? this.info_.uuid_ : ''
+        }) ;
+    }    
+
     private setViewString() {
         if (this.info_.uuid_) {
-            this.sendToRenderer('update-main-window-view', 'event-view', this.info_.evname_, this.info_.uuid_) ;
             this.sendToRenderer('tablet-title', this.info_.tablet_) ;
         }
         else {
-            this.setView('empty') ;
+            this.setView('text', 'No Event Loaded') ;
         }
     }
 

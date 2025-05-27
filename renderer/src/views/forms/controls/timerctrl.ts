@@ -1,4 +1,5 @@
-import {  IPCTimerItem  } from "../../../ipc.js";
+import {  IPCTimerItem, IPCTypedDataValue  } from "../../../ipc.js";
+import { DataValue } from "../../../utils/datavalue.js";
 import {  XeroRect  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -137,20 +138,20 @@ export class TimerControl extends FormControl {
         return new EditTimerDialog(this) ;
     }
 
-    public getData() : any {
-        let ret : number | undefined = undefined ;
+    public getData() :  IPCTypedDataValue | undefined  {
+        let ret : IPCTypedDataValue | undefined = undefined ;
 
         if (this.view instanceof XeroScoutFormView) {
             let view = this.view as XeroScoutFormView ;
-            ret = this.view.getTimerValue(this.item.tag) ;
+            ret = DataValue.fromReal(this.view.getTimerValue(this.item.tag)) ;
         }
         return ret;
     }
 
-    public setData(data: any) : void {
-        if (this.current_time_ && this.view instanceof XeroScoutFormView) {
+    public setData(data:IPCTypedDataValue) : void {
+        if (this.current_time_ && this.view instanceof XeroScoutFormView && DataValue.isNumber(data)) {
             let view = this.view as XeroScoutFormView ;
-            let value = data as number ;
+            let value = DataValue.toReal(data) ;
             view.setTimerValue(this.item.tag, value) ;
             this.displayTimer() ;
         }

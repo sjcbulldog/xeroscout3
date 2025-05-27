@@ -1,30 +1,30 @@
 import {  XeroLogger  } from "../utils/xerologger.js";
 import {  XeroInfoView  } from "../views/infoview.js";
-import {   XeroNav   } from "../xeronav.js";
-import {   XeroSelectEvent   } from "../views/selectevent.js";
-import {   XeroTextView   } from "../views/textview.js";
-import {   XeroView   } from "../views/xeroview.js";
-import {   XeroMainProcessInterface   } from "../widgets/xerocbtarget.js";
-import {   XeroSplitter   } from "../widgets/xerosplitter.js";
-import {   XeroStatusWindow   } from "../widgets/xerostatus.js";
-import {   XeroWidget   } from "../widgets/xerowidget.js";
-import {   XeroAssignTablets   } from "../views/assigntablets.js";
-import {   XeroEditFormView   } from "../views/forms/editformview.js";
-import {   XeroScoutFormView   } from "../views/forms/scoutformview.js";
-import {   XeroTeamStatus   } from "../views/teamstatus.js";
-import {   XeroMatchStatus   } from "../views/matchstatus.js";
-import {   StatusOverlay   } from "../status/StatusOverlay.js";
-import {   XeroTeamDatabaseView   } from "../views/teamdbview.js";
-import {   XeroMatchDatabaseView   } from "../views/matchdbview.js";
-import {   IPCSetStatus, IPCSetView   } from "../ipc.js";
+import {  XeroNav   } from "../xeronav.js";
+import {  XeroSelectEvent   } from "../views/selectevent.js";
+import {  XeroTextView   } from "../views/textview.js";
+import {  XeroView   } from "../views/xeroview.js";
+import {  XeroMainProcessInterface   } from "../widgets/xerocbtarget.js";
+import {  XeroSplitter   } from "../widgets/xerosplitter.js";
+import {  XeroStatusWindow   } from "../widgets/xerostatus.js";
+import {  XeroWidget   } from "../widgets/xerowidget.js";
+import {  XeroAssignTablets   } from "../views/assigntablets.js";
+import {  XeroEditFormView   } from "../views/forms/editformview.js";
+import {  XeroScoutFormView   } from "../views/forms/scoutformview.js";
+import {  XeroTeamStatus   } from "../views/teamstatus.js";
+import {  XeroMatchStatus   } from "../views/matchstatus.js";
+import {  StatusOverlay   } from "../status/StatusOverlay.js";
+import {  XeroTeamDatabaseView   } from "../views/teamdbview.js";
+import {  XeroMatchDatabaseView   } from "../views/matchdbview.js";
+import {  IPCSetStatus, IPCSetView   } from "../ipc.js";
 import { HintManager } from "../hintmgr.js";
 import { ImageDataSource } from "./imagesrc.js";
+import { XeroSelectTablet } from "../views/selecttablet/selecttablet.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize the XeroScout app
-    console.log("XeroApp DOMContentLoaded - creating app") ;
     mainapp = new XeroApp() ;
 });
 
@@ -46,11 +46,13 @@ export class XeroApp extends XeroMainProcessInterface {
     constructor() {
         super() ;
 
-        console.log(`XeroApp constructor called`) ;
         this.registerCallback('xero-app-init', this.init.bind(this)) ;
     }
 
     private init(type: XeroAppType) {
+        let logger_ = XeroLogger.getInstance() ;
+        logger_.debug(`XeroApp init called with type ${type}`) ;
+
         this.type_ = type ;
         this.hintdb_ = new HintManager() ;
         this.image_src_ = new ImageDataSource() ;
@@ -96,11 +98,22 @@ export class XeroApp extends XeroMainProcessInterface {
     public updateView(args: IPCSetView) {
         let logger = XeroLogger.getInstance() ;
 
-        if (this.current_view_ && !this.current_view_.okToClose) {
+        if (args === undefined || args.view === undefined) {
+            const obj = {
+                stack: ''
+            };
+            Error.captureStackTrace(obj);
+            console.log(obj.stack) ;
+            logger.error("updateView called with undefined args or view") ;
+        }
+
+        if (this.current_view_ && !this.current_view_.isOkToClose) {
             return ;
         }
 
-        this.closeCurrentView() ;
+        if (!this.closeCurrentView()) {
+            return ;
+        }
         if (!this.viewmap_.has(args.view)) {
             logger.error(`view ${args.view} not registered`) ;
         }
@@ -111,28 +124,39 @@ export class XeroApp extends XeroMainProcessInterface {
         }
     }
 
-    private closeCurrentView() {
+    private closeCurrentView() : boolean {
+        let ret = true ;
         if (this.current_view_) {
-            this.current_view_.close() ;
-            this.right_view_pane_!.elem.removeChild(this.current_view_!.elem) ;
-            this.current_view_ = undefined ;
+            if (this.current_view_.isOkToClose) {
+                this.current_view_.close() ;
+                this.right_view_pane_!.elem.removeChild(this.current_view_!.elem) ;
+                this.current_view_ = undefined ;
+            }
+            else {
+                ret = false ;
+            }
+        }
+
+        return ret;
+    }
+
+    private registerView(view: string, viewclass: any, programs: XeroAppType[]) {
+        if (this.type_ && programs.includes(this.type_)) {
+            this.viewmap_.set(view, viewclass) ;
         }
     }
 
-    private registerView(view: string, viewclass: any) {
-        this.viewmap_.set(view, viewclass) ;
-    }
-
     private registerViews() {
-        this.registerView('text', XeroTextView) ;
-        this.registerView('info', XeroInfoView) ;
-        this.registerView('select-event', XeroSelectEvent) ;
-        this.registerView('assign-tablets', XeroAssignTablets) ;
-        this.registerView('form-edit', XeroEditFormView) ;
-        this.registerView('form-scout', XeroScoutFormView) ;
-        this.registerView('team-status', XeroTeamStatus) ;
-        this.registerView('team-db', XeroTeamDatabaseView) ;
-        this.registerView('match-status', XeroMatchStatus) ;
-        this.registerView('match-db', XeroMatchDatabaseView) ;
+        this.registerView('text', XeroTextView, ['central', 'scout', 'coach']) ;
+        this.registerView('info', XeroInfoView, ['central']) ;
+        this.registerView('select-event', XeroSelectEvent, ['central']) ;
+        this.registerView('assign-tablets', XeroAssignTablets, ['central']) ;
+        this.registerView('form-edit', XeroEditFormView, ['central']) ;
+        this.registerView('form-scout', XeroScoutFormView, ['central', 'scout', 'coach']) ;
+        this.registerView('team-status', XeroTeamStatus, ['central']) ;
+        this.registerView('team-db', XeroTeamDatabaseView, ['central']) ;
+        this.registerView('match-status', XeroMatchStatus, ['central']) ;
+        this.registerView('match-db', XeroMatchDatabaseView, ['central']) ;
+        this.registerView('select-tablet', XeroSelectTablet, ['scout']) ;
     }
 }

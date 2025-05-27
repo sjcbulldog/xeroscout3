@@ -22,9 +22,8 @@ import { FormulaManager } from './formulamgr';
 import { FormManager } from './formmgr';
 import { TabletData, TabletManager } from './tabletmgr';
 import { ManualMatchData, MatchManager } from './matchmgr';
-import { ScoutingData } from '../comms/resultsifc';
 import { GraphManager } from './graphmgr';
-import { IPCHint } from '../../shared/ipc';
+import { IPCHint, IPCScoutResults } from '../../shared/ipc';
 
 export class Project {
     private static readonly keepLotsOfBackups = true ;
@@ -146,7 +145,7 @@ export class Project {
                     let teams = this.team_mgr_.getTeams().map((v)=> { return 'st-' + v.team_number}) ;
 
                     let gendata: DataGenerator = new DataGenerator(this.form_mgr_.getTeamFormFullPath()!) ;
-                    let results : ScoutingData | null = gendata.generateData(teams) ;
+                    let results : IPCScoutResults | null = gendata.generateData(teams) ;
                     if (results) {
                         results.purpose = "team" ;
                         try {
@@ -172,7 +171,7 @@ export class Project {
                     }
 
                     let gendata: DataGenerator = new DataGenerator(this.form_mgr_.getMatchFormFullPath()!) ;
-                    let results : ScoutingData | null  = gendata.generateData(matches) ;
+                    let results : IPCScoutResults | null  = gendata.generateData(matches) ;
                     if (results) {
                         results.purpose = "match" ;
                         try {

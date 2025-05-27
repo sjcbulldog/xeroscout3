@@ -1,15 +1,15 @@
-import { IPCNamedDataValue } from "../../shared/ipc";
+import { IPCTypedDataValue } from "../../shared/ipc";
 import { DataValue } from "./datavalue";
 
 export class DataRecord {
-    private data_ : Map<string, IPCNamedDataValue> ;
+    private data_ : Map<string, IPCTypedDataValue> ;
 
 
     public constructor() {
-        this.data_ = new Map<string, IPCNamedDataValue>() ;
+        this.data_ = new Map<string, IPCTypedDataValue>() ;
     }
 
-    public addfield(name: string, value : IPCNamedDataValue) {
+    public addfield(name: string, value : IPCTypedDataValue) {
         this.data_.set(name, value) ;
     }
 
@@ -26,7 +26,7 @@ export class DataRecord {
         return this.data_.has(key) ;
     }
 
-    public value(key: string) : IPCNamedDataValue | undefined {
+    public value(key: string) : IPCTypedDataValue | undefined {
         return this.data_.get(key) ;
     }
 }

@@ -2,14 +2,13 @@ import { scappbase } from "../main";
 import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
-import { OneScoutField } from "./comms/resultsifc";
 import { GraphDataRequest } from "./apps/sccentral";
 import { DataSet } from "./project/datasetmgr";
 import { TeamNickNameNumber } from "./project/teammgr";
 import { TabletData } from "./project/tabletmgr";
 import { GraphConfig } from "./project/graphmgr";
 import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
-import { IPCProjColumnsConfig } from "../shared/ipc";
+import { IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
@@ -231,6 +230,19 @@ export async function getMatchDB(cmd: string, ...args: any[]) {
     } 
 }
 
+// update-match-db
+export async function updateMatchDB(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && Array.isArray(args[0])) {
+            central.updateMatchDB(args[0]) ;
+        } else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }           
+    } 
+}
+
 // get-team-db
 export async function getTeamDB(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Central) {
@@ -238,6 +250,19 @@ export async function getTeamDB(cmd: string, ...args: any[]) {
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendTeamDB() ;
+        } else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }           
+    } 
+}
+
+// update-team-db
+export async function updateTeamDB(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && Array.isArray(args[0])) {
+            central.updateTeamDB(args[0]) ;
         } else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }           
@@ -546,7 +571,7 @@ export async function provideResult(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scout : SCScout = scappbase as SCScout ;
         if (args.length === 1 && typeof args[0] === 'object') {
-            scout.provideResults(args[0] as OneScoutField[]) ;
+            scout.provideResults(args[0] as IPCNamedDataValue[]) ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});             

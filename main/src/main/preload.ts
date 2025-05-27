@@ -54,10 +54,12 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'save-form',
 
         'get-match-db',
+        'update-match-db',
         'send-match-col-config',
-        'send-team-col-config',
-        'get-team-db',
 
+        'get-team-db',
+        'update-team-db',
+        'send-team-col-config',
 
         'get-team-status',
         'get-match-status',

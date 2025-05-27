@@ -1,6 +1,6 @@
-import { CellComponent, ColumnDefinition, TabulatorFull } from "tabulator-tables";
+import { CellComponent, ColumnDefinition, RowComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../../apps/xeroapp.js";
-import {  IPCColumnDesc, IPCDatabaseData, IPCProjColumnsConfig, IPCProjectColumnCfg  } from "../../ipc.js";
+import {  IPCChange, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../ipc.js";
 import {  XeroView  } from "../xeroview.js";
 import { DataValue } from "../../utils/datavalue.js";
 import { XeroPopupMenu, XeroPopupMenuItem } from "../../widgets/xeropopupmenu.js";
@@ -19,11 +19,15 @@ export class DatabaseView extends XeroView {
     private dialog_? : XeroDialog ;
     private popup_menu_? : XeroPopupMenu ;
     private context_menu_ : XeroPopupMenu ;
+    private dirty_ : boolean ;
+    private reverting_ : boolean ;
 
     protected constructor(app: XeroApp, clname: string, type: string) {
         super(app, clname);
 
         this.type_ = type ;
+        this.dirty_ = false ;
+        this.reverting_ = false ;
 
         this.registerCallback('send-' + type + '-db', this.receiveData.bind(this));
         this.request('get-' + type + '-db') ;
@@ -37,6 +41,13 @@ export class DatabaseView extends XeroView {
 
         this.context_menu_ = new XeroPopupMenu('Menu', items) ;
         this.startupMessage('Loading ' + type + ' database...') ;
+    }
+
+    public get isOkToClose() {
+        if (this.dirty_) {
+            alert('The data in this database view has been changed.  Use the context menu (right click) to either save this data or revert back to what was previously in the database') ;
+        }
+        return !this.dirty_ ;
     }
 
     private createColumnDescs() : ColumnDefinition[] {
@@ -228,20 +239,76 @@ export class DatabaseView extends XeroView {
         }
     }
 
-    private cellEdited(cell: CellComponent) {
-        cell.getElement().style.fontWeight = 'bolder' ;
-        cell.getElement().style.fontSize = '20px' ;
-        cell.getColumn().getElement().style.backgroundColor = 'lightblue' ;
-
-        let data = cell.getData() ;
-        let cellchange : any = {} ;
-
-        cellchange['__oldvalue'] = cell.getOldValue() ;
-        cellchange[cell.getField()] = data[cell.getField()] ;
-        for(let key of this.keycol_!) {
-            cellchange[key] = data[key] ;
+    private getColumnDesc(field: string) : IPCColumnDesc | undefined {
+        if (this.col_descs_) {
+            for(let desc of this.col_descs_) {
+                if (desc.name === field) {
+                    return desc ;
+                }
+            }
         }
-        this.changes_.push(cellchange) ;
+        return undefined ;
+    }
+
+    private cellValueToIPCValue(cell: CellComponent, value: any) : IPCTypedDataValue | undefined{
+        let ret : IPCTypedDataValue | undefined = undefined ;
+
+        let coldesc = this.getColumnDesc(cell.getField()) ;
+        if (coldesc) {
+            switch( coldesc.type) {
+                case 'string':
+                    ret = DataValue.fromString(value) ;
+                    break ;
+                case 'integer':
+                    ret = DataValue.fromInteger(value) ;
+                    break ;
+                case 'real':
+                    ret = DataValue.fromReal(value) ;
+                    break ;
+                case 'boolean':
+                    ret = DataValue.fromBoolean(value) ;
+                    break ;
+                case 'null':
+                    ret = DataValue.fromNull() ;
+                    break ;
+                case 'error':
+                    ret = DataValue.fromError(new Error(value)) ;
+                    break ;
+            }
+        }
+        return ret;
+    }
+
+    private cellEdited(cell: CellComponent) {
+        if (!this.reverting_) {
+            this.dirty_ = true ;
+
+            cell.getElement().style.fontWeight = 'bolder' ;
+
+            let data = cell.getData() ;
+            let searchkeys: any = {} ;
+            for(let key of this.keycol_!) {
+                let coldesc = this.getColumnDesc(key) ;
+                if (coldesc) {
+                    let colcell = cell.getRow().getCell(key) ;
+                    searchkeys[key] = this.cellValueToIPCValue(colcell, colcell.getValue()) ;
+                }
+            }
+
+            let oldv = this.cellValueToIPCValue(cell, cell.getOldValue()) ;
+            let newv = this.cellValueToIPCValue(cell, data[cell.getField()]) ;
+
+            if (oldv && newv) {
+                let change : IPCChange = {
+                    column: cell.getField(),
+                    oldvalue: oldv!,
+                    newvalue: newv!,
+                    search: searchkeys
+                }
+
+                this.changes_.push(change) ;
+            }
+        }
     }
 
     private tableReady() {
@@ -251,12 +318,66 @@ export class DatabaseView extends XeroView {
 
     private saveChanges() {
         if (this.changes_.length > 0) {
-            this.request('set-' + this.type_ + '-db-changes', this.changes_) ;
+
+            //
+            // Revert the display of the cells that have been changed
+            //
+            for(let change of this.changes_) {
+                let row = this.findRowFromSearch(change.search) ;
+                if (row) {
+                    let cell = row.getCell(change.column) ;
+                    if (cell) {
+                        cell.getElement().style.fontWeight = 'normal' ;
+                    }
+                }            
+            }
+
+            //
+            // Update the databse on the main process
+            //
+            this.request('update-' + this.type_ + '-db', this.changes_) ;
+
+            this.dirty_ = false ;
             this.changes_ = [] ;
         }
     }
 
+    private findRowFromSearch(search: any) : RowComponent | undefined {
+        for(let row of this.table_!.getRows()) {
+            let data = row.getData() ;
+            let match = true ;
+            for(let keys of Object.keys(search)) {
+                let tvalue = data[keys] ;
+                let svalue = DataValue.toDisplayString(search[keys]) ;
+                if (tvalue !== svalue) {
+                    match = false ;
+                    break ;
+                }
+            }
+
+            if (match) {
+                return row ;
+            }
+        }
+
+        return undefined ;
+    }
+
     private revertChanges() {
+        this.reverting_ = true ;
+        for(let change of this.changes_) {
+            let row = this.findRowFromSearch(change.search) ;
+            if (row) {
+                let cell = row.getCell(change.column) ;
+                if (cell) {
+                    cell.setValue(DataValue.toDisplayString(change.oldvalue)) ;
+                    cell.getElement().style.fontWeight = 'normal' ;
+                }
+            }
+        }
+
+        this.reverting_ = false ;
+        this.dirty_ = false ;
         this.changes_ = [] ;
     }
 

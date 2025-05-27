@@ -1,48 +1,48 @@
-import { IPCNamedDataValue, IPCDataValueType } from "../ipc.js";
+import { IPCTypedDataValue, IPCDataValueType } from "../ipc.js";
 
 export class DataValue {
 
-    public static fromString(value: string): IPCNamedDataValue {
+    public static fromString(value: string): IPCTypedDataValue {
         return {
             type: 'string',
             value: value
         };
     }
-    public static fromInteger(value: number): IPCNamedDataValue {
+    public static fromInteger(value: number): IPCTypedDataValue {
         return {
             type: 'integer',
             value: value
         };
     }
-    public static fromReal(value: number): IPCNamedDataValue {
+    public static fromReal(value: number): IPCTypedDataValue {
         return {
             type: 'real',
             value: value
         };
     } 
 
-    public static fromBoolean(value: boolean): IPCNamedDataValue {
+    public static fromBoolean(value: boolean): IPCTypedDataValue {
         return {
             type: 'boolean',
             value: value
         };
     }
 
-    public static fromNull(): IPCNamedDataValue {
+    public static fromNull(): IPCTypedDataValue {
         return {
             type: 'null',
             value: null
         };
     }
 
-    public static fromError(value: Error) : IPCNamedDataValue {
+    public static fromError(value: Error) : IPCTypedDataValue {
         return {
             type: 'error',
             value: value.message
         };
     }
 
-    public static equals(a: IPCNamedDataValue, b: IPCNamedDataValue): boolean {  
+    public static equals(a: IPCTypedDataValue, b: IPCTypedDataValue): boolean {  
         if (a.type !== b.type) {
             return false;
         }
@@ -74,81 +74,81 @@ export class DataValue {
         return ['integer', 'real', 'string', 'boolean', 'error', 'array'].includes(type);
     }
 
-    public static isNull(a:IPCNamedDataValue) : boolean {
+    public static isNull(a:IPCTypedDataValue) : boolean {
         return a.type === 'null' ;
     }
 
-    public static isInteger(a:IPCNamedDataValue) : boolean {
+    public static isInteger(a:IPCTypedDataValue) : boolean {
         return a.type === 'integer';
     }
 
-    public static isReal(a:IPCNamedDataValue) : boolean {
+    public static isReal(a:IPCTypedDataValue) : boolean {
         return a.type === 'real';
     }
 
-    public static isNumber(a:IPCNamedDataValue) : boolean {
+    public static isNumber(a:IPCTypedDataValue) : boolean {
         return a.type === 'integer' || a.type === 'real';
     }   
 
-    public static isString(a:IPCNamedDataValue) : boolean {
+    public static isString(a:IPCTypedDataValue) : boolean {
         return a.type === 'string';
     }
 
-    public static isBoolean(a:IPCNamedDataValue) : boolean {
+    public static isBoolean(a:IPCTypedDataValue) : boolean {
         return a.type === 'boolean';
     }
 
-    public static isArray(a:IPCNamedDataValue) : boolean {
+    public static isArray(a:IPCTypedDataValue) : boolean {
         return a.type === 'array';
     }
 
-    public static isError(a:IPCNamedDataValue) : boolean {
+    public static isError(a:IPCTypedDataValue) : boolean {
         return a.type === 'error';
     }
 
-    public static toBoolean(a:IPCNamedDataValue) : boolean {
+    public static toBoolean(a:IPCTypedDataValue) : boolean {
         if (a.type !== 'boolean') {
             throw new Error(`Cannot convert ${a.type} to boolean`);
         }
         return a.value as boolean;
     }
 
-    public static toString(a:IPCNamedDataValue) : string {
+    public static toString(a:IPCTypedDataValue) : string {
         if (a.type !== 'string') {
             throw new Error(`Cannot convert ${a.type} to string`);
         }
         return a.value as string;
     }
 
-    public static toErrorString(a: IPCNamedDataValue) : string {
+    public static toErrorString(a: IPCTypedDataValue) : string {
         if (a.type !== 'error') {
             throw new Error(`Cannot convert ${a.type} to error string`);
         }
         return (a.value as Error).message;
     }   
 
-    public static toReal(a:IPCNamedDataValue) : number {
+    public static toReal(a:IPCTypedDataValue) : number {
         if (a.type !== 'real' && a.type !== 'integer') {
             throw new Error(`Cannot convert ${a.type} to number`);
         }
         return a.value as number;
     }
 
-    public static toInteger(a:IPCNamedDataValue) : number {
+    public static toInteger(a:IPCTypedDataValue) : number {
         if (a.type !== 'integer') {
             throw new Error(`Cannot convert ${a.type} to integer`);
         }
         return a.value as number;
     }
 
-    public static toArray(a:IPCNamedDataValue) : Array<IPCNamedDataValue> {
+    public static toArray(a:IPCTypedDataValue) : Array<IPCTypedDataValue> {
         if (a.type !== 'array') {
             throw new Error(`Cannot convert ${a.type} to array`);
         }
-        return a.value as Array<IPCNamedDataValue>;
+        return a.value as Array<IPCTypedDataValue>;
     }
 
-    public static toDisplayString(a:IPCNamedDataValue) : string {
+    public static toDisplayString(a:IPCTypedDataValue) : string {
         let ret = '' ;
 
         if (a.value === null) {
@@ -186,7 +186,7 @@ export class DataValue {
         return ret;
     }
 
-    public static toValueString(a: IPCNamedDataValue) : string {
+    public static toValueString(a: IPCTypedDataValue) : string {
         let ret = '' ;
 
         if (a.value === null) {

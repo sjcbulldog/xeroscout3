@@ -1,4 +1,5 @@
-import { IPCTextAreaItem } from "../../../ipc.js";
+import { IPCTextAreaItem, IPCTypedDataValue } from "../../../ipc.js";
+import { DataValue } from "../../../utils/datavalue.js";
 import { XeroRect } from "../../../widgets/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";
@@ -87,13 +88,14 @@ export class TextAreaControl extends FormControl {
         return new EditTextAreaDialog(this) ;
     }
 
-    public getData() : any {
+    public getData() :  IPCTypedDataValue | undefined  {
         let area = this.ctrl as HTMLTextAreaElement ;
-        return area.value ;
+        return DataValue.fromString(area.value) ;
     }
 
-    public setData(data: any) : void {
-        let area = this.ctrl as HTMLTextAreaElement ;
-        area.value = data ;
+    public setData(data:IPCTypedDataValue) : void {
+        if(this.ctrl && DataValue.isString(data)) {
+            this.area_!.value = DataValue.toString(data) ;
+        }
     }
 }

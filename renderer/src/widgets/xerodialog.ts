@@ -113,11 +113,19 @@ export abstract class XeroDialog extends EventEmitter {
     }
 
     public okButton(event: Event) {
-        this.close(true) ;
+        if (this.isOKToClose(true)) {
+            this.close(true) ;
+        }
     }
 
     public cancelButton(event: Event) {
-        this.close(false) ;
+        if (this.isOKToClose(false)) {
+            this.close(false) ;
+        }
+    }
+
+    protected isOKToClose(ok: boolean) : boolean { 
+        return true ;
     }
 
     public populateButtons(div: HTMLDivElement) {
@@ -134,7 +142,7 @@ export abstract class XeroDialog extends EventEmitter {
         div.appendChild(cancelbutton) ;
     }
 
-    close(changed: boolean) {
+    public close(changed: boolean) {
         document.removeEventListener('keydown', this.key_down_handler_) ;
 
         if (this.popup_ && this.parent_ && this.parent_.contains(this.popup_)) {

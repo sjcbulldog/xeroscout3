@@ -12,7 +12,9 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          renameFormula, updateFormula, getDataSets, updateDataSet, deleteDataSet, renameDataSet, getTeamFieldList, getMatchFieldList,
          saveForm, getImages, importImage, getImageData, updatePicklistColumns, updatePicklistData, getPicklistColumns, getPicklistColData,
          getHintDB,
-         setHintHidden} from "./main/ipchandlers" ;
+         setHintHidden,
+         updateMatchDB,
+         updateTeamDB} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -107,7 +109,7 @@ function createWindow() : void {
     Menu.setApplicationMenu(scappbase!.createMenu()) ;
 
     win.on('ready-to-show', () => {
-        win.webContents.openDevTools() ;
+        // win.webContents.openDevTools() ;
     }) ;
     
     win.on("close", (event) => {
@@ -144,7 +146,9 @@ app.on("ready", () => {
     ipcMain.on('get-team-field-list', (event, ...args) => { getTeamFieldList('get-team-field-list', ...args)}) ;
     ipcMain.on('get-match-field-list', (event, ...args) => { getMatchFieldList('get-match-field-list', ...args)}) ;
     ipcMain.on('get-match-db', (event, ...args) => { getMatchDB('get-match-db', ...args)});
+    ipcMain.on('update-match-db', (event, ...args) => { updateMatchDB('update-match-db', ...args)}) ;
     ipcMain.on('get-team-db', (event, ...args) => { getTeamDB('get-team-db', ...args)}) ;
+    ipcMain.on('update-team-db', (event, ...args) => { updateTeamDB('update-team-db', ...args)}) ;
     ipcMain.on('get-form', (event, ...args) => { getForm('get-form', ...args)});
     ipcMain.on('get-image-data', (event, ...args) => { getImageData('get-image-data', ...args)});
     ipcMain.on('get-images', (event, ...args) => { getImages('get-images', ...args)});

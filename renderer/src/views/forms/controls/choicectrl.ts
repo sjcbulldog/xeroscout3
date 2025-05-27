@@ -1,4 +1,5 @@
-import {  IPCChoiceValue, IPCMultipleChoiceItem  } from "../../../ipc.js";
+import {  IPCChoiceValue, IPCMultipleChoiceItem, IPCTypedDataValue  } from "../../../ipc.js";
+import { DataValue } from "../../../utils/datavalue.js";
 import {  XeroRect  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditChoiceDialog  } from "../dialogs/editchoicedialog.js";
@@ -196,19 +197,26 @@ export class MultipleChoiceControl extends FormControl {
         return new EditChoiceDialog(this) ;
     }
     
-    public getData() : any {
+    public getData() : IPCTypedDataValue | undefined {
+        let ret : IPCTypedDataValue | undefined = undefined ;
         for(let ctrl of this.choice_ctrls_) {
             if (ctrl.checked) {
-                return this.choice_ctrl_to_value_.get(ctrl) ;
+                if (this.item.datatype !== 'string') {
+                    ret = DataValue.fromReal(this.choice_ctrl_to_value_.get(ctrl)! as number) ;
+                }
+                else {
+                    ret = DataValue.fromString(this.choice_ctrl_to_value_.get(ctrl)! as string) ;
+                }
             }
         }
-        return undefined ;
+        return ret ;
     }
 
-    public setData(data: any) : void {
-        if (this.choice_ctrls_) {
+    public setData(data:IPCTypedDataValue) : void {
+        if (this.choice_ctrls_ && DataValue.isString(data)) {
+            let str = DataValue.toString(data) ;
             for(let ctrl of this.choice_ctrls_) {
-                if (this.choice_ctrl_to_value_.get(ctrl) === data) {
+                if (this.choice_ctrl_to_value_.get(ctrl) === str) {
                     ctrl.checked = true ;
                 }
                 else {

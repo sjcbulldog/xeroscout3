@@ -1,4 +1,4 @@
-import {  IPCFormItem  } from "../../../ipc.js";
+import {  IPCFormItem, IPCTypedDataValue  } from "../../../ipc.js";
 import {  XeroPoint, XeroRect, XeroSize  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -221,7 +221,7 @@ export abstract class FormControl {
     }
 
     public abstract createEditDialog() : EditFormControlDialog ;
-    public abstract getData() : void ;
+    public abstract getData() : IPCTypedDataValue | undefined ;
     public abstract setData(data: any) : void ;
     protected abstract copyObject() : FormControl ;
 
