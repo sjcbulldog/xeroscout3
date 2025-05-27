@@ -36,15 +36,15 @@ export class XeroView extends XeroWidget {
     public startupMessage(msg: string) {
         this.reset() ;
 
-        // this.empty_div_ = document.createElement("div") ;
-        // this.empty_div_.className = "xero-text-div" ;
+        this.empty_div_ = document.createElement("div") ;
+        this.empty_div_.className = "xero-text-div" ;
     
-        // this.span_ = document.createElement("span") ;
-        // this.span_.className = "xero-text-span" ;
-        // this.span_.innerHTML = "<b>" + msg + "</b>" ;
+        this.span_ = document.createElement("span") ;
+        this.span_.className = "xero-text-span" ;
+        this.span_.innerHTML = "<b>" + msg + "</b>" ;
         
-        // this.empty_div_.append(this.span_);
-        // this.elem.append(this.empty_div_) ;        
+        this.empty_div_.append(this.span_);
+        this.elem.append(this.empty_div_) ;        
     }
 
     private hintClosed(hidden: boolean) {

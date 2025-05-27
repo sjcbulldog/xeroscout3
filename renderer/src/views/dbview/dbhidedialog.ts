@@ -87,12 +87,14 @@ export class ShowHideColumnsDialog extends XeroDialog {
         this.colcfgs_.frozenColumnCount = 0 ;
         for(let row of this.table_!.getRows()) {
             let data = row.getData() ;
-            let colcfg = this.colcfgs_.columns[index++] ;
+            let colcfg = this.colcfgs_.columns[index] ;
             colcfg.hidden = !data.visible ;
 
             if (data.frozen) {
                 this.colcfgs_.frozenColumnCount = index + 1 ;
             }
+
+            index++ ;
         }
 
         super.okButton(event) ;        

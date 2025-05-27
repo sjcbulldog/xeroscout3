@@ -107,6 +107,7 @@ export class XeroApp extends XeroMainProcessInterface {
         else {
             let classObj = this.viewmap_.get(args.view) ;
             this.current_view_ = new classObj(this, args.args) ;
+            this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;            
         }
     }
 

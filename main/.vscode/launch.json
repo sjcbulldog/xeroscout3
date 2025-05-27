@@ -14,7 +14,7 @@
         ".",
         "--enable-logging",
         "central",
-        // "C:/users/butch/OneDrive/Documents/events/e1/event.json"
+        "C:/users/butch/OneDrive/Documents/events/e1/event.json"
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
