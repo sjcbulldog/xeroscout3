@@ -1,6 +1,21 @@
 GitHub Issues
 -------------
 
+Next
+----
+- DONE: Get rid of the top of the dbview
+- DONE: Add context menu with save changes, restore changes, hide/unhide columns, formulas (not implemented)
+- DONE: Send freeze, width, show/hide, and column order information back to main
+- Honor freeze, width, show/hide, and column order information in table setup
+- Figure out hidden column user interaction
+- Send hidden column choices back to main
+- Honor hidden column choices
+- Defer close of dbview if there is changed data (prompt - there are 3 changed cells, do you want to save or discard)\
+- Add save command from menu
+- Add revert command from menu
+- Better 
+
+
 All
 ---
 Image relative control coordinates
@@ -35,6 +50,12 @@ Design
 Have the scouting tablet and the central tablet work via talking to a common
 web server via rest APIs.  For the stands mode, sync with a server running on the
 central machine.  Have a wifi mode where it runs on a server running in my office
+
+Misc
+----
+Fix scrolling problem on the bottom status window when lines exceed size of window.
+Select event view, make cell text not-selectable
+Make hint window look better
 
 Attributions
 ------------

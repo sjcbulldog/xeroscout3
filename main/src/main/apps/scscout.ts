@@ -68,7 +68,7 @@ export class SCScout extends SCBase {
     }
     
     public basePage() : string  {
-        return "content/scscouter/scouter.html"
+        return "content/main.html"
     }
 
     public canQuit(): boolean {

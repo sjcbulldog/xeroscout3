@@ -20,27 +20,38 @@ import {   IPCSetStatus, IPCSetView   } from "../ipc.js";
 import { HintManager } from "../hintmgr.js";
 import { ImageDataSource } from "./imagesrc.js";
 
+let mainapp: XeroApp | undefined = undefined ;
+
 document.addEventListener('DOMContentLoaded', function () {
-    let mainapp = new XeroApp() ;
-}) ;
+    // Initialize the XeroScout app
+    console.log("XeroApp DOMContentLoaded - creating app") ;
+    mainapp = new XeroApp() ;
+});
+
+export type XeroAppType = 'central' | 'scout' | 'coach' ;
 
 export class XeroApp extends XeroMainProcessInterface {
     private viewmap_ : Map<string, any> = new Map() ;                   // Map of view name to class
 
-    private status_ : XeroStatusWindow ;
-    private splitter_ : XeroSplitter ;
-    private left_nav_pane_ : XeroNav ;
-    private right_view_pane_ : XeroWidget ;
+    private status_? : XeroStatusWindow ;
+    private splitter_? : XeroSplitter ;
+    private left_nav_pane_? : XeroNav ;
+    private right_view_pane_? : XeroWidget ;
     private current_view_ : XeroView | undefined ;
-
-    private hintdb_ : HintManager ;
-
-    private status_overlay_ : StatusOverlay ;
-    private image_src_ : ImageDataSource ;
+    private hintdb_? : HintManager ;
+    private status_overlay_? : StatusOverlay ;
+    private image_src_? : ImageDataSource ;
+    private type_? : XeroAppType ;
 
     constructor() {
         super() ;
 
+        console.log(`XeroApp constructor called`) ;
+        this.registerCallback('xero-app-init', this.init.bind(this)) ;
+    }
+
+    private init(type: XeroAppType) {
+        this.type_ = type ;
         this.hintdb_ = new HintManager() ;
         this.image_src_ = new ImageDataSource() ;
 
@@ -68,7 +79,7 @@ export class XeroApp extends XeroMainProcessInterface {
     }
 
     public get statusBar() {
-        return this.status_.statusBar() ;
+        return this.status_!.statusBar() ;
     }
 
     public get hintDB() {
@@ -77,31 +88,32 @@ export class XeroApp extends XeroMainProcessInterface {
 
     private updateStatusBar(args: IPCSetStatus) {
         let logger = XeroLogger.getInstance() ;
-        logger.debug(`request to update status bar to '${args.left}' '${args.middle}' '${args.right}'`) ;
-        this.status_.statusBar().setLeftStatus(args.left) ;
-        this.status_.statusBar().setMiddleStatus(args.middle) ;
-        this.status_.statusBar().setRightStatus(args.right) ;
+        this.status_!.statusBar().setLeftStatus(args.left) ;
+        this.status_!.statusBar().setMiddleStatus(args.middle) ;
+        this.status_!.statusBar().setRightStatus(args.right) ;
     }
 
     public updateView(args: IPCSetView) {
         let logger = XeroLogger.getInstance() ;
 
-        this.closeCurrentView() ;
+        if (this.current_view_ && !this.current_view_.okToClose) {
+            return ;
+        }
 
+        this.closeCurrentView() ;
         if (!this.viewmap_.has(args.view)) {
             logger.error(`view ${args.view} not registered`) ;
         }
         else {
             let classObj = this.viewmap_.get(args.view) ;
             this.current_view_ = new classObj(this, args.args) ;
-            this.right_view_pane_.elem.appendChild(this.current_view_!.elem) ;
         }
     }
 
     private closeCurrentView() {
         if (this.current_view_) {
             this.current_view_.close() ;
-            this.right_view_pane_.elem.removeChild(this.current_view_!.elem) ;
+            this.right_view_pane_!.elem.removeChild(this.current_view_!.elem) ;
             this.current_view_ = undefined ;
         }
     }

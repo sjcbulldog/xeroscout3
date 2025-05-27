@@ -1,6 +1,6 @@
 import { XeroApp  } from "../../apps/xeroapp.js";
 import { XeroPoint, XeroRect, XeroSize  } from "../../widgets/xerogeom.js";
-import { XeroPopupMenu, XeroPopupMenuItem as PopupMenuItem  } from "../../widgets/xeropopupmenu.js";
+import { XeroPopupMenu, XeroPopupMenuItem  } from "../../widgets/xeropopupmenu.js";
 import { XeroView  } from "../xeroview.js";
 import { LabelControl  } from "./controls/labelctrl.js";
 import { TextControl  } from "./controls/textctrl.js";
@@ -99,7 +99,6 @@ export class XeroEditFormView extends XeroView {
 
     private instance_id_ : number = -1 ; 
 
-
     private static moveControlAmount = 1 ;
     private static shiftMoveControlAmount = 10 ;
     private static ctrlMoveControlAmount = 50 ;
@@ -174,16 +173,16 @@ export class XeroEditFormView extends XeroView {
         this.request('get-form', this.type_);
 
         let ctrlitems = [
-            new PopupMenuItem('Label', this.addNewLabelCtrl.bind(this)),
-            new PopupMenuItem('Box', this.addNewBoxCtrl.bind(this)),
-            new PopupMenuItem('Image', this.addNewImageCtrl.bind(this)),
-            new PopupMenuItem('Text Field', this.addNewTextCtrl.bind(this)),
-            new PopupMenuItem('Text Area', this.addNewTextAreaCtrl.bind(this)),
-            new PopupMenuItem('Up/Down Field', this.addNewUpDownCtrl.bind(this)),
-            new PopupMenuItem('Boolean Field', this.addNewBooleanCtrl.bind(this)),
-            new PopupMenuItem('Multiple Choice', this.addNewMultipleChoiceCtrl.bind(this)),
-            new PopupMenuItem('Select', this.addNewSelectCtrl.bind(this)),
-            new PopupMenuItem('Timer', this.addNewTimerCtrl.bind(this)),
+            new XeroPopupMenuItem('Label', this.addNewLabelCtrl.bind(this)),
+            new XeroPopupMenuItem('Box', this.addNewBoxCtrl.bind(this)),
+            new XeroPopupMenuItem('Image', this.addNewImageCtrl.bind(this)),
+            new XeroPopupMenuItem('Text Field', this.addNewTextCtrl.bind(this)),
+            new XeroPopupMenuItem('Text Area', this.addNewTextAreaCtrl.bind(this)),
+            new XeroPopupMenuItem('Up/Down Field', this.addNewUpDownCtrl.bind(this)),
+            new XeroPopupMenuItem('Boolean Field', this.addNewBooleanCtrl.bind(this)),
+            new XeroPopupMenuItem('Multiple Choice', this.addNewMultipleChoiceCtrl.bind(this)),
+            new XeroPopupMenuItem('Select', this.addNewSelectCtrl.bind(this)),
+            new XeroPopupMenuItem('Timer', this.addNewTimerCtrl.bind(this)),
         ]
 
         this.ctrl_menu_ = new XeroPopupMenu('controls', ctrlitems) ;
@@ -222,7 +221,7 @@ export class XeroEditFormView extends XeroView {
         window.addEventListener('blur', this.blurbind_) ;        
 
         this.imagesupdatedbind_ = this.imageNamesUpdated.bind(this) ;
-        this.app.imageSource.addListener('image-names-updated', this.imagesupdatedbind_) ;
+        this.app.imageSource!.addListener('image-names-updated', this.imagesupdatedbind_) ;
     }
 
     public close() {
@@ -241,7 +240,7 @@ export class XeroEditFormView extends XeroView {
         window.removeEventListener('focus', this.focusbind_!);
     	window.removeEventListener('blur', this.blurbind_!);
 
-        this.app.imageSource.removeListener('image-names-updated', this.imagesupdatedbind_!) ;
+        this.app.imageSource!.removeListener('image-names-updated', this.imagesupdatedbind_!) ;
     }
 
     findItemByTag(name: string) {
@@ -292,9 +291,9 @@ export class XeroEditFormView extends XeroView {
             (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
         )
 
-        let items : PopupMenuItem[] = [] ;
+        let items : XeroPopupMenuItem[] = [] ;
         for(let name of images) {
-            let mitem = new PopupMenuItem(name, this.setBackgroundImage.bind(this, name)) ;
+            let mitem = new XeroPopupMenuItem(name, this.setBackgroundImage.bind(this, name)) ;
             items.push(mitem) ;
         }
 
@@ -393,7 +392,7 @@ export class XeroEditFormView extends XeroView {
 
     private addNewImageCtrl() {
         if (this.tabbed_ctrl_?.selectedPage) {
-            let formctrl = new ImageControl(this.app.imageSource, this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
+            let formctrl = new ImageControl(this.app.imageSource!, this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
             this.addItemToCurrentSection(formctrl.item) ;
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
             this.modified(new UndoStackEntry('add', 'control', [formctrl])) ;
@@ -542,7 +541,7 @@ export class XeroEditFormView extends XeroView {
             formctrl.update(item) ;
         }
         else if (item.type === 'image') {
-            let imagectrl = new ImageControl(this.app.imageSource, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            let imagectrl = new ImageControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
             formctrl = imagectrl ;
             formctrl.update(item) ;
         }
@@ -613,7 +612,7 @@ export class XeroEditFormView extends XeroView {
         let page = new XeroFormEditSectionPage() ;
         this.updateControls(section, page) ;
 
-        this.app.imageSource.getImageData(section.image)
+        this.app.imageSource!.getImageData(section.image)
             .then((data) => {
                 if (data) {
                     page.setImage(data) ;
@@ -714,7 +713,7 @@ export class XeroEditFormView extends XeroView {
                 this.modified(new UndoStackEntry('edit', 'image', old_image)) ;
             }
 
-            this.app.imageSource.getImageData(image)
+            this.app.imageSource!.getImageData(image)
                 .then((data) => {
                     if (data) {
                         this.section_pages_[pageno].setImage(data) ;
@@ -1709,46 +1708,46 @@ export class XeroEditFormView extends XeroView {
         if (event.target && event.target instanceof HTMLElement) {
             if (!this.section_menu_) {
                 let sectionItems = [
-                    new PopupMenuItem('Add', this.addSection.bind(this)),
-                    new PopupMenuItem('Delete', this.deleteCurrentSection.bind(this)),
-                    new PopupMenuItem('Rename', this.renameSection.bind(this)),
-                    new PopupMenuItem('Move Left', this.moveSection.bind(this, true)),
-                    new PopupMenuItem('Move Right', this.moveSection.bind(this, false)),                
+                    new XeroPopupMenuItem('Add', this.addSection.bind(this)),
+                    new XeroPopupMenuItem('Delete', this.deleteCurrentSection.bind(this)),
+                    new XeroPopupMenuItem('Rename', this.renameSection.bind(this)),
+                    new XeroPopupMenuItem('Move Left', this.moveSection.bind(this, true)),
+                    new XeroPopupMenuItem('Move Right', this.moveSection.bind(this, false)),                
                 ]
                 this.section_menu_ = new XeroPopupMenu('section', sectionItems) ;
             }
 
             if (!this.align_menu_) {
                 let items = [
-                    new PopupMenuItem('Align Top', this.alignTop.bind(this)),
-                    new PopupMenuItem('Align Left', this.alignLeft.bind(this)),
-                    new PopupMenuItem('Align Right', this.alignRight.bind(this)),
-                    new PopupMenuItem('Align Bottom', this.alignBottom.bind(this)),
-                    new PopupMenuItem('Align Vertical Center', this.alignCenter.bind(this)),
-                    new PopupMenuItem('Align Horizontal Center', this.alignMiddle.bind(this)),
+                    new XeroPopupMenuItem('Align Top', this.alignTop.bind(this)),
+                    new XeroPopupMenuItem('Align Left', this.alignLeft.bind(this)),
+                    new XeroPopupMenuItem('Align Right', this.alignRight.bind(this)),
+                    new XeroPopupMenuItem('Align Bottom', this.alignBottom.bind(this)),
+                    new XeroPopupMenuItem('Align Vertical Center', this.alignCenter.bind(this)),
+                    new XeroPopupMenuItem('Align Horizontal Center', this.alignMiddle.bind(this)),
                 ]
                 this.align_menu_ = new XeroPopupMenu('controls', items) ;
             }
 
             if (!this.size_menu_) {
                 let items = [
-                    new PopupMenuItem('Same Width', this.sameWidth.bind(this)),
-                    new PopupMenuItem('Same Height', this.sameHeight.bind(this)),
-                    new PopupMenuItem('Same Size', this.sameSize.bind(this)),
+                    new XeroPopupMenuItem('Same Width', this.sameWidth.bind(this)),
+                    new XeroPopupMenuItem('Same Height', this.sameHeight.bind(this)),
+                    new XeroPopupMenuItem('Same Size', this.sameSize.bind(this)),
                 ]
                 this.size_menu_ = new XeroPopupMenu('controls', items) ;
             }
 
             let items = [
-                new PopupMenuItem('Sections', undefined, this.section_menu_),
-                new PopupMenuItem('Controls', undefined, this.ctrl_menu_),
-                new PopupMenuItem('Align', undefined, this.align_menu_),
-                new PopupMenuItem('Size', undefined, this.size_menu_),
-                new PopupMenuItem('Images', undefined, this.image_menu_),
+                new XeroPopupMenuItem('Sections', undefined, this.section_menu_),
+                new XeroPopupMenuItem('Controls', undefined, this.ctrl_menu_),
+                new XeroPopupMenuItem('Align', undefined, this.align_menu_),
+                new XeroPopupMenuItem('Size', undefined, this.size_menu_),
+                new XeroPopupMenuItem('Images', undefined, this.image_menu_),
             ] ;
 
             if (this.selected_ctrls_.length > 0) {                
-                items.push(new PopupMenuItem('Properties', this.editControlProperties.bind(this, this.selected_ctrls_[0], event.clientX, event.clientY))) ;
+                items.push(new XeroPopupMenuItem('Properties', this.editControlProperties.bind(this, this.selected_ctrls_[0], event.clientX, event.clientY))) ;
             }
 
             this.popup_menu_ = new XeroPopupMenu('main', items) ;

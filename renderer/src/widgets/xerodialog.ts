@@ -60,20 +60,6 @@ export abstract class XeroDialog extends EventEmitter {
         this.topbar_.addEventListener('mousedown', this.mouseDown.bind(this)) ;
     }
 
-    private repositionDialog(mutations: MutationRecord[]) {
-        for (let mutation of mutations) {
-            let rect = this.parent_?.getBoundingClientRect() ;
-            if (rect) {
-                let prect = this.parent_!.getBoundingClientRect() ;
-                let drect = this.popup_!.getBoundingClientRect() ;
-                let x = (prect.width - drect.width) / 2 ;
-                let y = (prect.height - drect.height) / 8 ;
-                this.popup_!.style.left = x + 'px' ;
-                this.popup_!.style.top = y + 'px' ;
-            }
-        }
-    }
-
     protected abstract populateDialog(div: HTMLDivElement) : void ;
 
     protected onInit() : void {

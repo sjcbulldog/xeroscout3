@@ -16,26 +16,35 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
   send: (channel: string, data: any) => {
       let validChannels = [
         'get-nav-data', 
+
         'get-info-data',
+
         'get-formulas',
         'delete-formula',
         'add-formula',
         'rename-formula',
         'update-formula',
+
         'get-datasets',
         'rename-dataset',
         'update-dataset',
         'create-dataset',
         'delete-dataset',
+
         'generate-random-data',
+
         'set-event-name',
         'get-event-data',
+
         'get-tablet-data',
         'set-tablet-data',
+
         'get-team-data',
         'set-team-data',
+
         'get-match-data',
         'set-match-data',
+        
         'load-ba-event-data',
         'execute-command',
         'get-form',
@@ -43,14 +52,19 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'import-image',
         'get-images',
         'save-form',
+
         'get-match-db',
         'send-match-col-config',
         'send-team-col-config',
         'get-team-db',
+
+
         'get-team-status',
         'get-match-status',
+
         'set-tablet-name-purpose',
         'provide-result',
+
         'get-team-graph-data',
         'get-team-list',
         'get-multi-selected-teams',
@@ -128,6 +142,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-team-db',
         'send-team-col-config',
         'send-match-col-config',
+        'xero-app-init',
         'set-status-text',
         'set-status-html',
         'set-status-title',

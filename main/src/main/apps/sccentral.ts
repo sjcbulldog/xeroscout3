@@ -134,6 +134,8 @@ export class SCCentral extends SCBase {
 	}
 
 	public mainWindowLoaded(): void {
+		this.sendToRenderer('xero-app-init', 'central') ;
+		
 		let index = process.argv.indexOf('central') ;
 		if (index < process.argv.length - 1) {
 			Project.openEvent(this.logger_, process.argv[index + 1], this.year_!)
@@ -973,6 +975,7 @@ export class SCCentral extends SCBase {
 					let dataobj : IPCDatabaseData = {
 						column_configurations: this.project_!.data_mgr_!.getMatchColConfig()!,
 						column_definitions: cols!,
+						keycols: ['comp_level', 'set_number', 'match_number', 'team_key'],
 						data: this.convertDataForDisplay(data),
 					};
 					this.sendToRenderer('send-match-db', dataobj);
@@ -1005,10 +1008,11 @@ export class SCCentral extends SCBase {
 			this.project_?.data_mgr_!.getAllTeamData()
 				.then((data) => {
 					let dataobj = {
-						cols: cols,
+						column_configurations: this.project_!.data_mgr_!.getTeamColConfig()!,
+						column_definitions: cols!,
+						keycols: ['team_number'],
 						data: this.convertDataForDisplay(data),
 					};
-					this.sendToRenderer('send-team-col-config', this.project_!.data_mgr_!.getTeamColConfig()) ;
 					this.sendToRenderer('send-team-db', dataobj);
 				})
 				.catch((err) => {

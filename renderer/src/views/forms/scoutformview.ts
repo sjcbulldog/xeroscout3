@@ -243,7 +243,7 @@ export class XeroScoutFormView extends XeroView {
                     formctrl.update(item) ;
                 }
                 else if (item.type === 'image') {
-                    formctrl = new ImageControl(this.app.imageSource, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl = new ImageControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else if (item.type === 'box') {

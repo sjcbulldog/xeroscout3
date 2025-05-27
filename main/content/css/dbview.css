@@ -1,0 +1,30 @@
+
+.xero-db-view {
+    width: 100%;
+    height: 100%;
+}
+
+.xero-match-db-view {
+    width: 100%;
+    height: 100%;
+}
+
+.xero-team-db-view {
+    width: 100%;
+    height: 100%;
+}
+
+.xero-db-view {
+    width: 100%;
+    height: 100%;
+}
+
+.xero-db-view-table-div {
+    width: calc(100% - 5px) ;
+    height: 100% ;
+    overflow: auto;
+}
+
+.xero-db-dialog-hide-show {
+    height: 400px ;
+}

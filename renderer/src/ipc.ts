@@ -142,7 +142,8 @@ export interface IPCColumnDesc
 } ;
 
 export interface IPCDatabaseData {
-    column_configurations: IPCProjColumnsConfig ;
-    column_definitions: IPCColumnDesc[] ;
-    data: any[] ;                  // The actual data in the database, as an array of objects
+    column_configurations: IPCProjColumnsConfig ;       // The configuration for the columns in the database view
+    column_definitions: IPCColumnDesc[] ;               // The data definitions for each column in the database
+    keycols: string[] ;                                 // The columns that are used as keys in the database
+    data: any[] ;                                       // The actual data in the database, as an array of objects
 }

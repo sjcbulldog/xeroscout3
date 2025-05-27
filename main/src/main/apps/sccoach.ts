@@ -11,7 +11,7 @@ export class SCCoach extends SCBase {
     }
     
     public basePage() : string  {
-        return "content/scscouter/sccoach.html"
+        return "content/main.html"
     }
     
     public canQuit(): boolean {
