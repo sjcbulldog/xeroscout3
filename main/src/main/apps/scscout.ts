@@ -714,8 +714,7 @@ export class SCScout extends SCBase {
     }
 
     public mainWindowLoaded(): void {
-        this.sendToRenderer('xero-app-init', 'scout') ;
-
+        this.appInit() ;
         this.setViewString() ;
         
         let v = this.getVersion('application') ;

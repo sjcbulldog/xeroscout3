@@ -53,7 +53,5 @@ Attributions
 Bugs
 ----
 Fix scrolling problem on the bottom status window when lines exceed size of window.
-Select event view, make cell text not-selectable
 Make hint window look better
 Catch when closing the entire application if there is modified data in the database view.
-Remember left splitter value and restore (per central, scout, coach)

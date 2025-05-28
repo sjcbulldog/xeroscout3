@@ -106,6 +106,8 @@ export class XeroScoutFormView extends XeroView {
         this.registerCallback('request-results', this.provideResults.bind(this)) ;
         this.registerCallback('send-initial-values', this.initForm.bind(this)) ;
         this.request('get-form', this.type_);        
+
+        this.data_ = new XeroFormDataValues() ;
     }
 
     public isTimerRunning(tag: string) : boolean {

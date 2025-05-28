@@ -4,7 +4,7 @@ import { IPCNamedDataValue, IPCTypedDataValue } from "../../ipc.js";
 export class XeroFormDataValues {
     private dvalues_ : IPCNamedDataValue[] ;
 
-    public constructor(dvalues: IPCNamedDataValue[]) {
+    public constructor(dvalues: IPCNamedDataValue[] = []) {
         this.dvalues_ = dvalues;
     }
 
@@ -24,6 +24,9 @@ export class XeroFormDataValues {
         const index = this.dvalues_.findIndex((dvalue) => dvalue.tag === tag);
         if (index !== -1) {
             this.dvalues_[index].value = value;
+        }
+        else {
+            this.dvalues_.push({ tag, value });
         }
     }
 }

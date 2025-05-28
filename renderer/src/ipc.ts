@@ -105,9 +105,15 @@ export interface IPCSelectItem extends IPCChoicesItem {
 export interface IPCTimerItem extends IPCFormItem {
 }
 
+export interface IPCSize {
+    width: number ;
+    height: number ;
+}
+
 export interface IPCSection {
     name: string ;
     image: string ;
+    imageSize?: IPCSize ;
     items: IPCFormItem[] ;
 }
 

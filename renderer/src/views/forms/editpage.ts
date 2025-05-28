@@ -1,19 +1,21 @@
 import { IPCSection } from "../../ipc.js";
-import { XeroPoint } from "../../widgets/xerogeom.js";
+import { XeroPoint, XeroSize } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
 
 export class XeroFormEditSectionPage extends XeroWidget {
     public static fuzzyEdgeSpacing = 10 ;
-    private static kUsageScale = 0.98 ;
+    private static kUsageScale = 0.94;
 
     private controls_ : FormControl[] = [] ;
     private image_ : HTMLImageElement ;
     private observer_ : ResizeObserver ;
+    private name_ : string ;
 
-    public constructor() {
+    public constructor(name: string) {
         super('div', 'xero-form-section-page') ;
 
+        this.name_ = name ;
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
         this.elem.appendChild(this.image_) ;
@@ -36,6 +38,11 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
     public get controls() : FormControl[] {
         return this.controls_ ;
+    }
+
+    public get imageSize() : XeroSize {
+        let bounds = this.image_.getBoundingClientRect() ;
+        return new XeroSize(bounds.width, bounds.height) ;
     }
 
     //
@@ -105,11 +112,15 @@ export class XeroFormEditSectionPage extends XeroWidget {
         control.ctrl!.draggable = false ;
     }
 
+    private dumpImageSize(title: string) : void {
+        let bounds = this.image_.getBoundingClientRect() ;
+        console.log(`${title}: ${bounds.width.toFixed(1)} x ${bounds.height.toFixed(1)}`) ;
+    }
+
     private onResize(entries: ResizeObserverEntry[]) : void {
         for(let entry of entries) {
             if (entry.target === this.elem) {
-                this.image_.style.width = `${entry.contentRect.width * XeroFormEditSectionPage.kUsageScale}px` ;
-                this.image_.style.height = `${entry.contentRect.height * XeroFormEditSectionPage.kUsageScale}px` ;
+                
             }
         }
     }   

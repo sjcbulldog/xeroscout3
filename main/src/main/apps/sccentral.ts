@@ -2152,7 +2152,7 @@ export class SCCentral extends SCBase {
 				msg = "Tablet '" + p.payloadAsString() + "' has sucessfully completed synchronization and is ready to use";
 			}
 			else {
-				msg = `Tablet '${p.payloadAsString()}' has sucessfully synchronized scouting data with this host, ${this.updated_records_} added` ; 
+				msg = `Tablet '${p.payloadAsString()}' has sucessfully synchronized scouting data with this host, new records added` ;
 			}
 
 			dialog.showMessageBox(this.win_, {

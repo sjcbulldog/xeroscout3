@@ -102,6 +102,7 @@ export class XeroEditFormView extends XeroView {
     private static moveControlAmount = 1 ;
     private static shiftMoveControlAmount = 10 ;
     private static ctrlMoveControlAmount = 50 ;
+    private static shiftCtrlMoveControlAmount = 250 ;
 
     private keybindings_ : KeybindingManager = new KeybindingManager() ;
 
@@ -340,6 +341,11 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('ArrowUp', true, false, false, 'Move the current control up by 50', this.moveSelectedItems.bind(this, 0, -XeroEditFormView.ctrlMoveControlAmount));
         this.keybindings_.addKeybinding('ArrowDown', true, false, false, 'Move the current control down by 50', this.moveSelectedItems.bind(this, 0, XeroEditFormView.ctrlMoveControlAmount));
 
+        this.keybindings_.addKeybinding('ArrowLeft', true, false, true, 'Move the current control left by 50', this.moveSelectedItems.bind(this, -XeroEditFormView.shiftCtrlMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowRight', true, false, true, 'Move the current control right by 50', this.moveSelectedItems.bind(this, XeroEditFormView.shiftCtrlMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowUp', true, false, true, 'Move the current control up by 50', this.moveSelectedItems.bind(this, 0, -XeroEditFormView.shiftCtrlMoveControlAmount));
+        this.keybindings_.addKeybinding('ArrowDown', true, false, true, 'Move the current control down by 50', this.moveSelectedItems.bind(this, 0, XeroEditFormView.shiftCtrlMoveControlAmount));        
+
         this.keybindings_.addKeybinding('ArrowLeft', false, true, false, 'Resize the current control moving the left border', this.resizeSelectedItems.bind(this, -XeroEditFormView.moveControlAmount, 0));
         this.keybindings_.addKeybinding('ArrowRight', false, true, false, 'Resize the current control moving the right border', this.resizeSelectedItems.bind(this, XeroEditFormView.moveControlAmount, 0));
         this.keybindings_.addKeybinding('ArrowUp', false, true, false, 'Resize the current control moving the top border', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.moveControlAmount));
@@ -354,6 +360,11 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('ArrowRight', true, true, false, 'Resize the current control moving the right border by 50', this.resizeSelectedItems.bind(this, XeroEditFormView.ctrlMoveControlAmount, 0));
         this.keybindings_.addKeybinding('ArrowUp', true, true, false, 'Resize the current control moving the top border by 50', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.ctrlMoveControlAmount));
         this.keybindings_.addKeybinding('ArrowDown', true, true, false, 'Resize the current control moving the bottom border by 50', this.resizeSelectedItems.bind(this, 0, XeroEditFormView.ctrlMoveControlAmount));        
+
+        this.keybindings_.addKeybinding('ArrowLeft', true, true, true, 'Resize the current control moving the left border by 50', this.resizeSelectedItems.bind(this, -XeroEditFormView.shiftCtrlMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowRight', true, true, true, 'Resize the current control moving the right border by 50', this.resizeSelectedItems.bind(this, XeroEditFormView.shiftCtrlMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowUp', true, true, true, 'Resize the current control moving the top border by 50', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.shiftCtrlMoveControlAmount));
+        this.keybindings_.addKeybinding('ArrowDown', true, true, true, 'Resize the current control moving the bottom border by 50', this.resizeSelectedItems.bind(this, 0, XeroEditFormView.shiftCtrlMoveControlAmount));          
 
         this.keybindings_.addKeybinding('F2', false, false, false, 'Insert a new label control', this.addNewLabelCtrl.bind(this));
         this.keybindings_.addKeybinding('F3', false, false, false, 'Insert a new box control', this.addNewBoxCtrl.bind(this));
@@ -622,7 +633,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private createSectionPageObject(section: IPCSection) : XeroFormEditSectionPage { 
-        let page = new XeroFormEditSectionPage() ;
+        let page = new XeroFormEditSectionPage(section.name) ;
         this.updateControls(section, page) ;
 
         this.app.imageSource!.getImageData(section.image)
@@ -649,11 +660,10 @@ export class XeroEditFormView extends XeroView {
    
     private addSection() {
         if (this.form_) {
+            let num = this.form_.sections.length ;
             let section : IPCSection = this.form_.createNewSection() ;
             this.appendSectionPage(section) ;
-            if (this.tabbed_ctrl_!.selectedPageNumber === -1) {
-                this.tabbed_ctrl_!.selectPage(0) ;
-            }
+            this.tabbed_ctrl_!.selectPage(num) ;
             this.modified(new UndoStackEntry('add', 'section', section.name)) ;       
         }
     }
@@ -722,6 +732,7 @@ export class XeroEditFormView extends XeroView {
             let pageno = this.tabbed_ctrl_!.selectedPageNumber ;
             let old_image = this.form_.sections[pageno].image ;
             this.form_.sections[pageno].image = image ;
+            this.form_.sections[pageno].imageSize = undefined ;                 // Reset the image size so it will be recalculated
             if (save) {
                 this.modified(new UndoStackEntry('edit', 'image', old_image)) ;
             }
@@ -787,6 +798,16 @@ export class XeroEditFormView extends XeroView {
 
     private doLayout(index: number) {
         this.section_pages_[index].doLayout() ;
+        if (!this.form_?.sections[index].imageSize) {
+            //
+            // For backwards compatibility, we need to set the image size
+            // if it doesn't exist. This becomes the baseline for the form and all scaling
+            //
+            let sz = this.section_pages_[index].imageSize ;
+            this.form_!.sections[index].imageSize = { width: sz.width, height: sz.height } ;
+            this.request('save-form', { type: this.type_, contents: this.form_!.json}) ;
+            console.log(`XeroEditFormView: setting image size for section ${index} to ${sz.width.toFixed(1)} x ${sz.height.toFixed(1)}`) ;
+        }
     }
 
     private beforeSectionChanged(oldpage: number, newpage: number) {
