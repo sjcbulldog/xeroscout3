@@ -167,12 +167,15 @@ export class DataManager extends Manager {
         return ret;
     }
 
-    public async processResults(obj: IPCScoutResults) : Promise<void> {
-        let ret = new Promise<void>(async (resolve, reject) => {
+    public async processResults(obj: IPCScoutResults) : Promise<number> {
+        let ret = new Promise<number>(async (resolve, reject) => {
             if (!this.info_) {
                 this.logger_.error('project is not initialized, cannot process results') ;
+                reject(new Error('project is not initialized')) ;
             }
             else {
+                let num = 0 ;
+
                 if (obj.purpose) {
                     if (obj.purpose === 'match') {
                         this.info_.match_results_ = [] ;
@@ -184,6 +187,7 @@ export class DataManager extends Manager {
 
                         try {
                             let status = await this.matchdb_.processScoutingResults(obj) ;
+                            num = status.length ;
                             for(let st of status) {
                                 if (!this.info_.scouted_match_.includes(st)) {
                                     this.info_.scouted_match_.push(st) ;
@@ -206,6 +210,7 @@ export class DataManager extends Manager {
 
                         try {
                             let teams = await this.teamdb_.processScoutingResults(obj) ;
+                            num = teams.length ;
                             for (let st of teams) {
                                 if (!this.info_.scouted_team_.includes(st)) {
                                     this.info_.scouted_team_.push(st) ;
@@ -218,7 +223,7 @@ export class DataManager extends Manager {
                             return ;
                         }
                     }
-                    resolve() ;
+                    resolve(num) ;
                 }
                 this.write() ;
             }

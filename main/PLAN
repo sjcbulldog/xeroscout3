@@ -19,6 +19,7 @@
 - DONE: Fix scouting form look/feel, provide team or match # with color
 - DONE: Prompt before scouting a new team or match and generating data
 - Form scaling to tablet size
+- Report on central the number of teams/matches that were updated
 
 3.0.11
 ------
@@ -44,6 +45,10 @@
 - Multi team View
 - Team Graphs
 - Spider Graphs (look at graphing package)
+
+3.0.15
+------
+Attributions
 
 Bugs
 ----

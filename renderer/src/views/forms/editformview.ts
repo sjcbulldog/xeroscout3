@@ -340,6 +340,21 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('ArrowUp', true, false, false, 'Move the current control up by 50', this.moveSelectedItems.bind(this, 0, -XeroEditFormView.ctrlMoveControlAmount));
         this.keybindings_.addKeybinding('ArrowDown', true, false, false, 'Move the current control down by 50', this.moveSelectedItems.bind(this, 0, XeroEditFormView.ctrlMoveControlAmount));
 
+        this.keybindings_.addKeybinding('ArrowLeft', false, true, false, 'Resize the current control moving the left border', this.resizeSelectedItems.bind(this, -XeroEditFormView.moveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowRight', false, true, false, 'Resize the current control moving the right border', this.resizeSelectedItems.bind(this, XeroEditFormView.moveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowUp', false, true, false, 'Resize the current control moving the top border', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.moveControlAmount));
+        this.keybindings_.addKeybinding('ArrowDown', false, true, false, 'Resize the current control moving the bottom border', this.resizeSelectedItems.bind(this, 0, XeroEditFormView.moveControlAmount));
+
+        this.keybindings_.addKeybinding('ArrowLeft', false, true, true, 'Resize the current control moving the left border by 10', this.resizeSelectedItems.bind(this, -XeroEditFormView.shiftMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowRight', false, true, true, 'Resize the current control moving the right border by 10', this.resizeSelectedItems.bind(this, XeroEditFormView.shiftMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowUp', false, true, true, 'Resize the current control moving the top border by 10', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.shiftMoveControlAmount));
+        this.keybindings_.addKeybinding('ArrowDown', false, true, true, 'Resize the current control moving the bottom border by 10', this.resizeSelectedItems.bind(this, 0, XeroEditFormView.shiftMoveControlAmount));
+
+        this.keybindings_.addKeybinding('ArrowLeft', true, true, false, 'Resize the current control moving the left border by 50', this.resizeSelectedItems.bind(this, -XeroEditFormView.ctrlMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowRight', true, true, false, 'Resize the current control moving the right border by 50', this.resizeSelectedItems.bind(this, XeroEditFormView.ctrlMoveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowUp', true, true, false, 'Resize the current control moving the top border by 50', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.ctrlMoveControlAmount));
+        this.keybindings_.addKeybinding('ArrowDown', true, true, false, 'Resize the current control moving the bottom border by 50', this.resizeSelectedItems.bind(this, 0, XeroEditFormView.ctrlMoveControlAmount));        
+
         this.keybindings_.addKeybinding('F2', false, false, false, 'Insert a new label control', this.addNewLabelCtrl.bind(this));
         this.keybindings_.addKeybinding('F3', false, false, false, 'Insert a new box control', this.addNewBoxCtrl.bind(this));
         this.keybindings_.addKeybinding('F4', false, false, false, 'Insert a new text control', this.addNewTextCtrl.bind(this));
@@ -507,11 +522,9 @@ export class XeroEditFormView extends XeroView {
     }     
 
     private receivedForm(args: any) {
-        console.log(`XeroEditFormView: received form data for ${this.type_}`) ; 
-
         this.initDisplay() ;
 
-        this.form_ = new FormObject(args.form.json) ;
+        this.form_ = new FormObject(args.form) ;
         if (this.form_) {
             if (this.form_.sections.length) {
                 this.createSectionPages() ;
@@ -776,13 +789,12 @@ export class XeroEditFormView extends XeroView {
         this.section_pages_[index].doLayout() ;
     }
 
-    private beforeSectionChanged(index: number) {
-        this.section_pages_[index].resetHTML() ;
+    private beforeSectionChanged(oldpage: number, newpage: number) {
     }
 
-    private afterSectionChanged(index: number) {
-        if (this.tabbed_ctrl_!.selectedPageNumber !== -1) {
-            setTimeout(this.doLayout.bind(this, index), 10) ;
+    private afterSectionChanged(oldpage: number, newpage: number) {
+        if (newpage !== -1) {
+            setTimeout(this.doLayout.bind(this, newpage), 10) ;
         }
     }
 
@@ -986,6 +998,36 @@ export class XeroEditFormView extends XeroView {
             }
         }
     }
+
+    private resizeSelectedItems(dw: number, dh: number, ev: KeyboardEvent) {
+        if (this.selected_ctrls_.length > 0) {
+            let dx = 0 ;
+            let dy = 0 ;
+
+            if (dw < 0) {
+                dw = -dw ;
+                dx = -dw ;
+            }
+
+            if (dh < 0) {
+                dh = -dh ;
+                dy = -dh ;
+            }
+
+            if (!this.testMoveSelectedItems(dx, dy, dw, dh, false)) {
+                return ;
+            }
+
+            for(let frmctrl of this.selected_ctrls_) {
+                frmctrl.item.x += dx ;
+                frmctrl.item.y += dy ;
+                frmctrl.item.width += dw ;
+                frmctrl.item.height += dh ;
+                frmctrl.positionUpdated() ;
+                this.displayMiddleBar() ;
+            }
+        }
+    }    
 
     private deleteControls(ctrls: FormControl[], save: boolean = true) {
         let deled : IPCFormItem[] = [] ;
@@ -1270,9 +1312,6 @@ export class XeroEditFormView extends XeroView {
     }
 
     private pageToForm(x: number, y: number) : XeroPoint {
-        if (this.tabbed_ctrl_!.selectedPage === undefined) {
-            console.log('XeroEditFormView: pageToForm: no selected page') ;
-        }
         let bounds = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect() ;
         let pt = new XeroPoint(x - bounds.left, y - bounds.top) ;
         return pt ;
@@ -1295,7 +1334,6 @@ export class XeroEditFormView extends XeroView {
             //
             // We are in a dialog or popup menu, so ignore the mouse move
             //
-            console.log('XeroEditFormView: mouseMove: in dialog or popup menu') ;
             return ;
 
         }
@@ -1306,7 +1344,6 @@ export class XeroEditFormView extends XeroView {
             // Tell the user to right click for a menu and return
             //
             this.setMiddleStatusBarText(XeroEditFormView.kDefaultMiddleText) ;   
-            console.log('XeroEditFormView: mouseMove: no selected page') ;
             return ;
         }    
         
@@ -1314,7 +1351,6 @@ export class XeroEditFormView extends XeroView {
             //
             // The document does not have focus, so ignore the mouse move
             //
-            console.log('XeroEditFormView: mouseMove: document does not have focus') ;
             return ;
         }
 
@@ -1329,7 +1365,6 @@ export class XeroEditFormView extends XeroView {
             // We are dragging the area select box, so update the size of the
             // box
             //
-            console.log('XeroEditFormView: mouseMove: area select') ;
             this.placeAreaSelectDiv(this.cursor_) ;
         }
         else if (this.selected_ctrls_.length === 0) {
@@ -1339,7 +1374,6 @@ export class XeroEditFormView extends XeroView {
             //
             // Its ok if ctrl is undefined, highlight() handles this correctly
             //
-            console.log('XeroEditFormView: mouseMove: no selected controls') ;
             this.highlight(ctrls[ctrls.length - 1]) ;
             this.elem.style.cursor = 'default' ;
         }
@@ -1347,7 +1381,6 @@ export class XeroEditFormView extends XeroView {
             //
             // We have selected controls, but we are not dragging them
             //
-            console.log('XeroEditFormView: mouseMove: selected controls but not dragging') ;
             this.highlight(ctrls[ctrls.length - 1]) ;
             this.mouseMoveControlsSelected() ;
         }
@@ -1355,7 +1388,6 @@ export class XeroEditFormView extends XeroView {
             //
             // We are moving or resizing the selected controls
             //
-            console.log('XeroEditFormView: mouseMove: selected controls and dragging') ;
             this.draggingResizingControls(event) ;
         }
     }
@@ -1521,7 +1553,6 @@ export class XeroEditFormView extends XeroView {
         event.stopPropagation() ;
 
         let ctrls = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlsByPosition(this.cursor_) ;
-        console.log(`XeroEditFormView: mouseDown: ${ctrls.length} controls found`) ;
         if (ctrls.length === 0) {
             if (this.selected_ctrls_.length > 0) {
                 //

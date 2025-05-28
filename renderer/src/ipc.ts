@@ -179,3 +179,10 @@ export interface IPCScoutResults {
     purpose: string ;
     results: IPCScoutResult[] ;
 }
+
+export type IPCAppType = 'central' | 'scout' | 'coach' ;
+
+export interface IPCAppInit {
+    type: IPCAppType ;
+    splitter: number ;
+}

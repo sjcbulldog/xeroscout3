@@ -76,9 +76,9 @@ export class XeroMatchStatus extends XeroView {
             initialSort: [{ column : 'comp_level', dir: 'asc' }],
             columns: [
                 { title: 'Type', field: 'comp_level' , sorter: this.sortMatchFunc.bind(this) },
-                { title: 'Match', field: 'match_number'},
-                { title: 'Set', field: 'set_number'},
-                { title: 'Played', field: 'played', formatter: 'tickCross'},
+                { title: 'Match', field: 'match_number', headerSort: false},
+                { title: 'Set', field: 'set_number', headerSort: false},
+                { title: 'Played', field: 'played', formatter: 'tickCross', headerSort: false},
 
                 { title: 'Blue 1', field: 'blue1'},
                 { title: 'Blue Tablet 1', field: 'bluetab1'},

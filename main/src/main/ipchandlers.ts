@@ -870,3 +870,9 @@ export async function clientLog(cmd: string, ...args: any[]) {
         scappbase.logClientMessage(args[0]) ;
     }
 }
+
+export async function splitterChanged(cmd: string, ...args: any[]) {
+    if (scappbase && args.length === 1 && typeof args[0] === 'number') {
+        scappbase.splitterChanged(args[0] as number) ;
+    }
+}

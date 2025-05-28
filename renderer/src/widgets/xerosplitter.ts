@@ -47,7 +47,7 @@ export class XeroSplitter extends XeroWidget {
             this.bar_.elem.style.cursor = "row-resize";
         }
 
-        this.setSplit(5) ;
+        this.position = 5 ;
 
         document.addEventListener('mousedown', this.mouseDownHandler.bind(this));
         this.mouse_move_handler_ = this.mouseMoveHandler.bind(this);
@@ -55,7 +55,21 @@ export class XeroSplitter extends XeroWidget {
 
     }
 
-    public setSplit(percent: number) {
+    public get position() : number {
+        let ret: number = 0 ;
+
+        if (this.orientation_ == "horizontal") {
+            ret = this.first_.elem.getBoundingClientRect().width;
+            ret = (ret / this.elem.getBoundingClientRect().width) * 100; // Convert to percentage   
+        } else {
+            ret = this.first_.elem.getBoundingClientRect().height;
+            ret = (ret / this.elem.getBoundingClientRect().height) * 100; // Convert to percentage
+        }
+
+        return ret;
+    }   
+
+    public set position(percent: number) {
         if (this.orientation_ == "horizontal") {
             this.first_.elem.style.width = `${percent}%`;
             this.second_.elem.style.width = `calc(100% - ${percent}% - ${this.bar_width_}px)`; // 10px for the splitter bar
@@ -67,7 +81,6 @@ export class XeroSplitter extends XeroWidget {
 
     private mouseDownHandler(event: MouseEvent) {
         if (event.target === this.bar_.elem) {
-
             document.addEventListener('mousemove', this.mouse_move_handler_);
             document.addEventListener('mouseup', this.mouse_up_handler_);
         }
@@ -88,5 +101,7 @@ export class XeroSplitter extends XeroWidget {
     private mouseUpHandler(event: MouseEvent) {
         document.removeEventListener('mousemove', this.mouse_move_handler_!);
         document.removeEventListener('mouseup', this.mouse_up_handler_!);
+
+        this.emit('changed')
     }
 }

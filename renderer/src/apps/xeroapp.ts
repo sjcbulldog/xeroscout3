@@ -16,7 +16,7 @@ import {  XeroMatchStatus   } from "../views/matchstatus.js";
 import {  StatusOverlay   } from "../status/StatusOverlay.js";
 import {  XeroTeamDatabaseView   } from "../views/teamdbview.js";
 import {  XeroMatchDatabaseView   } from "../views/matchdbview.js";
-import {  IPCSetStatus, IPCSetView   } from "../ipc.js";
+import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView   } from "../ipc.js";
 import { HintManager } from "../hintmgr.js";
 import { ImageDataSource } from "./imagesrc.js";
 import { XeroSelectTablet } from "../views/selecttablet/selecttablet.js";
@@ -27,8 +27,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize the XeroScout app
     mainapp = new XeroApp() ;
 });
-
-export type XeroAppType = 'central' | 'scout' | 'coach' ;
 
 export class XeroApp extends XeroMainProcessInterface {
     private viewmap_ : Map<string, any> = new Map() ;                   // Map of view name to class
@@ -41,7 +39,7 @@ export class XeroApp extends XeroMainProcessInterface {
     private hintdb_? : HintManager ;
     private status_overlay_? : StatusOverlay ;
     private image_src_? : ImageDataSource ;
-    private type_? : XeroAppType ;
+    private type_? : IPCAppType ;
 
     constructor() {
         super() ;
@@ -49,11 +47,11 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('xero-app-init', this.init.bind(this)) ;
     }
 
-    private init(type: XeroAppType) {
+    private init(init: IPCAppInit) {
         let logger_ = XeroLogger.getInstance() ;
-        logger_.debug(`XeroApp init called with type ${type}`) ;
+        logger_.debug(`XeroApp init called with type ${init.type}`) ;
 
-        this.type_ = type ;
+        this.type_ = init.type ;
         this.hintdb_ = new HintManager() ;
         this.image_src_ = new ImageDataSource() ;
 
@@ -62,7 +60,8 @@ export class XeroApp extends XeroMainProcessInterface {
         this.left_nav_pane_ = new XeroNav() ;
         this.right_view_pane_ = new XeroWidget('div', "xero-view-pane") ;
         this.splitter_ = new XeroSplitter("horizontal", this.left_nav_pane_, this.right_view_pane_) ;
-        this.splitter_.setSplit(5) ;
+        this.splitter_.on('changed', this.splitterChanged.bind(this)) ;
+        this.splitter_.position = init.splitter || 10 ;
 
         this.status_overlay_ = new StatusOverlay(this.right_view_pane_) ;
 
@@ -74,6 +73,10 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('update-main-window-view', this.updateView.bind(this)) ;
         this.registerCallback('send-app-status', this.updateStatusBar.bind(this)) ;
         this.registerViews() ;
+    }
+
+    private splitterChanged() {
+        this.request('splitter-changed', this.splitter_!.position) ;
     }
 
     public get imageSource() {
@@ -140,7 +143,7 @@ export class XeroApp extends XeroMainProcessInterface {
         return ret;
     }
 
-    private registerView(view: string, viewclass: any, programs: XeroAppType[]) {
+    private registerView(view: string, viewclass: any, programs: IPCAppType[]) {
         if (this.type_ && programs.includes(this.type_)) {
             this.viewmap_.set(view, viewclass) ;
         }

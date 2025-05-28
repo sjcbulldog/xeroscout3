@@ -14,7 +14,8 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getHintDB,
          setHintHidden,
          updateMatchDB,
-         updateTeamDB} from "./main/ipchandlers" ;
+         updateTeamDB,
+         splitterChanged} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -127,6 +128,7 @@ function createWindow() : void {
 }
 
 app.on("ready", () => {
+    ipcMain.on('splitter-changed', (event, ...args) => { splitterChanged('splitter-changed', ...args)}) ;
     ipcMain.on('get-nav-data', (event, ...args) => { getNavData('get-nav-data', ...args)});
     ipcMain.on('get-info-data', (event, ...args) => { getInfoData('get-info-data', ...args)}) ;
     ipcMain.on('get-formulas', (event, ...args) => { getFormulas('get-formulas', ...args)}) ;

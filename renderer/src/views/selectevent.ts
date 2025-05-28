@@ -75,10 +75,21 @@ export class XeroSelectEvent extends XeroView {
                 data:args,
                 layout:"fitColumns",
                 resizableColumnFit:true,
-                columns:cols
+                columns:cols,
+                clipboard: false,
             });        
 
+        this.table_.on('tableBuilt', this.tableLoaded.bind(this)) ;
         this.table_.on('cellDblClick', this.loadBAEvent.bind(this)) ;
+    }
+
+    private tableLoaded() : void {
+        for(let row of this.table_!.getRows()) {
+            for (let cell of row.getCells()) {
+                cell.getElement().style.cursor = 'pointer' ;
+                cell.getElement().style.userSelect = 'none' ;
+            }
+        }   
     }
 
     private loadBAEvent(e: Event, cell: CellComponent) : void {

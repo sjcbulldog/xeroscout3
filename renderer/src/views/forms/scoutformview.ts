@@ -326,10 +326,12 @@ export class XeroScoutFormView extends XeroView {
 
     private beforeSectionChanged(oldpage: number, newpage: number) : void {
         if (oldpage !== -1) {
-            for(let ctrl of this.section_pages_[oldpage].controls) {
-                let value = ctrl.getData() ;
-                if (value) {
-                    this.data_!.set(ctrl.item.tag, value) ;
+            if (this.data_) {
+                for(let ctrl of this.section_pages_[oldpage].controls) {
+                    let value = ctrl.getData() ;
+                    if (value) {
+                        this.data_!.set(ctrl.item.tag, value) ;
+                    }
                 }
             }
         }
@@ -337,11 +339,13 @@ export class XeroScoutFormView extends XeroView {
 
     private afterSectionChanged(oldpage: number, newpage: number) : void {
         if (newpage !== -1) {
-            this.section_pages_[newpage].doLayout() ;
-            for(let ctrl of this.section_pages_[newpage].controls) {
-                let data = this.data_!.get(ctrl.item.tag) ;
-                if (data) {
-                    ctrl.setData(data) ;
+            this.section_pages_[newpage].doLayout() ;            
+            if (this.data_) {
+                for(let ctrl of this.section_pages_[newpage].controls) {
+                    let data = this.data_!.get(ctrl.item.tag) ;
+                    if (data) {
+                        ctrl.setData(data) ;
+                    }
                 }
             }
         }        

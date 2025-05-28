@@ -107,9 +107,10 @@ export class SCCentral extends SCBase {
 	private importImage_ : MenuItem | undefined ;
 	private lastformview_? : string ;
 	private synctype_ : string = 'data' ;
+	private updated_records_ : number = 0 ;
 
 	constructor(win: BrowserWindow, args: string[]) {
-		super(win, 'server');
+		super(win, 'central');
 
 		this.color_ = 'blue' ;
 		this.reversed_ = false ;
@@ -132,7 +133,7 @@ export class SCCentral extends SCBase {
 	}
 
 	public mainWindowLoaded(): void {
-		this.sendToRenderer('xero-app-init', 'central') ;
+		this.appInit() ;
 		
 		let index = process.argv.indexOf('central') ;
 		if (index < process.argv.length - 1) {
@@ -1966,6 +1967,7 @@ export class SCCentral extends SCBase {
 
 		if (p.type_ === PacketType.Hello) {
 			this.synctype_ = 'data' ;
+			this.updated_records_ = 0 ;
 			if (p.data_.length > 0) {
 				try {
 					let obj = JSON.parse(p.payloadAsString());
@@ -2112,11 +2114,12 @@ export class SCCentral extends SCBase {
 			try {
 				let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
 				this.project_!.data_mgr_?.processResults(obj)
-					.then(() => {
+					.then((count) => {
+						this.updated_records_ = count ;
 						if (this.project_!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
-							this.setView("teamstatus");
+							this.setView("team-status");
 						} else {
-							this.setView("matchstatus");
+							this.setView("match-status");
 						}
 					})
 					.catch((err) => {
@@ -2149,7 +2152,7 @@ export class SCCentral extends SCBase {
 				msg = "Tablet '" + p.payloadAsString() + "' has sucessfully completed synchronization and is ready to use";
 			}
 			else {
-				msg = "Tablet '" + p.payloadAsString() + "' has sucessfully synchronized scouting data with this host" ;
+				msg = `Tablet '${p.payloadAsString()}' has sucessfully synchronized scouting data with this host, ${this.updated_records_} added` ; 
 			}
 
 			dialog.showMessageBox(this.win_, {
