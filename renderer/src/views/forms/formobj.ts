@@ -23,6 +23,17 @@ export class FormObject {
         return this.form_.images ;  
     }
 
+    public findItemByTag(tag: string) : IPCFormItem | undefined {
+        for(let section of this.form_.sections) {
+            for(let item of section.items) {
+                if(item.tag === tag) {
+                    return item ;
+                }
+            }
+        }
+        return undefined ;
+    }
+
     public containsSection(name: string) : boolean {
         for(let section of this.form_.sections) {
             if(section.name === name) {

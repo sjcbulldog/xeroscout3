@@ -223,6 +223,14 @@ export abstract class FormControl {
     public abstract createEditDialog() : EditFormControlDialog ;
     public abstract getData() : IPCTypedDataValue | undefined ;
     public abstract setData(data: any) : void ;
+
+    public scale(xscale: number, yscale: number) : void {
+        this.item_.x = Math.round(this.item_.x * xscale) ;
+        this.item_.y = Math.round(this.item_.y * yscale) ;
+        this.item_.width = Math.round(this.item_.width * xscale) ;
+        this.item_.height = Math.round(this.item_.height * yscale) ;
+    }
+
     protected abstract copyObject() : FormControl ;
 
     protected setTag(tag: string) {

@@ -1,8 +1,9 @@
+import { IPCImageResponse } from "../ipc.js";
 import { XeroMainProcessInterface } from "../widgets/xerocbtarget.js";
 
 interface ImageWaiters {
-    resolve: (data: string | null) => void;
-    reject: (error: any) => void;
+    resolve: (data: IPCImageResponse) => void;
+    reject: (error: Error) => void;
     name: string ;
 }
 
@@ -29,10 +30,15 @@ export class ImageDataSource extends XeroMainProcessInterface {
         return this.image_names ;
     }
 
-    public getImageData(name: string) : Promise<string | null> {
-        let ret = new Promise<string | null>((resolve, reject) => {
+    public getImageData(name: string) : Promise<IPCImageResponse> {
+        let ret = new Promise<IPCImageResponse>((resolve, reject) => {
             if (this.nameToImageMap_.has(name)) {
-                resolve(this.nameToImageMap_.get(name)!) ;
+                let resp : IPCImageResponse = {
+                    name: name,
+                    data: this.nameToImageMap_.get(name)!,
+                    newname: undefined
+                };
+                resolve(resp) ;
             }
             else {
                 this.request('get-image-data', name) ;
@@ -47,11 +53,11 @@ export class ImageDataSource extends XeroMainProcessInterface {
         return ret;
     }
 
-    public get blank() : Promise<string | null> {
+    public get blank() : Promise<IPCImageResponse> {
         return this.getImageData(ImageDataSource.kBlankImageName) ;
     }
 
-    public get missing() : Promise<string | null> {
+    public get missing() : Promise<IPCImageResponse> {
         return this.getImageData(ImageDataSource.kMissingImageName) ;
     }
 
@@ -60,20 +66,22 @@ export class ImageDataSource extends XeroMainProcessInterface {
         this.emit('image-names-updated', this.image_names) ;
     }
 
-    private receivedImageData(args:any) : void {
-        let name = args.name ;
-        let data = args.data ;
-
-        this.nameToImageMap_.set(name, data) ;
+    private receivedImageData(args:IPCImageResponse) : void {
+        if (args.newname) {
+            this.nameToImageMap_.set(args.newname, args.data) ;
+        }
+        else {
+            this.nameToImageMap_.set(args.name, args.data) ;
+        }
         
         let processed = true ;
         while (processed) {
             processed = false ;
-            let index = this.waiters.findIndex(waiter => waiter.name === name) ;
+            let index = this.waiters.findIndex(waiter => waiter.name === args.name) ;
             if (index >= 0) {
                 let waiter = this.waiters[index] ;
                 this.waiters.splice(index, 1) ;
-                waiter.resolve(data) ;
+                waiter.resolve(args) ;
                 processed = true ;
             }
         }

@@ -38,9 +38,9 @@ export class XeroTabbedWidget extends XeroWidget {
         return this.selected_page_ ;
     }
 
-    public get selectedPage() : HTMLElement | undefined {
-        return this.selected_ ;
-    }
+    // public get selectedPage() : HTMLElement | undefined {
+    //     return this.selected_ ;
+    // }
 
     public renamePage(index: number, name: string) : void { 
         if (index < 0 || index >= this.names_.length) {

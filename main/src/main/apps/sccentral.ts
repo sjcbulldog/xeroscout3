@@ -4,7 +4,7 @@ import * as path from "path";
 import { SCBase, XeroAppType, XeroVersion } from "./scbase";
 import { BlueAlliance } from "../extnet/ba";
 import { Project } from "../project/project";
-import { BrowserWindow, Data, dialog, Menu, MenuItem, shell } from "electron";
+import { BrowserWindow, Data, dialog, Menu, MenuItem, protocol, shell } from "electron";
 import { TCPSyncServer } from "../sync/tcpserver";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
@@ -21,7 +21,7 @@ import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
 import { DataValue } from "../model/datavalue";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCForm, IPCScoutResult, IPCScoutResults } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCForm, IPCScoutResult, IPCScoutResults, IPCImageResponse } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 
 export interface GraphDataRequest {
@@ -107,7 +107,6 @@ export class SCCentral extends SCBase {
 	private importImage_ : MenuItem | undefined ;
 	private lastformview_? : string ;
 	private synctype_ : string = 'data' ;
-	private updated_records_ : number = 0 ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
@@ -183,7 +182,7 @@ export class SCCentral extends SCBase {
 			.then((up) => {
 				if (!up) {
 					this.ba_ = undefined;
-					this.sendToRenderer('send-app-status', { right: 'Blue Alliance not availabel - trying again' }) ;
+					this.sendToRenderer('send-app-status', { right: 'Blue Alliance not available - trying again' }) ;
 					this.tryAgain() ;
 				} else {
 					this.sendToRenderer('send-app-status', { right: 'Blue Alliance connected' }) ;
@@ -570,7 +569,17 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendImageData(image: string) {
-		this.sendToRenderer('send-image-data', { name: image, data: this.getImageData(image) }) ;
+		let ret : IPCImageResponse = {
+			newname: undefined,
+			name: image, 
+			data: this.getImageData(image)
+		}
+
+		if (!ret.data) {
+			ret.newname = 'missing' ;
+			ret.data = this.getImageData('missing') ;
+		}
+		this.sendToRenderer('send-image-data', ret) ;
 	}
 
 	public importImage() {
@@ -1044,7 +1053,7 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendEventData(): void {
-		if (this.project_ && this.isBAAvailabel()) {
+		if (this.project_ && this.isBAAvailable()) {
 			this.ba_?.getEvents()
 				.then((frcevs: BAEvent[]) => {
 					this.baevents_ = frcevs;
@@ -1065,7 +1074,7 @@ export class SCCentral extends SCBase {
 		} else {
 			dialog.showErrorBox(
 				'Load Blue Alliance Event',
-				'The Blue Alliance site is not availabel'
+				'The Blue Alliance site is not available'
 			);
 			this.setView('info') ;
 		}
@@ -1080,7 +1089,7 @@ export class SCCentral extends SCBase {
 	}
 
 	public async loadBaEventData(key: string): Promise<void> {
-		if (!this.isBAAvailabel()) {
+		if (!this.isBAAvailable()) {
 			dialog.showErrorBox(
 				'Load Blue Alliance Event',
 				'The Blue Alliance site is not available.'
@@ -1188,8 +1197,8 @@ export class SCCentral extends SCBase {
 			return;
 		}
 
-		if (!this.isBAAvailabel()) {
-			let html = "The Blue Alliance site is not availabel.";
+		if (!this.isBAAvailable()) {
+			let html = "The Blue Alliance site is not available.";
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title", "Error Importing Match Data");
 			this.sendToRenderer("set-status-html", html);
@@ -1237,8 +1246,8 @@ export class SCCentral extends SCBase {
 			return;
 		}
 
-		if (!this.isBAAvailabel()) {
-			let html = "The Statbotics site is not availabel.";
+		if (!this.isBAAvailable()) {
+			let html = "The Statbotics site is not available.";
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title", "Error Importing Match Data");
 			this.sendToRenderer("set-status-html", html);
@@ -1297,7 +1306,7 @@ export class SCCentral extends SCBase {
 		return ret;
 	}
 
-	private isBAAvailabel(): boolean {
+	private isBAAvailable(): boolean {
 		return this.ba_ !== undefined && !this.baloading_;
 	}
 
@@ -1769,7 +1778,7 @@ export class SCCentral extends SCBase {
 	}
 
 	private loadBAEvent() {
-		if (this.isBAAvailabel()) {
+		if (this.isBAAvailable()) {
 			this.ba_?.getEvents()
 				.then((frcevs) => {
 					this.sendToRenderer("send-event-data", frcevs);
@@ -1967,7 +1976,6 @@ export class SCCentral extends SCBase {
 
 		if (p.type_ === PacketType.Hello) {
 			this.synctype_ = 'data' ;
-			this.updated_records_ = 0 ;
 			if (p.data_.length > 0) {
 				try {
 					let obj = JSON.parse(p.payloadAsString());
@@ -2115,7 +2123,6 @@ export class SCCentral extends SCBase {
 				let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
 				this.project_!.data_mgr_?.processResults(obj)
 					.then((count) => {
-						this.updated_records_ = count ;
 						if (this.project_!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
 							this.setView("team-status");
 						} else {

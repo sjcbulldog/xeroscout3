@@ -18,8 +18,8 @@
 - DONE: Get syncing working via cable
 - DONE: Fix scouting form look/feel, provide team or match # with color
 - DONE: Prompt before scouting a new team or match and generating data
+- DONE: WiFi sync, IP addr sync
 - Form scaling to tablet size
-- Report on central the number of teams/matches that were updated
 
 3.0.11
 ------
@@ -29,6 +29,7 @@
     - horizontal splitter to dbview
     - database up top
     - report on bottom, click on line item goes to table cell
+- reverse form
 
 3.0.12
 ------

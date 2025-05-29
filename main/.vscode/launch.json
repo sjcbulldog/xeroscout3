@@ -20,6 +20,25 @@
       "preLaunchTask": "build"
     },
     {
+      "name": "Debug Central Renderer",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "args": [
+        ".",
+        "--enable-logging",
+        "--remote-debugging-port=9222",
+        "central",
+        "C:/users/butch/OneDrive/Documents/events/e1/event.json"
+      ],
+      "outputCapture": "std",
+      "preLaunchTask": "build"
+    },    
+    {
       "name": "Debug Scout",
       "type": "node",
       "request": "launch",
@@ -67,9 +86,9 @@
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
-    },
+    }
   ],
-  "compounds": [
+  "compounds": [ 
     {
       "name": "Debug Central & Scout",
       "configurations": [

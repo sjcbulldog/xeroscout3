@@ -8,9 +8,14 @@ export class TCPSyncServer extends SyncServer {
 
     private server_? : net.Server ;
     private socket_? : net.Socket ;
+    private port_: number = -1 ;
 
-    public constructor(logger: winston.Logger) {
+    public constructor(logger: winston.Logger, port: number = TCPSyncServer.portNumber) {
         super(logger) ;
+    }
+
+    public get port() : number {
+        return this.port_ ;
     }
 
     public shutdownClient() : void {

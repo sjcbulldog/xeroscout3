@@ -7,18 +7,18 @@ export class XeroFormScoutSectionPage extends XeroWidget {
 
     private controls_ : FormControl[] = [] ;
     private image_ : HTMLImageElement ;
-    private observer_ : ResizeObserver ;
+    private formdiv_ : HTMLDivElement ;
 
     public constructor(data: string) {
         super('div', 'xero-form-section-page') ;
 
+        this.formdiv_ = document.createElement('div') ;
+        this.formdiv_.className = 'xero-form-section-page-form' ;
+
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
         this.image_.src = `data:image/png;base64,${data}` ;
-        this.elem.appendChild(this.image_) ;
-
-        this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;
-        this.observer_.observe(this.elem) ;
+        this.formdiv_.appendChild(this.image_) ;
     }
 
     public get controls() : FormControl[] {
@@ -27,9 +27,7 @@ export class XeroFormScoutSectionPage extends XeroWidget {
 
     public addControl(control: FormControl) : void {
         this.controls_.push(control) ;
-
-        let top = this.elem.getBoundingClientRect().top ;
-        control.createForScouting(this.elem, 0, top) ;
+        this.addControlToLayout(control) ;
     }
 
     public setImage(data: string) : void {
@@ -55,18 +53,10 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         return undefined ;
     }   
 
-    private onResize(entries: ResizeObserverEntry[]) : void {
-        for(let entry of entries) {
-            if (entry.target === this.elem) {
-                this.image_.style.width = `${entry.contentRect.width * XeroFormScoutSectionPage.kUsageScale}px` ;
-                this.image_.style.height = `${entry.contentRect.height * XeroFormScoutSectionPage.kUsageScale}px` ;
-            }
-        }        
-    }
-
     private addControlToLayout(control: FormControl) : void {
-        let top = this.elem.getBoundingClientRect().top ;
-        control.createForScouting(this.elem, 0, top) ;
-        control.ctrl!.draggable = false ;
+        let bounds = this.elem.getBoundingClientRect() ;
+        let fbounds = this.formdiv_.getBoundingClientRect() ;        
+
+        control.createForScouting(this.elem, fbounds.left - bounds.left, fbounds.top) ;
     }
 }

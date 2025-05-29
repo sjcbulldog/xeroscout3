@@ -1,4 +1,4 @@
-import { IPCImageItem, IPCTypedDataValue } from "../../../ipc.js";
+import { IPCImageItem, IPCImageResponse, IPCTypedDataValue } from "../../../ipc.js";
 import { XeroRect } from "../../../widgets/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";
@@ -51,9 +51,12 @@ export class ImageControl extends FormControl {
         if (this.ctrl) {
             let item = this.item as IPCImageItem ;
             this.image_src_.getImageData(item.image)
-                .then((data) => {
-                    if (data) {
-                        this.setImageData(data) ;
+                .then((data: IPCImageResponse) => {
+                    if (data.data) {
+                        if (data.newname) {
+                            item.image = data.newname ;
+                        }
+                        this.setImageData(data.data) ;
                     }
                 }) ;
             this.setPosition(xoff, yoff) ;

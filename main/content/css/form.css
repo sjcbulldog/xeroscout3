@@ -9,13 +9,6 @@
     position: relative;
 }
 
-.xero-form-title {
-    text-align: center;
-    font-size: 36px;
-    font-family: Arial;
-    font-weight: bold;
-    flex-grow: 0;
-}
 
 .xero-form-tab-div {
     flex-grow: 1;
@@ -375,10 +368,19 @@
     height: 100%;
 }
 
-.xero-form-section-page {
-    border: none ;
+.xero-form-section-page-form {
+    border: solid 2px black;
     padding: 0px ;
     margin: 0px ;
+    background: white ;
+}
+
+.xero-form-section-page {
+    background: lightblue ;
+    display: flex ;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .xero-form-section-image {
@@ -457,4 +459,52 @@
     width: 100%;
     height: 100%;
     object-fit: fill;
+}
+
+.xero-form-top-div {
+    display: grid;
+    flex-direction: row;
+    flex-grow: 0;
+    justify-content: space-between;
+}
+
+.xero-form-size-div {
+    display: flex;
+    flex-direction: row;    
+    margin-top: 5px ;
+    margin-bottom: 5px;
+    border: 2px solid black;
+    border-radius: 5px ;
+    grid-column-start: 1;
+    grid-column-end: 1;
+}
+
+.xero-form-title-div {
+    text-align: center;
+    font-size: 36px;
+    font-family: Arial;
+    font-weight: bold;
+    grid-column-start: 2;
+    grid-column-end: 2;    
+    justify-content: center ;
+}
+
+.xero-form-right-div {
+    margin-right: 10px ;
+    text-align: right;
+    font-size: 24px;
+    font-family: Arial;
+    font-weight: bold;
+    grid-column-start: 3;
+    grid-column-end: 3;
+}
+
+
+.xero-form-size-select {
+    margin: 3px ;
+}
+
+
+.xero-form-coord-label {
+    margin-left: 10px;
 }

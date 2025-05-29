@@ -192,3 +192,9 @@ export interface IPCAppInit {
     type: IPCAppType ;
     splitter: number ;
 }
+
+export interface IPCImageResponse {
+    name: string ;
+    newname: string | undefined ;
+    data: string ;
+}

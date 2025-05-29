@@ -13,7 +13,7 @@ import { MultipleChoiceControl  } from "./controls/choicectrl.js";
 import { SelectControl  } from "./controls/selectctrl.js";
 import { TimerControl  } from "./controls/timerctrl.js";
 import { XeroLogger  } from "../../utils/xerologger.js";
-import { IPCForm, IPCFormItem, IPCSection  } from "../../ipc.js";
+import { IPCFormItem, IPCSection  } from "../../ipc.js";
 import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import { XeroFormEditSectionPage } from "./editpage.js";
 import { BoxControl } from "./controls/boxctrl.js";
@@ -23,63 +23,9 @@ import { KeybindingManager } from "./keybindings.js";
 import { KeybindingDialog } from "./dialogs/keybindingdialog.js";
 import { TextAreaControl } from "./controls/textareactrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
-import { ImageDataSource } from "../../apps/imagesrc.js";
+import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoMoveResizeArgs, UndoMoveSectionArgs, UndoRenameSectionArgs, UndoStackEntry } from "./undo.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' | 'area-select';
-
-type UndoRenameSectionArgs = {
-    page: number,
-    oldname: string ;
-}
-
-type UndoMoveSectionArgs = {
-    page: number ;
-    direction : 'left' | 'right' ;
-}
-
-type UndoEditArgs = {
-    formctrl: FormControl ;
-    olditem: IPCFormItem ;
-}
-
-type UndoMoveResizeArgs = {
-    formctrl: FormControl ;
-    oldbounds: XeroRect ;
-}
-
-type UndoDeleteControlArgs = {
-    page: number,
-    items: IPCFormItem[]
-}
-
-type UndoDeleteSectionArgs = {
-    section: IPCSection ;
-    index: number ;
-}
-
-type UndoOperType = 'add' | 'delete' | 'edit' | 'rename' | 'move' ;
-type UndoObjType = 'section' | 'control' | 'image' ;
-type UndoObjDataType = 
-        FormControl[] |                     // Add control
-        UndoDeleteSectionArgs |             // Delete section
-        UndoDeleteControlArgs |             // Delete control
-        UndoRenameSectionArgs |             // Rename section
-        UndoMoveSectionArgs |               // Move section
-        UndoEditArgs[] |                    // Edit control
-        UndoMoveResizeArgs[] |              // Move control
-        string ;                            // Add section, 
-
-class UndoStackEntry {
-    public readonly oper: UndoOperType ;
-    public readonly obj: UndoObjType ;
-    public readonly item: UndoObjDataType ;
-
-    constructor(oper: UndoOperType, obj: UndoObjType, item: UndoObjDataType) {
-        this.oper = oper ;
-        this.obj = obj ;
-        this.item = item ;
-    }
-}
 
 class FormControlImageRequest {
     public readonly ctrl: FormControl ;
@@ -108,8 +54,16 @@ export class XeroEditFormView extends XeroView {
 
     private tabbed_ctrl_? : XeroTabbedWidget ;
     private section_pages_ : XeroFormEditSectionPage[] = [] ;
-    private titlediv_? : HTMLElement ;
+    private topdiv_ ? : HTMLDivElement ;
+    private titlediv_? : HTMLDivElement ;
+    private sizediv_? : HTMLDivElement
     private tabdiv_? : HTMLElement ;
+    private size_select_? : HTMLSelectElement ;
+    private label_x_? : HTMLLabelElement ;
+    private enter_x_? : HTMLInputElement ;
+    private label_y_? : HTMLLabelElement ;
+    private enter_y_? : HTMLInputElement ;
+    private rightdiv_? : HTMLDivElement ;
     private area_select_div? : HTMLElement ;
     private area_select_start_? : XeroPoint ;
 
@@ -123,6 +77,7 @@ export class XeroEditFormView extends XeroView {
     private undo_stack_ : UndoStackEntry[] = [] ;
 
     private type_: string ;
+    private form_size_ : XeroSize = new XeroSize(0, 0) ;
     private ctrl_menu_ : XeroPopupMenu ;
     private form_? : FormObject ;
     private selected_ctrls_ : FormControl[] = [] ;
@@ -142,7 +97,7 @@ export class XeroEditFormView extends XeroView {
     private cursor_ : XeroPoint = new XeroPoint(0, 0) ;
     private context_menu_cursor_: XeroPoint = new XeroPoint(0, 0) ;
 
-    private requested_images_ : string[] = [] ;
+    private observer_ : ResizeObserver ;    
 
     private ctxbind_? : (e: MouseEvent) => void ;
     private dblclkbind_? : (e: MouseEvent) => void ;
@@ -163,6 +118,8 @@ export class XeroEditFormView extends XeroView {
         super(app, 'xero-form-view') ;
 
         this.instance_id_ = XeroEditFormView.instance_counter_++ ;
+        this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;
+        this.observer_.observe(this.elem) ;        
 
         this.initKeybindings() ;
 
@@ -228,6 +185,8 @@ export class XeroEditFormView extends XeroView {
     public close() {
         super.close() ;
 
+        this.observer_.unobserve(this.elem) ;   
+
         document.removeEventListener('contextmenu', this.ctxbind_!) ;
     	document.removeEventListener('dblclick', this.dblclkbind_!);
     	document.removeEventListener('keydown', this.keydownbind_!);
@@ -242,21 +201,6 @@ export class XeroEditFormView extends XeroView {
     	window.removeEventListener('blur', this.blurbind_!);
 
         this.app.imageSource!.removeListener('image-names-updated', this.imagesupdatedbind_!) ;
-    }
-
-    findItemByTag(name: string) {
-        if (this.form_) {
-            for(let section of this.form_.sections) {
-                if (section.items) {
-                    for(let item of section.items) {
-                        if (item.tag === name) {
-                            return item ;
-                        }
-                    }
-                }
-            }
-        }
-        return undefined ;
     }
 
     private shiftSectionLeft(ev: KeyboardEvent) {
@@ -282,9 +226,26 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
+    private getFormDiv() : HTMLDivElement {
+        let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
+        return page.form ;
+    }
+
+    private getFormOffset() : XeroPoint {
+        let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
+        let bounds = page.form.getBoundingClientRect() ;
+        return new XeroPoint(bounds.left, bounds.top) ;
+    }
+
+    private getFormBounds() : XeroRect {
+        let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
+        let bounds = page.form.getBoundingClientRect() ;
+        return XeroRect.fromDOMRect(bounds) ;
+    }
+
     private editProperties(ev: KeyboardEvent) {
-        let top = this.tabbed_ctrl_?.selectedPage!.getBoundingClientRect().top ;
-        this.editControlProperties(this.selected_ctrls_[0], this.cursor_.x, this.cursor_.y + top!) ;
+        let offset = this.getFormOffset() ;
+        this.editControlProperties(this.selected_ctrls_[0], this.cursor_.x, this.cursor_.y + offset.y) ;
     }
 
     private imageNamesUpdated(images: string[]) {
@@ -383,7 +344,7 @@ export class XeroEditFormView extends XeroView {
         let name = 'tag_' + index ;
 
         while(true) {
-            if (this.findItemByTag(name) === undefined) {
+            if (this.form_!.findItemByTag(name) === undefined) {
                 break ;
             }
             index++ ;
@@ -404,8 +365,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private addNewLabelCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
-
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new LabelControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
             this.addItemToCurrentSection(formctrl.item) ;
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
@@ -417,7 +377,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private addNewImageCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new ImageControl(this.app.imageSource!, this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
             this.addItemToCurrentSection(formctrl.item) ;
             this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
@@ -429,7 +389,7 @@ export class XeroEditFormView extends XeroView {
     }    
 
     private addNewBoxCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new BoxControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -442,7 +402,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private addNewTextCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new TextControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -455,7 +415,7 @@ export class XeroEditFormView extends XeroView {
     }    
 
     private addNewTextAreaCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new TextAreaControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -468,7 +428,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private addNewUpDownCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new UpDownControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -481,7 +441,7 @@ export class XeroEditFormView extends XeroView {
     }  
 
     private addNewBooleanCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new BooleanControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -494,7 +454,7 @@ export class XeroEditFormView extends XeroView {
     }  
 
     private addNewMultipleChoiceCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new MultipleChoiceControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 150))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -507,7 +467,7 @@ export class XeroEditFormView extends XeroView {
     } 
 
     private addNewSelectCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new SelectControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -520,7 +480,7 @@ export class XeroEditFormView extends XeroView {
     } 
 
     private addNewTimerCtrl() {
-        if (this.tabbed_ctrl_?.selectedPage) {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
             let formctrl = new TimerControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
 
             this.addItemToCurrentSection(formctrl.item) ;
@@ -533,14 +493,11 @@ export class XeroEditFormView extends XeroView {
     }     
 
     private receivedForm(args: any) {
+        this.form_ = new FormObject(args.form) ;        
         this.initDisplay() ;
-
-        this.form_ = new FormObject(args.form) ;
-        if (this.form_) {
-            if (this.form_.sections.length) {
-                this.createSectionPages() ;
-                this.setCurrentSectionByIndex(0) ;
-            }
+        if (this.form_.sections.length) {
+            this.createSectionPages() ;
+            this.setCurrentSectionByIndex(0) ;
         }
     }
 
@@ -633,13 +590,16 @@ export class XeroEditFormView extends XeroView {
     }
 
     private createSectionPageObject(section: IPCSection) : XeroFormEditSectionPage { 
-        let page = new XeroFormEditSectionPage(section.name) ;
+        let page = new XeroFormEditSectionPage(section.name, this.form_size_) ;
         this.updateControls(section, page) ;
 
         this.app.imageSource!.getImageData(section.image)
             .then((data) => {
                 if (data) {
-                    page.setImage(data) ;
+                    if(data.newname) {
+                        section.image = data.newname ;
+                    }
+                    page.setImage(data.data) ;
                 }
             }) ;        
 
@@ -740,7 +700,10 @@ export class XeroEditFormView extends XeroView {
             this.app.imageSource!.getImageData(image)
                 .then((data) => {
                     if (data) {
-                        this.section_pages_[pageno].setImage(data) ;
+                        if(data.newname) {
+                            this.form_!.sections[pageno].image = data.newname ;
+                        }   
+                        this.section_pages_[pageno].setImage(data.data) ;
                     }
                 }) ;
         }
@@ -758,14 +721,138 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
+    private updatePageSize() {
+        //
+        // Make the page size match the new form size value
+        //
+        if (this.tabbed_ctrl_ && this.tabbed_ctrl_.selectedPageNumber !== -1) {
+            let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
+            page.setPageSize(this.form_size_) ;
+            this.doLayout(this.tabbed_ctrl_!.selectedPageNumber) ;
+        }
+        this.rightdiv_!.innerText = `Page Size: ${this.form_size_.width} x ${this.form_size_.height}` ;
+    }
+
+    private sizeChanged() {        
+        let name = this.size_select_!.value ;
+        this.setDisplay(name) ;
+
+        if (name === 'custom') {
+            this.otherSizeChanged() ;
+        }
+        else {
+            this.updatePageSize() ;
+        }
+    }
+
+    private setDisplay(name: string) {
+        switch(name) {
+            case 'dell':
+                this.form_size_ = new XeroSize(1292, 777) ;
+                this.updatePageSize() ;
+                this.enter_x_!.disabled = true ;
+                this.enter_x_!.value = '' ;
+                this.enter_y_!.disabled = true ;
+                this.enter_y_!.value = '' ;
+                break ;
+            case 'surface':
+                this.form_size_ = new XeroSize(1075, 1028) ;
+                this.updatePageSize() ;    
+                this.enter_x_!.disabled = true ;
+                this.enter_x_!.value = '' ;
+                this.enter_y_!.disabled = true ;
+                this.enter_y_!.value = '' ;
+                break ;
+            case 'custom':
+                this.enter_x_!.disabled = false ;
+                this.enter_x_!.value = this.form_size_.width.toString() ;
+                this.enter_y_!.disabled = false ;
+                this.enter_y_!.value = this.form_size_.height.toString() ;
+                this.updatePageSize() ;                   
+                return ;
+        }
+    }
+
+    private otherSizeChanged() {
+        let x = parseInt(this.enter_x_!.value) ;
+        let y = parseInt(this.enter_y_!.value) ;
+        if (!isNaN(x) && !isNaN(y)) {
+            this.form_size_ = new XeroSize(x, y) ;
+            this.updatePageSize() ;
+        }
+        else {
+            alert('You must enter valid numbers for the custom size') ;
+        }
+    }
+
     private initDisplay() {
+        let option: HTMLOptionElement ;
         this.reset() ;
 
+        this.topdiv_ = document.createElement('div') ;
+        this.topdiv_.className = 'xero-form-top-div' ;
+        this.elem.append(this.topdiv_) ;
+
+        this.sizediv_ = document.createElement('div') ;
+        this.sizediv_.className = 'xero-form-size-div' ;
+        this.topdiv_.append(this.sizediv_) ;
+
+        this.size_select_ = document.createElement('select') ;
+        this.size_select_.className = 'xero-form-size-select' ;
+        this.size_select_.addEventListener('change', this.sizeChanged.bind(this)) ;
+
+        option = document.createElement('option') ;
+        option.value = 'dell' ;
+        option.innerText = 'Dell Tablet' ;
+        this.size_select_.append(option) ;
+
+        option = document.createElement('option') ;
+        option.value = 'surface' ;
+        option.innerText = 'Microsoft Surface' ;
+        this.size_select_.append(option) ;
+        this.sizediv_.append(this.size_select_) ;
+
+        option = document.createElement('option') ;
+        option.value = 'custom' ;
+        option.innerText = 'Custom' ;
+        this.size_select_.append(option) ;
+        this.sizediv_.append(this.size_select_) ;
+
+        this.enter_x_ = document.createElement('input') ;
+        this.enter_x_.type = 'number' ;
+        this.enter_x_.className = 'xero-form-enter-coord' ;
+        this.enter_x_.placeholder = 'X Value' ;
+        this.enter_x_.addEventListener('change', this.otherSizeChanged.bind(this)) ;
+        
+        this.label_x_ = document.createElement('label') ;
+        this.label_x_.className = 'xero-form-coord-label' ;
+        this.label_x_.innerText = 'X: ' ;
+        this.sizediv_.append(this.label_x_) ;
+        this.label_x_.append(this.enter_x_) ;
+        this.enter_x_.disabled = true ;
+
+        this.enter_y_ = document.createElement('input') ;
+        this.enter_y_.type = 'number' ;
+        this.enter_y_.className = 'xero-form-enter-coord' ;
+        this.enter_y_.placeholder = 'Y Value' ;
+        this.enter_y_.addEventListener('change', this.otherSizeChanged.bind(this)) ;
+
+        this.label_y_ = document.createElement('label') ;
+        this.label_y_.className = 'xero-form-coord-label' ;
+        this.label_y_.innerText = 'Y: ' ;
+        this.sizediv_.append(this.label_y_) ;
+        this.label_y_.append(this.enter_y_) ;
+        this.enter_y_.disabled = true ;
+
         this.titlediv_ = document.createElement('div') ;
-        this.titlediv_.className = 'xero-form-title' ;
+        this.titlediv_.className = 'xero-form-title-div' ;
         let tname = this.type_.charAt(0).toUpperCase() + this.type_.slice(1) ;
         this.titlediv_.innerText = tname + ' Form' ;
-        this.elem.append(this.titlediv_) ;
+        this.topdiv_.append(this.titlediv_) ;
+
+        this.rightdiv_ = document.createElement('div') ;
+        this.rightdiv_.className = 'xero-form-right-div' ;
+        this.topdiv_.append(this.rightdiv_) ;
 
         this.tabdiv_ = document.createElement('div') ;
         this.tabdiv_.className = 'xero-form-tab-div' ;
@@ -782,6 +869,8 @@ export class XeroEditFormView extends XeroView {
         this.tabbed_ctrl_.on('afterSelectPage', this.afterSectionChanged.bind(this)) ;
         this.tabbed_ctrl_.setParent(this.tabdiv_) ;
 
+        this.size_select_!.value = 'surface' ;
+        this.setDisplay(this.size_select_!.value) ;
     }
 
     private focus(ev: FocusEvent) : void {
@@ -797,7 +886,6 @@ export class XeroEditFormView extends XeroView {
     }
 
     private doLayout(index: number) {
-        this.section_pages_[index].doLayout() ;
         if (!this.form_?.sections[index].imageSize) {
             //
             // For backwards compatibility, we need to set the image size
@@ -806,8 +894,17 @@ export class XeroEditFormView extends XeroView {
             let sz = this.section_pages_[index].imageSize ;
             this.form_!.sections[index].imageSize = { width: sz.width, height: sz.height } ;
             this.request('save-form', { type: this.type_, contents: this.form_!.json}) ;
-            console.log(`XeroEditFormView: setting image size for section ${index} to ${sz.width.toFixed(1)} x ${sz.height.toFixed(1)}`) ;
         }
+        else {
+            //
+            // We have an image size, scale the controls to align
+            //
+            let sz = this.section_pages_[index].imageSize ;
+            this.section_pages_[index].scaleControlsToImageSize(this.form_!.sections[index].imageSize!) ;
+            this.form_!.sections[index].imageSize = { width: sz.width, height: sz.height } ;
+            this.request('save-form', { type: this.type_, contents: this.form_!.json}) ;  
+        }
+        this.section_pages_[index].doLayout() ;
     }
 
     private beforeSectionChanged(oldpage: number, newpage: number) {
@@ -815,7 +912,7 @@ export class XeroEditFormView extends XeroView {
 
     private afterSectionChanged(oldpage: number, newpage: number) {
         if (newpage !== -1) {
-            setTimeout(this.doLayout.bind(this, newpage), 10) ;
+            setTimeout(this.doLayout.bind(this, newpage), 1) ;
         }
     }
 
@@ -941,7 +1038,7 @@ export class XeroEditFormView extends XeroView {
 
     private editControlProperties(frmctrl: FormControl, x: number, y: number) {
         this.dragging_ = 'none' ;
-        let bounds = this.tabbed_ctrl_?.selectedPage!.getBoundingClientRect() ;
+        let bounds = this.getFormBounds() ;
 
         if (x > bounds!.left + bounds!.width - 600) {
             x = bounds!.left  + bounds!.width - 600 ;
@@ -973,6 +1070,7 @@ export class XeroEditFormView extends XeroView {
 
     private testMoveItem(frmctrl: FormControl, dx: number, dy: number, dw: number, dh: number, original: boolean) : boolean {
         if (frmctrl) {
+            let form_bounds = this.getFormBounds() ;
             let bounds: XeroRect ;
 
             if (original) {
@@ -983,12 +1081,19 @@ export class XeroEditFormView extends XeroView {
             }
 
             // Make sure we don't move off the screen
-            if (bounds.x + dx  < 0 || bounds.y + dy < 0) {
+            if (bounds.x + dx  < 0 && dx < 0) {
+                return false ;
+            }
+                
+            if (bounds.y + dy < 0 && dy < 0) {
                 return false ;
             }
 
-            if (bounds.x + dx + bounds.width + dw > this.tabbed_ctrl_!.selectedPage!.clientWidth - 10 || 
-                        bounds.y + dy + bounds.height + dh > this.tabbed_ctrl_!.selectedPage!.clientHeight -10) {
+            if (bounds.x + dx + bounds.width + dw > form_bounds.width - 10 && (dx > 0 || dw > 0)) {
+                return false ;
+            }
+            
+            if (bounds.y + dy + bounds.height + dh > form_bounds.height - 10 && (dy > 0 || dh > 0)) {
                 return false; 
             }
         }
@@ -1333,13 +1438,13 @@ export class XeroEditFormView extends XeroView {
     }
 
     private pageToForm(x: number, y: number) : XeroPoint {
-        let bounds = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect() ;
+        let bounds = this.getFormBounds() ;
         let pt = new XeroPoint(x - bounds.left, y - bounds.top) ;
         return pt ;
     }   
 
     private mouseMove(event: MouseEvent) {
-        if (this.tabbed_ctrl_ === undefined || this.tabbed_ctrl_!.selectedPage === undefined) {
+        if (this.tabbed_ctrl_ === undefined || this.tabbed_ctrl_!.selectedPageNumber === -1) {
             //
             // We are not setup yet, so we cannot do anything
             return ;
@@ -1492,7 +1597,7 @@ export class XeroEditFormView extends XeroView {
 
     private placeAreaSelectDiv(pt: XeroPoint) {
         if (this.area_select_div && this.area_select_start_) {
-            let bounds = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect() ;
+            let bounds = this.getFormBounds() ;
 
             let x = Math.min(this.area_select_start_.x, pt.x) ;
             let y = Math.min(this.area_select_start_.y, pt.y) + bounds.top ;
@@ -1523,9 +1628,8 @@ export class XeroEditFormView extends XeroView {
 
     private stopAreaSelect() {
         if (this.area_select_div) {
-            let page = this.tabbed_ctrl_!.selectedPage! ;
-            if (page.contains(this.area_select_div)) {
-                page.removeChild(this.area_select_div) ;
+            if (this.getFormDiv().contains(this.area_select_div)) {
+                this.getFormDiv().removeChild(this.area_select_div) ;
             }
             this.area_select_div = undefined ;
         }
@@ -1538,10 +1642,9 @@ export class XeroEditFormView extends XeroView {
             throw new Error('Area select already started') ;
         }
 
-        let page = this.tabbed_ctrl_!.selectedPage! ;
         this.area_select_div = document.createElement('div') ;
         this.area_select_div.className = 'xero-form-area-select' ;
-        page.appendChild(this.area_select_div) ;        
+        this.getFormDiv().appendChild(this.area_select_div) ;        
 
         this.area_select_start_ = st.clone() ;
         this.placeAreaSelectDiv(this.area_select_start_) ;
@@ -1565,8 +1668,7 @@ export class XeroEditFormView extends XeroView {
             return ;
         }
 
-        let page = this.tabbed_ctrl_!.selectedPage! ;
-        if (!XeroWidget.isChildOf(page, event.target as HTMLElement)) {
+        if (!XeroWidget.isChildOf(this.getFormDiv(), event.target as HTMLElement)) {
             return ;
         }
 
@@ -1687,7 +1789,7 @@ export class XeroEditFormView extends XeroView {
 
     private renameSection() {
         if (this.form_) {
-            let bounds = this.tabbed_ctrl_!.selectedPage!.getBoundingClientRect() ;
+            let bounds = this.getFormBounds() ;
             this.edit_dialog_ = new EditSectionNameDialog(this.form_.sections[this.tabbed_ctrl_!.selectedPageNumber].name) ;
             this.edit_dialog_.on('closed', this.sectionNameDialogDone.bind(this)) ;
             this.edit_dialog_.showRelative(this.elem.parentElement!, bounds.left + bounds.width / 4, bounds.top + bounds.height / 4) ;
@@ -2091,4 +2193,15 @@ export class XeroEditFormView extends XeroView {
 
         this.request('save-form', { type: this.type_, contents: this.form_.json}) ;       
     }
+
+
+    private onResize(entries: ResizeObserverEntry[]) : void {
+        for(let entry of entries) {
+            if (entry.target === this.elem) {
+                if (this.tabbed_ctrl_ && this.tabbed_ctrl_.selectedPageNumber !== -1) {
+                    setTimeout(this.doLayout.bind(this, this.tabbed_ctrl_.selectedPageNumber), 10) ;
+                }
+            }
+        }
+    }      
 }

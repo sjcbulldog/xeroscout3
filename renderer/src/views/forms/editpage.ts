@@ -1,4 +1,4 @@
-import { IPCSection } from "../../ipc.js";
+import { IPCSection, IPCSize } from "../../ipc.js";
 import { XeroPoint, XeroSize } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
@@ -9,24 +9,41 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
     private controls_ : FormControl[] = [] ;
     private image_ : HTMLImageElement ;
-    private observer_ : ResizeObserver ;
+    private formdiv_ : HTMLDivElement ;
+    private size_ : XeroSize ;
     private name_ : string ;
 
-    public constructor(name: string) {
+    public constructor(name: string, sz: XeroSize) {
         super('div', 'xero-form-section-page') ;
 
         this.name_ = name ;
+        this.size_ = sz ;
+        this.formdiv_ = document.createElement('div') ;
+        this.formdiv_.className = 'xero-form-section-page-form' ;
+
+        this.formdiv_.style.width = `${sz.width}px` ;
+        this.formdiv_.style.height = `${sz.height}px` ;
+
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
-        this.elem.appendChild(this.image_) ;
+        this.formdiv_.appendChild(this.image_) ;
 
-        this.observer_ = new ResizeObserver(this.onResize.bind(this)) ;
-        this.observer_.observe(this.elem) ;
+        this.elem.appendChild(this.formdiv_) ;
+    }
+
+    public setPageSize(sz: XeroSize) : void {
+        this.size_ = sz ;
+        this.formdiv_.style.width = `${sz.width}px` ;
+        this.formdiv_.style.height = `${sz.height}px` ;
+    }
+
+    public get form() : HTMLDivElement {
+        return this.formdiv_ ;
     }
 
     public resetHTML() : void {
-        this.elem.innerHTML = '' ;
-        this.elem.appendChild(this.image_) ;
+        this.formdiv_.innerHTML = '' ;
+        this.formdiv_.appendChild(this.image_) ;
     }
 
     public doLayout() : void {
@@ -101,27 +118,25 @@ export class XeroFormEditSectionPage extends XeroWidget {
     }
     
     public removeAllControls() : void {
-        this.elem.innerHTML = '' ;
-        this.elem.appendChild(this.image_) ;
+        this.formdiv_.innerHTML = '' ;
+        this.formdiv_.appendChild(this.image_) ;
         this.controls_ = [] ;
     }
 
-    private addControlToLayout(control: FormControl) : void {
-        let top = this.elem.getBoundingClientRect().top ;
-        control.createForEdit(this.elem, 0, top) ;
-        control.ctrl!.draggable = false ;
-    }
+    public scaleControlsToImageSize(imsize: IPCSize) : void {
+        let sx = this.imageSize.width / imsize.width ;
+        let sy = this.imageSize.height / imsize.height ;
 
-    private dumpImageSize(title: string) : void {
-        let bounds = this.image_.getBoundingClientRect() ;
-        console.log(`${title}: ${bounds.width.toFixed(1)} x ${bounds.height.toFixed(1)}`) ;
-    }
-
-    private onResize(entries: ResizeObserverEntry[]) : void {
-        for(let entry of entries) {
-            if (entry.target === this.elem) {
-                
-            }
+        for(let control of this.controls_) {
+            control.scale(sx, sy) ;
+            control.resetHTMLControl() ;
+            this.addControlToLayout(control) ;
         }
-    }   
+    }
+
+    private addControlToLayout(control: FormControl) : void {
+        let bounds = this.elem.getBoundingClientRect() ;
+        let fbounds = this.formdiv_.getBoundingClientRect() ;
+        control.createForEdit(this.formdiv_, fbounds.left - bounds.left, fbounds.top) ;
+    }
 }
