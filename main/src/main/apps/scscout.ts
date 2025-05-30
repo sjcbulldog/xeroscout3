@@ -9,6 +9,8 @@ import { PacketType } from "../sync/packettypes";
 import { MatchTablet, TeamTablet } from "../project/tabletmgr";
 import { IPCFormScoutData, IPCNamedDataValue, IPCScoutResult, IPCScoutResults, IPCTabletDefn } from "../../shared/ipc";
 
+const mdns = require('mdns-js') ; 
+
 export class MatchInfo {
     public type_? : string ;
     public set_? : number ;
@@ -37,6 +39,8 @@ export class SCScout extends SCBase {
 
     private static readonly syncEventLocal: string = "sync-event-local" ;
     private static readonly syncEventRemote: string = "sync-event-remote" ;
+    private static readonly syncEventWiFi: string = "sync-event-wifi" ;
+    private static readonly syncEventIPAddr: string = "sync-event-ipaddr" ;
     private static readonly resetTablet: string = "reset-tablet" ;
     private static readonly resizeWindow: string = "resize-window" ;
     private static readonly reverseImage: string = 'reverse' ;
@@ -52,6 +56,11 @@ export class SCScout extends SCBase {
     private reversed_ : boolean = false ;
     private reverseImage_: MenuItem | undefined ;
     private sync_client_? : SyncClient ;
+
+    private ipaddr_: string = '' ;
+    private port_ : number = 0 ;
+
+    private team_number_ : number = 1425 ;
 
     private match_results_received_ : boolean = false ;
     private team_results_received_ : boolean = false ;
@@ -93,10 +102,36 @@ export class SCScout extends SCBase {
         this.sendToRenderer('send-nav-data', treedata);
     }
 
-    public windowCreated() {
-        this.win_.on('ready-to-show', () => {
-            this.setViewString() ;
+    private mdnsUpdate(service: any) {
+        if (service.type[0].name === 'xeroscout') {
+            if (service.host.startsWith('xeroscout-' + this.team_number_)) {
+                this.ipaddr_ = service.addresses[0] ;
+                this.port_= service.port ;
+
+                let serverstr: string = `Server: ${this.ipaddr_}:${this.port_}` ;
+                this.sendToRenderer('send-app-status', { 
+                    left: undefined,
+                    middle: this.info_.evname_ ? this.info_.evname_ : 'No Event Loaded',
+                    right: serverstr
+                }) ;
+            }
+        }
+    }
+
+    private ready() {
+        this.setViewString() ;
+
+        const browser = mdns.createBrowser() ;
+        browser.on('ready', () => {
+            this.logger_.info('MDNS Browser ready') ;
+            browser.discover() ;
         }) ;
+
+        browser.on('update', this.mdnsUpdate.bind(this)) ;
+    }
+
+    public windowCreated() {
+        this.win_.on('ready-to-show', this.ready.bind(this)) ;
     }
 
     private populateNavTeams() : any[] {
@@ -184,6 +219,20 @@ export class SCScout extends SCBase {
             this.team_results_received_ = false ;
             this.syncClient(this.sync_client_) ;
         }
+        else if (cmd === SCScout.syncEventWiFi) {
+            this.setViewString() ;
+            this.current_scout_ = undefined ;
+            this.sync_client_ = new TCPClient(this.logger_, this.ipaddr_, this.port_) ;
+            this.sync_client_.on('close', this.syncDone.bind(this)) ; 
+            this.sync_client_.on('error', this.syncError.bind(this)) ;
+
+            this.match_results_received_ = false ;
+            this.team_results_received_ = false ;
+            this.syncClient(this.sync_client_) ;
+        }      
+        else if (cmd === SCScout.syncEventIPAddr) {
+            this.setView('sync-ipaddr') ;
+        }              
         else if (cmd === SCScout.resetTablet) {
             this.resetTabletCmd() ;
         }
@@ -199,6 +248,18 @@ export class SCScout extends SCBase {
         else if (cmd.startsWith('sm-')) {
             this.scoutMatch(cmd) ;
         }
+    }
+
+    public syncIPAddrWithAddr(ipaddr: string, port: number) {
+        this.setViewString() ;
+        this.current_scout_ = undefined ;
+        this.sync_client_ = new TCPClient(this.logger_, ipaddr, port) ;
+        this.sync_client_.on('close', this.syncDone.bind(this)) ; 
+        this.sync_client_.on('error', this.syncError.bind(this)) ;
+
+        this.match_results_received_ = false ;
+        this.team_results_received_ = false ;
+        this.syncClient(this.sync_client_) ;
     }
 
     private resetTabletCmd() {
@@ -763,12 +824,26 @@ export class SCScout extends SCBase {
 
         synctcpitem = new MenuItem( {
             type: 'normal',
-            label: 'Sync Event Remote (192.168.1.1)',
+            label: 'Sync Event Cable (192.168.1.1)',
             click: () => { this.executeCommand(SCScout.syncEventRemote)}
         }) ;
-        filemenu.submenu?.insert(0, synctcpitem) ;
+        filemenu.submenu?.insert(1, synctcpitem) ;
 
-        filemenu.submenu?.insert(1, new MenuItem({type: 'separator'}));
+        synctcpitem = new MenuItem( {
+            type: 'normal',
+            label: 'Sync Event WiFi (mDNS)',
+            click: () => { this.executeCommand(SCScout.syncEventWiFi)}
+        }) ;
+        filemenu.submenu?.insert(2, synctcpitem) ;    
+        
+        synctcpitem = new MenuItem( {
+            type: 'normal',
+            label: 'Sync Event IP Address (Manual)',
+            click: () => { this.executeCommand(SCScout.syncEventIPAddr)}
+        }) ;
+        filemenu.submenu?.insert(3, synctcpitem) ;          
+
+        filemenu.submenu?.insert(4, new MenuItem({type: 'separator'}));        
 
         ret.append(filemenu) ;
 

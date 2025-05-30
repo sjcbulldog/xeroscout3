@@ -864,6 +864,22 @@ export async function setHintHidden(cmd: string, ...args: any[]) {
     } 
 }
 
+export async function syncIPAddr(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let scouter : SCScout = scappbase as SCScout ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            let obj = args[0] ;
+            if (obj.hasOwnProperty('ipaddr') && obj.hasOwnProperty('port')) {
+                scouter.syncIPAddrWithAddr(obj.ipaddr as string, obj.port as number) ;
+            }
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    } 
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 export async function clientLog(cmd: string, ...args: any[]) {
     if (scappbase) {

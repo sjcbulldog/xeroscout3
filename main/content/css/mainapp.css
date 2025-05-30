@@ -416,3 +416,16 @@ xero-status-overlay-close-visible {
     width: 100%;
     height: 100%;
 }
+
+.xero-sync-setup-dialog-rowdiv {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.xero-sync-ip-addr {
+    width: 100%;
+    height: 100% ;
+}

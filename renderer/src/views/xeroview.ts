@@ -25,6 +25,10 @@ export class XeroView extends XeroWidget {
         return this.app_ ;
     }
 
+    public onVisible() {
+        // This method can be overridden by subclasses to perform actions when the view becomes visible
+    }
+
     public reset() {
         this.elem.innerHTML = "" ;
     }

@@ -20,6 +20,7 @@ import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView   } from "../ipc.js";
 import { HintManager } from "../hintmgr.js";
 import { ImageDataSource } from "./imagesrc.js";
 import { XeroSelectTablet } from "../views/selecttablet/selecttablet.js";
+import { XeroSyncIPAddrView } from "../views/syncipaddr/syncipaddr.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -67,8 +68,6 @@ export class XeroApp extends XeroMainProcessInterface {
 
         this.status_ = new XeroStatusWindow(this.splitter_) ;
         this.status_.setParent(body) ;
-
-        this.status_.statusBar().setLeftStatus("Xero App - Ready") ;
 
         this.registerCallback('update-main-window-view', this.updateView.bind(this)) ;
         this.registerCallback('send-app-status', this.updateStatusBar.bind(this)) ;
@@ -123,7 +122,9 @@ export class XeroApp extends XeroMainProcessInterface {
         else {
             let classObj = this.viewmap_.get(args.view) ;
             this.current_view_ = new classObj(this, args.args) ;
-            this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;            
+            this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;
+
+            this.current_view_!.onVisible() ;
         }
     }
 
@@ -161,5 +162,6 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('match-status', XeroMatchStatus, ['central']) ;
         this.registerView('match-db', XeroMatchDatabaseView, ['central']) ;
         this.registerView('select-tablet', XeroSelectTablet, ['scout']) ;
+        this.registerView('sync-ipaddr', XeroSyncIPAddrView, ['scout']);
     }
 }

@@ -29,6 +29,36 @@ export abstract class XeroDialog extends EventEmitter {
 
     public showRelative(win: HTMLElement, x: number, y: number) {
         this.parent_ = win ;
+        this.prePlaceInit() ;
+
+        this.popup_!.style.left = x + 'px' ;
+        this.popup_!.style.top = y + 'px' ;
+
+        this.postPlaceInit() ;
+    }
+
+    public showCentered(win: HTMLElement) {
+        this.parent_ = win ;
+        this.prePlaceInit() ;
+
+        let pbounds = win.getBoundingClientRect() ;
+        let dbounds = this.popup_!.getBoundingClientRect() ;
+
+        let left = pbounds.left + (pbounds.width - dbounds.width) / 2 ;
+        let top = pbounds.top + (pbounds.height - dbounds.height) / 2 ;
+
+        this.popup_!.style.left = left + 'px' ;
+        this.popup_!.style.top = top + 'px' ;
+
+        this.postPlaceInit() ;
+    }
+
+    private postPlaceInit() {
+        document.addEventListener('keydown', this.key_down_handler_) ;
+        this.topbar_!.addEventListener('mousedown', this.mouseDown.bind(this)) ;        
+    }
+
+    private prePlaceInit() {
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-form-edit-dialog' ;
 
@@ -50,14 +80,8 @@ export abstract class XeroDialog extends EventEmitter {
         this.populateDialog(this.client_area_) 
         this.populateButtons(this.button_area_) ;
 
-        this.popup_.style.left = x + 'px' ;
-        this.popup_.style.top = y + 'px' ;
-
-        this.parent_.appendChild(this.popup_) ;
-        this.onInit() ;
-
-        document.addEventListener('keydown', this.key_down_handler_) ;
-        this.topbar_.addEventListener('mousedown', this.mouseDown.bind(this)) ;
+        this.parent_!.appendChild(this.popup_!) ;
+        this.onInit() ;        
     }
 
     protected abstract populateDialog(div: HTMLDivElement) : void ;

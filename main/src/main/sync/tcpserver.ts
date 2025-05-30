@@ -12,6 +12,7 @@ export class TCPSyncServer extends SyncServer {
 
     public constructor(logger: winston.Logger, port: number = TCPSyncServer.portNumber) {
         super(logger) ;
+        this.port_ = port ;
     }
 
     public get port() : number {
@@ -42,8 +43,8 @@ export class TCPSyncServer extends SyncServer {
     public async init() : Promise<void> {
         let ret: Promise<void> = new Promise<void>((resolve, reject) => {
             this.server_ = new net.Server((socket) => { this.connected(socket) ; }) ;
-            this.server_.listen(TCPSyncServer.portNumber, '0.0.0.0', 2, () => {
-                this.logger_.info('TCPSyncServer: listening for connections on port ' + TCPSyncServer.portNumber) ;
+            this.server_.listen(this.port_, '0.0.0.0', 2, () => {
+                this.logger_.info('TCPSyncServer: listening for connections on port ' + this.port_) ;
                 resolve() ;
             }) ;
         }) ;

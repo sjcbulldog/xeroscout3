@@ -5,16 +5,18 @@ import * as net from 'net' ;
 import { dialog } from "electron";
 
 export class TCPClient extends SyncClient {
-    private static readonly portNumber: number = 45455 ;
+    private static readonly portNumberA: number = 45455 ;
 
     private host_ : string ;
+    private port_ : number = -1 ;
     private socket_ : net.Socket ;
 
-    public constructor(logger:winston.Logger, host: string) {
+    public constructor(logger:winston.Logger, host: string, port: number = TCPClient.portNumberA) {
         super(logger) ;
 
         this.host_ = host ;
         this.socket_ = new net.Socket() ;
+        this.port_ = port ;
     }
 
     public name() : string {
@@ -41,7 +43,7 @@ export class TCPClient extends SyncClient {
                 this.emit('close') ;
             }) ;
 
-            this.socket_.connect(TCPClient.portNumber, this.host_) ;
+            this.socket_.connect(this.port_, this.host_) ;
 
             resolve() ;
         }) ;

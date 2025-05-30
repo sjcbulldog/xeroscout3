@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
       let validChannels = [
         'splitter-changed',
         'get-nav-data', 
+        'sync-ipaddr',
 
         'get-info-data',
 

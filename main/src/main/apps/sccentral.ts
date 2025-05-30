@@ -1,6 +1,7 @@
 import Papa from "papaparse";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { SCBase, XeroAppType, XeroVersion } from "./scbase";
 import { BlueAlliance } from "../extnet/ba";
 import { Project } from "../project/project";
@@ -23,6 +24,8 @@ import { FormManager } from "../project/formmgr";
 import { DataValue } from "../model/datavalue";
 import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCForm, IPCScoutResult, IPCScoutResults, IPCImageResponse } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
+
+const mdns = require('mdns-js') ;
 
 export interface GraphDataRequest {
 	ds: string,
@@ -107,6 +110,7 @@ export class SCCentral extends SCBase {
 	private importImage_ : MenuItem | undefined ;
 	private lastformview_? : string ;
 	private synctype_ : string = 'data' ;
+	private team_number_ : number =  1425 ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
@@ -160,10 +164,33 @@ export class SCCentral extends SCBase {
 
 		let v = this.getVersion('application') ;
 		this.sendToRenderer('send-app-status', { 
-			left: `Xero Central ${this.versionToString(v)}`,
+			left: this.getProgramTitle(),
 			middle: undefined,
 			right: 'Connecting To Blue Alliance...',
 		}) ;
+	}
+
+	private findPrimaryIPAddress() : string {
+		let ret: string = 'unknown' ;
+		let ipaddrs = os.networkInterfaces() ;
+		for(let key of Object.keys(ipaddrs)) {	
+			let ifaces = ipaddrs[key] ;
+			if (ifaces) {
+				for(let iface of ifaces!) {
+					if (iface.family === 'IPv4' && !iface.internal) {
+						ret = iface.address ;
+						break ;
+					}
+				}
+			}
+		}
+
+		return ret;
+	}
+
+	private getProgramTitle() : string {
+		let v = this.getVersion('application') ;
+		return `Xero Central ${this.versionToString(v)} (${this.findPrimaryIPAddress()})`
 	}
 
 	private tryAgain() {
@@ -2179,6 +2206,7 @@ export class SCCentral extends SCBase {
 	}
 
 	private startSyncServer() {
+
 		if (!this.tcpsyncserver_) {
 			this.tcpsyncserver_ = new TCPSyncServer(this.logger_);
 			this.tcpsyncserver_
@@ -2216,6 +2244,16 @@ export class SCCentral extends SCBase {
 				});
 			});
 		}
+
+		let port = this.tcpsyncserver_!.port ;
+		const adv = mdns.createAdvertisement(mdns.tcp('xeroscout'), port, 
+			{
+				name: "xeroscout-" + this.team_number_,
+				txt: {
+					txtvers: '1'
+				}
+			}) ;
+		adv.start() ;		
 	}
 
 	public generateRandomData() {
