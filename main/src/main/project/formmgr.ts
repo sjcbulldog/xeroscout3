@@ -196,7 +196,7 @@ export class FormManager extends Manager {
 		return ret;
 	}
 
-	public createTeamForm() {
+	public createTeamForm() : boolean {
 		if (this.info_.teamform_ && this.info_.teamform_.length > 0) {
 			let ans = dialog.showMessageBoxSync(
 				{
@@ -207,12 +207,14 @@ export class FormManager extends Manager {
 				}) ;
 
 			if (ans === 1) {
-				return;
+				return false ;
 			}
 		}
 
 		this.info_.teamform_ = this.createFormInternal('team', 'team.json') ;
 		this.write() ;
+
+		return true ;
 	}
 
 	public saveForm(type: string, contents: any) {
@@ -221,7 +223,7 @@ export class FormManager extends Manager {
 		fs.writeFileSync(target, jsonstr);
 	}
 
-	public createMatchForm() {
+	public createMatchForm() : boolean {
 		if (this.info_.matchform_ && this.info_.matchform_.length > 0) {
 			let ans = dialog.showMessageBoxSync(
 				{
@@ -232,12 +234,14 @@ export class FormManager extends Manager {
 				}) ;
 
 			if (ans === 1) {
-				return;
+				return false ;
 			}
 		}
 
 		this.info_.matchform_ = this.createFormInternal('match', 'match.json') ;
 		this.write() ;
+
+		return true ;
 	}
 
 	private createFormInternal(ftype: string, filename: string): string {

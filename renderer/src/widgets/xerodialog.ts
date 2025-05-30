@@ -41,11 +41,13 @@ export abstract class XeroDialog extends EventEmitter {
         this.parent_ = win ;
         this.prePlaceInit() ;
 
+
         let pbounds = win.getBoundingClientRect() ;
         let dbounds = this.popup_!.getBoundingClientRect() ;
+        let obounds = this.popup_!.offsetParent!.getBoundingClientRect() ;
 
-        let left = pbounds.left + (pbounds.width - dbounds.width) / 2 ;
-        let top = pbounds.top + (pbounds.height - dbounds.height) / 2 ;
+        let left = pbounds.left + (pbounds.width - dbounds.width) / 2 + obounds.left - pbounds.left ;
+        let top = pbounds.top + (pbounds.height - dbounds.height) / 2 + obounds.top - pbounds.top ;
 
         this.popup_!.style.left = left + 'px' ;
         this.popup_!.style.top = top + 'px' ;

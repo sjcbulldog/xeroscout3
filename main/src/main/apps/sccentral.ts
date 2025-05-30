@@ -1590,14 +1590,16 @@ export class SCCentral extends SCBase {
 		}
 		else if (cmd === SCCentral.createMatchForm) {
 			if (this.project_ && this.project_.form_mgr_) {
-				this.project_.form_mgr_.createMatchForm() ;
-				this.executeCommand(SCCentral.editMatchForm) ;
+				if (this.project_.form_mgr_.createMatchForm()) {
+					this.executeCommand(SCCentral.editMatchForm) ;
+				}
 			}
 		}
 		else if (cmd === SCCentral.createTeamForm) {
 			if (this.project_ && this.project_.form_mgr_) {
-				this.project_.form_mgr_.createTeamForm() ;
-				this.executeCommand(SCCentral.editTeamForm) ;
+				if (this.project_.form_mgr_.createTeamForm()) {
+					this.executeCommand(SCCentral.editTeamForm) ;
+				}
 			}
 		}
 		else if (cmd === SCCentral.editMatchForm) {
