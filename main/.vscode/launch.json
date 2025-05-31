@@ -12,7 +12,6 @@
       },
       "args": [
         ".",
-        "--enable-logging",
         "central",
         "C:/users/butch/OneDrive/Documents/events/e1/event.json"
       ],

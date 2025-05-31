@@ -276,6 +276,9 @@ export class XeroEditFormView extends XeroView {
 
     private initKeybindings() {
         this.keybindings_.addKeybinding('F1', false, false, false, 'Show key bindings', this.showKeyBindings.bind(this));
+
+        this.keybindings_.addKeybinding('l', false, false, false, 'Lock the highlighted control', this.lockControl.bind(this));
+        this.keybindings_.addKeybinding('u', false, false, false, 'Unlock all controls', this.unlockAllControls.bind(this));
       
         this.keybindings_.addKeybinding('L', true, false, true, 'Shift the current section left', this.shiftSectionLeft.bind(this));
         this.keybindings_.addKeybinding('R', true, false, true, 'Shift the current section right', this.shiftSectionRight.bind(this));
@@ -307,8 +310,8 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('ArrowUp', true, false, true, 'Move the current control up by 50', this.moveSelectedItems.bind(this, 0, -XeroEditFormView.shiftCtrlMoveControlAmount));
         this.keybindings_.addKeybinding('ArrowDown', true, false, true, 'Move the current control down by 50', this.moveSelectedItems.bind(this, 0, XeroEditFormView.shiftCtrlMoveControlAmount));        
 
-        this.keybindings_.addKeybinding('ArrowLeft', false, true, false, 'Resize the current control moving the left border', this.resizeSelectedItems.bind(this, -XeroEditFormView.moveControlAmount, 0));
-        this.keybindings_.addKeybinding('ArrowRight', false, true, false, 'Resize the current control moving the right border', this.resizeSelectedItems.bind(this, XeroEditFormView.moveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowLeft', false, true, false, 'Resize the current control moving the right border left', this.resizeSelectedItems.bind(this, -XeroEditFormView.moveControlAmount, 0));
+        this.keybindings_.addKeybinding('ArrowRight', false, true, false, 'Resize the current control moving the right border right', this.resizeSelectedItems.bind(this, XeroEditFormView.moveControlAmount, 0));
         this.keybindings_.addKeybinding('ArrowUp', false, true, false, 'Resize the current control moving the top border', this.resizeSelectedItems.bind(this, 0, -XeroEditFormView.moveControlAmount));
         this.keybindings_.addKeybinding('ArrowDown', false, true, false, 'Resize the current control moving the bottom border', this.resizeSelectedItems.bind(this, 0, XeroEditFormView.moveControlAmount));
 
@@ -337,6 +340,18 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('F9', false, false, false, 'Insert a new select control', this.addNewSelectCtrl.bind(this));
         this.keybindings_.addKeybinding('F10', false, false, false, 'Insert a new timer control', this.addNewTimerCtrl.bind(this));
         this.keybindings_.addKeybinding('F11', false, false, false, 'Insert a new image control', this.addNewImageCtrl.bind(this));
+    }
+
+    private unlockAllControls() {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].unlockAllControls() ;
+        }
+    }
+
+    private lockControl() {
+        if (this.highlighted_ctrl_) {
+            this.highlighted_ctrl_.locked = true ;
+        }
     }
 
     private getUniqueTagName() : string {
@@ -1112,6 +1127,7 @@ export class XeroEditFormView extends XeroView {
 
     private moveSelectedItems(dx: number, dy: number, ev: KeyboardEvent) {
         if (this.selected_ctrls_.length > 0) {
+
             if (!this.testMoveSelectedItems(dx, dy, 0, 0, false)) {
                 return ;
             }
@@ -1126,32 +1142,16 @@ export class XeroEditFormView extends XeroView {
     }
 
     private resizeSelectedItems(dw: number, dh: number, ev: KeyboardEvent) {
-        if (this.selected_ctrls_.length > 0) {
-            let dx = 0 ;
-            let dy = 0 ;
 
-            if (dw < 0) {
-                dw = -dw ;
-                dx = -dw ;
-            }
+        if (!this.testMoveSelectedItems(0, 0, dw, dh, false)) {
+            return ;
+        }
 
-            if (dh < 0) {
-                dh = -dh ;
-                dy = -dh ;
-            }
-
-            if (!this.testMoveSelectedItems(dx, dy, dw, dh, false)) {
-                return ;
-            }
-
-            for(let frmctrl of this.selected_ctrls_) {
-                frmctrl.item.x += dx ;
-                frmctrl.item.y += dy ;
-                frmctrl.item.width += dw ;
-                frmctrl.item.height += dh ;
-                frmctrl.positionUpdated() ;
-                this.displayMiddleBar() ;
-            }
+        for(let frmctrl of this.selected_ctrls_) {
+            frmctrl.item.width += dw ;
+            frmctrl.item.height += dh ;
+            frmctrl.positionUpdated() ;
+            this.displayMiddleBar() ;
         }
     }    
 
@@ -1188,7 +1188,9 @@ export class XeroEditFormView extends XeroView {
         if (this.tabbed_ctrl_!.selectedPageNumber !== -1) {
             let ctrls = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].controls
             for(let ctrl of ctrls) {
-                this.select(ctrl) ;
+                if (!ctrl.locked) {
+                    this.select(ctrl) ;
+                }
             }
         }
     }
@@ -1597,10 +1599,10 @@ export class XeroEditFormView extends XeroView {
 
     private placeAreaSelectDiv(pt: XeroPoint) {
         if (this.area_select_div && this.area_select_start_) {
-            let bounds = this.getFormBounds() ;
+            let sz = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].getPlaceOffset() ;
 
-            let x = Math.min(this.area_select_start_.x, pt.x) ;
-            let y = Math.min(this.area_select_start_.y, pt.y) + bounds.top ;
+            let x = Math.min(this.area_select_start_.x, pt.x) + sz.width ;
+            let y = Math.min(this.area_select_start_.y, pt.y) + sz.height ;
             let w = Math.abs(pt.x - this.area_select_start_.x) ;
             let h = Math.abs(pt.y - this.area_select_start_.y) ;
 
@@ -1617,7 +1619,7 @@ export class XeroEditFormView extends XeroView {
             let selectArea = XeroRect.fromPoints([start, end]) ;
 
             for(let ctrl of this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].controls) {
-                if (ctrl.ctrl) {
+                if (ctrl.ctrl && !ctrl.locked) {
                     if (selectArea.intersects(ctrl.bounds)) {
                         this.select(ctrl) ;
                     }
@@ -1789,10 +1791,9 @@ export class XeroEditFormView extends XeroView {
 
     private renameSection() {
         if (this.form_) {
-            let bounds = this.getFormBounds() ;
             this.edit_dialog_ = new EditSectionNameDialog(this.form_.sections[this.tabbed_ctrl_!.selectedPageNumber].name) ;
             this.edit_dialog_.on('closed', this.sectionNameDialogDone.bind(this)) ;
-            this.edit_dialog_.showRelative(this.elem.parentElement!, bounds.left + bounds.width / 4, bounds.top + bounds.height / 4) ;
+            this.edit_dialog_.showCentered(this.elem.parentElement!) ;
         }
     }
 

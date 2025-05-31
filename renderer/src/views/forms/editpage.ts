@@ -5,19 +5,14 @@ import { FormControl } from "./controls/formctrl.js";
 
 export class XeroFormEditSectionPage extends XeroWidget {
     public static fuzzyEdgeSpacing = 10 ;
-    private static kUsageScale = 0.94;
 
     private controls_ : FormControl[] = [] ;
     private image_ : HTMLImageElement ;
     private formdiv_ : HTMLDivElement ;
-    private size_ : XeroSize ;
-    private name_ : string ;
 
     public constructor(name: string, sz: XeroSize) {
         super('div', 'xero-form-section-page') ;
 
-        this.name_ = name ;
-        this.size_ = sz ;
         this.formdiv_ = document.createElement('div') ;
         this.formdiv_.className = 'xero-form-section-page-form' ;
 
@@ -32,7 +27,6 @@ export class XeroFormEditSectionPage extends XeroWidget {
     }
 
     public setPageSize(sz: XeroSize) : void {
-        this.size_ = sz ;
         this.formdiv_.style.width = `${sz.width}px` ;
         this.formdiv_.style.height = `${sz.height}px` ;
     }
@@ -62,13 +56,19 @@ export class XeroFormEditSectionPage extends XeroWidget {
         return new XeroSize(bounds.width, bounds.height) ;
     }
 
+    public unlockAllControls() : void {
+        for(let control of this.controls_) {    
+            control.locked = false ;
+        }
+    }
+        
     //
     // Find a control by its form position
     //
     public findControlsByPosition(pt: XeroPoint) : FormControl[] {
         let ret : FormControl[] = [] ;
         for(let entry of this.controls_) {
-            if (entry.ctrl === undefined) {
+            if (entry.ctrl === undefined || entry.locked) {
                 continue ;
             }
 
@@ -134,9 +134,14 @@ export class XeroFormEditSectionPage extends XeroWidget {
         }
     }
 
-    private addControlToLayout(control: FormControl) : void {
+    public getPlaceOffset() : XeroSize {
         let bounds = this.elem.getBoundingClientRect() ;
         let fbounds = this.formdiv_.getBoundingClientRect() ;
-        control.createForEdit(this.formdiv_, fbounds.left - bounds.left, fbounds.top) ;
+        return new XeroSize(fbounds.left - bounds.left, fbounds.top) ;
+    }
+
+    private addControlToLayout(control: FormControl) : void {
+        let sz = this.getPlaceOffset() ;
+        control.createForEdit(this.formdiv_, sz.width, sz.height) ;
     }
 }

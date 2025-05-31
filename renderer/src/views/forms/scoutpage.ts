@@ -1,24 +1,26 @@
+import { XeroSize } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
 import { XeroEditFormView } from "./editformview.js";
 
 export class XeroFormScoutSectionPage extends XeroWidget {
-    private static kUsageScale = 0.98 ;
-
     private controls_ : FormControl[] = [] ;
     private image_ : HTMLImageElement ;
     private formdiv_ : HTMLDivElement ;
 
-    public constructor(data: string) {
+    public constructor(formsize: XeroSize, data: string) {
         super('div', 'xero-form-section-page') ;
 
         this.formdiv_ = document.createElement('div') ;
         this.formdiv_.className = 'xero-form-section-page-form' ;
+        this.formdiv_.style.width = `${formsize.width}px` ;
+        this.formdiv_.style.height = `${formsize.height}px` ;
 
         this.image_ = document.createElement('img') ;
         this.image_.className = 'xero-form-section-image' ;
         this.image_.src = `data:image/png;base64,${data}` ;
         this.formdiv_.appendChild(this.image_) ;
+        this.elem.appendChild(this.formdiv_) ;
     }
 
     public get controls() : FormControl[] {
@@ -57,6 +59,8 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         let bounds = this.elem.getBoundingClientRect() ;
         let fbounds = this.formdiv_.getBoundingClientRect() ;        
 
-        control.createForScouting(this.elem, fbounds.left - bounds.left, fbounds.top) ;
+        console.log(`Adding control ${control.item.tag} bounds ${JSON.stringify(bounds)} to form bounds ${JSON.stringify(fbounds)}`) ;
+
+        control.createForScouting(this.formdiv_, fbounds.left, fbounds.top) ;
     }
 }

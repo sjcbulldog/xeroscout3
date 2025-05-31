@@ -1,7 +1,7 @@
 import {  XeroApp  } from "../../apps/xeroapp.js";
 import {  IPCFormScoutData, IPCNamedDataValue, IPCSection } from "../../ipc.js";
 import {  XeroLogger } from "../../utils/xerologger.js";
-import {  XeroRect  } from "../../widgets/xerogeom.js";
+import {  XeroRect, XeroSize  } from "../../widgets/xerogeom.js";
 import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import {  XeroView  } from "../xeroview.js";
 import {  BooleanControl  } from "./controls/booleanctrl.js";
@@ -18,65 +18,7 @@ import {  UpDownControl  } from "./controls/updownctrl.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
 import {  XeroFormScoutSectionPage } from "./scoutpage.js";
-
-class TimerStatus {
-    public readonly name: string ;
-    private running_ = false ;
-    private callback_?: () => void ;
-    private value_: number = 0.0 ;    
-    private timer_? : any ;
-
-    constructor(name: string) {
-        this.name = name ;
-    }
-
-    public setCallback(callback: () => void) {
-        if (this.running_) {
-            this.callback_ = callback ;
-        }
-    }
-
-    public get running() : boolean {
-        return this.running_ ;
-    }
-
-    public get value() : number {
-        return this.value_ ;
-    }
-
-    public set value(value: number) {
-        this.value_ = value ;
-        if (this.callback_) {
-            this.callback_() ;
-        }
-    }
-
-    public reset() {
-        this.value = 0.0 ;
-    }
-
-    public start(callback: () => void) {
-        this.running_ = true ;
-        this.callback_ = callback ;
-        this.timer_ = setInterval(this.tick.bind(this), 100) ;
-    }
-
-    public stop() {
-        if (this.timer_) {
-            clearInterval(this.timer_) ;
-            this.timer_ = undefined ;
-        }
-        this.running_ = false ;
-        this.callback_ = undefined ;
-    }
-
-    private tick() {
-        this.value += 0.1 ;
-        if (this.callback_) {
-            this.callback_() ;
-        }
-    }
-}
+import { TimerStatus } from "./timerstatus.js";
 
 export class XeroScoutFormView extends XeroView {
     static buttonClassUnselected = 'xero-form-tab-button-unselected' ;
@@ -90,7 +32,7 @@ export class XeroScoutFormView extends XeroView {
     private tabbed_ctrl_? : XeroTabbedWidget ;
     private section_pages_ : XeroFormScoutSectionPage[] = [] ;
     private titlediv_? : HTMLElement ;
-    private tabdiv_? : HTMLElement ;    
+    private tabdiv_? : HTMLElement ;
 
     private form_info_? : IPCFormScoutData
 
@@ -219,7 +161,7 @@ export class XeroScoutFormView extends XeroView {
         if (!image) {
             throw new Error(`XeroScoutFormView: image ${section.image} not found`) ;
         }
-        let page = new XeroFormScoutSectionPage(image!) ;
+        let page = new XeroFormScoutSectionPage(new XeroSize(section.imageSize!.width, section.imageSize!.height), image!) ;
         this.tabbed_ctrl_!.addPage(section.name, page.elem) ;
         this.section_pages_.push(page) ;
         this.updateControls(section, page) ;

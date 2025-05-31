@@ -16,10 +16,19 @@ export abstract class FormControl {
     private origional_bounds_? : XeroRect ;
     private offset_? : XeroPoint ;
     private style_ : FormDisplayStyle = 'none' ;
+    private locked_ : boolean = false ;
     
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
         this.view_ = view ;
+    }
+
+    public get locked() : boolean {
+        return this.locked_ ;
+    }
+
+    public set locked(locked: boolean) {
+        this.locked_ = locked ;
     }
 
     public get view() : XeroView {
@@ -87,6 +96,11 @@ export abstract class FormControl {
 
     public positionUpdated() {
         if (this.ctrl_) {
+            this.item.x = Math.round(this.item.x) ;
+            this.item.y = Math.round(this.item.y) ;
+            this.item.width = Math.round(this.item.width) ;
+            this.item.height = Math.round(this.item.height) ;
+
             this.ctrl_.style.left = (this.item.x + this.offset.x) + 'px' ;
             this.ctrl_.style.top = (this.item.y + this.offset.y) + 'px' ;
             this.ctrl_.style.width = this.item.width + 'px' ;
