@@ -1,5 +1,4 @@
-import { IPCSection, IPCSize } from "../../ipc.js";
-import { XeroPoint, XeroSize } from "../../widgets/xerogeom.js";
+import { XeroPoint, XeroRect, XeroSize } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
 
@@ -7,11 +6,16 @@ export class XeroFormEditSectionPage extends XeroWidget {
     public static fuzzyEdgeSpacing = 10 ;
 
     private controls_ : FormControl[] = [] ;
-    private image_ : HTMLImageElement ;
+    private holder_ : HTMLDivElement ;
     private formdiv_ : HTMLDivElement ;
 
     public constructor(name: string, sz: XeroSize) {
         super('div', 'xero-form-section-page') ;
+
+        this.holder_ = document.createElement('div') ;
+        this.holder_.className = 'xero-form-section-page-holder' ;
+        this.holder_.addEventListener('scroll', this.holderScrolled.bind(this)) ;
+        this.elem.appendChild(this.holder_) ;
 
         this.formdiv_ = document.createElement('div') ;
         this.formdiv_.className = 'xero-form-section-page-form' ;
@@ -19,11 +23,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
         this.formdiv_.style.width = `${sz.width}px` ;
         this.formdiv_.style.height = `${sz.height}px` ;
 
-        this.image_ = document.createElement('img') ;
-        this.image_.className = 'xero-form-section-image' ;
-        this.formdiv_.appendChild(this.image_) ;
-
-        this.elem.appendChild(this.formdiv_) ;
+        this.holder_.appendChild(this.formdiv_) ;
     }
 
     public setPageSize(sz: XeroSize) : void {
@@ -37,7 +37,6 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
     public resetHTML() : void {
         this.formdiv_.innerHTML = '' ;
-        this.formdiv_.appendChild(this.image_) ;
     }
 
     public doLayout() : void {
@@ -49,11 +48,6 @@ export class XeroFormEditSectionPage extends XeroWidget {
 
     public get controls() : FormControl[] {
         return this.controls_ ;
-    }
-
-    public get imageSize() : XeroSize {
-        let bounds = this.image_.getBoundingClientRect() ;
-        return new XeroSize(bounds.width, bounds.height) ;
     }
 
     public unlockAllControls() : void {
@@ -112,36 +106,55 @@ export class XeroFormEditSectionPage extends XeroWidget {
             this.controls_.splice(index, 1) ;
         }
     }
-
-    public setImage(data: string) : void {
-        this.image_.src = `data:image/png;base64,${data}` ;
-    }
     
     public removeAllControls() : void {
         this.formdiv_.innerHTML = '' ;
-        this.formdiv_.appendChild(this.image_) ;
         this.controls_ = [] ;
-    }
-
-    public scaleControlsToImageSize(imsize: IPCSize) : void {
-        let sx = this.imageSize.width / imsize.width ;
-        let sy = this.imageSize.height / imsize.height ;
-
-        for(let control of this.controls_) {
-            control.scale(sx, sy) ;
-            control.resetHTMLControl() ;
-            this.addControlToLayout(control) ;
-        }
     }
 
     public getPlaceOffset() : XeroSize {
         let bounds = this.elem.getBoundingClientRect() ;
         let fbounds = this.formdiv_.getBoundingClientRect() ;
-        return new XeroSize(fbounds.left - bounds.left, fbounds.top) ;
+        return new XeroSize(fbounds.left - bounds.left + this.formdiv_.scrollLeft, fbounds.top + this.formdiv_.scrollTop) ;
+    }
+
+    private holderScrolled(ev: Event) : void {
+        this.resetHTML() ;
+        this.doLayout() ;
+    }
+
+    private getClipRect(ctrl: FormControl) : string | undefined {
+        let cbounds : XeroRect = XeroRect.fromDOMRect(ctrl.ctrl!.getBoundingClientRect()) ;
+        let fbounds : XeroRect = XeroRect.fromDOMRect(this.holder_.getBoundingClientRect()) ;
+
+        let vbounds = fbounds.offset(new XeroSize(this.holder_.scrollLeft, this.holder_.scrollTop)) ;
+        
+        let ints = fbounds.intersection(cbounds) ;
+
+        let left = -10 ;
+        let right = -10 ;
+        let top = -10 ;
+        let bottom = -10 ;
+
+        if (cbounds.left < fbounds.left) {
+            left = fbounds.left - cbounds.left ;
+        }
+
+        if (cbounds.top < fbounds.top) {
+            top = fbounds.top - cbounds.top ;
+        }
+
+        let clip = `inset(${top}px ${right}px ${bottom}px ${left}px)` ;
+        return clip ;
     }
 
     private addControlToLayout(control: FormControl) : void {
         let sz = this.getPlaceOffset() ;
         control.createForEdit(this.formdiv_, sz.width, sz.height) ;
+
+        let clip = this.getClipRect(control) ;
+        if (clip !== undefined) {
+            control.ctrl!.style.clipPath = clip ;
+        }
     }
 }

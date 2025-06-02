@@ -64,6 +64,9 @@ export class XeroRect {
         this.height = hv;
     }
     
+    public offset(sz: XeroSize) : XeroRect {
+        return new XeroRect(this.x + sz.width, this.y + sz.height, this.width, this.height);
+    }
 
     public get left(): number {
         return this.x;

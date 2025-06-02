@@ -27,16 +27,6 @@ import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoMoveRes
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' | 'area-select';
 
-class FormControlImageRequest {
-    public readonly ctrl: FormControl ;
-    public readonly name: string ;
-
-    constructor(ctrl: FormControl, name: string) {
-        this.ctrl = ctrl ;
-        this.name = name ;
-    }
-}
-
 export class XeroEditFormView extends XeroView {
     private static instance_counter_ = 0 ;
     private static kSelectSameSpot = 5 ;
@@ -110,9 +100,6 @@ export class XeroEditFormView extends XeroView {
     private paste_bind_? : (e: ClipboardEvent) => void ;
     private focusbind_? : (e: FocusEvent) => void ;
     private blurbind_? : (e: FocusEvent) => void ;
-    private imagesupdatedbind_? : (images: string[]) => void ;
-
-    private image_data_requestor_ : FormControlImageRequest[] = [] ;
 
     constructor(app: XeroApp, type: any) {
         super(app, 'xero-form-view') ;
@@ -125,7 +112,6 @@ export class XeroEditFormView extends XeroView {
 
         this.type_ = type ;
         this.registerCallback('send-form', this.receivedForm.bind(this));
-        this.registerCallback('send-form-image', this.receivedNewFormImageName.bind(this)) ;
 
         this.request('get-images') ;
         this.request('get-form', this.type_);
@@ -177,9 +163,6 @@ export class XeroEditFormView extends XeroView {
 
         this.blurbind_ = this.blur.bind(this) ;
         window.addEventListener('blur', this.blurbind_) ;        
-
-        this.imagesupdatedbind_ = this.imageNamesUpdated.bind(this) ;
-        this.app.imageSource!.addListener('image-names-updated', this.imagesupdatedbind_) ;
     }
 
     public close() {
@@ -199,9 +182,8 @@ export class XeroEditFormView extends XeroView {
 
         window.removeEventListener('focus', this.focusbind_!);
     	window.removeEventListener('blur', this.blurbind_!);
-
-        this.app.imageSource!.removeListener('image-names-updated', this.imagesupdatedbind_!) ;
     }
+
 
     private shiftSectionLeft(ev: KeyboardEvent) {
         this.moveSection(true) ;
@@ -246,20 +228,6 @@ export class XeroEditFormView extends XeroView {
     private editProperties(ev: KeyboardEvent) {
         let offset = this.getFormOffset() ;
         this.editControlProperties(this.selected_ctrls_[0], this.cursor_.x, this.cursor_.y + offset.y) ;
-    }
-
-    private imageNamesUpdated(images: string[]) {
-        images = images.sort(
-            (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
-        )
-
-        let items : XeroPopupMenuItem[] = [] ;
-        for(let name of images) {
-            let mitem = new XeroPopupMenuItem(name, this.setBackgroundImage.bind(this, name)) ;
-            items.push(mitem) ;
-        }
-
-        this.image_menu_ = new XeroPopupMenu('images', items) ;
     }
 
     private keybindingDialogClosed() {
@@ -606,17 +574,7 @@ export class XeroEditFormView extends XeroView {
 
     private createSectionPageObject(section: IPCSection) : XeroFormEditSectionPage { 
         let page = new XeroFormEditSectionPage(section.name, this.form_size_) ;
-        this.updateControls(section, page) ;
-
-        this.app.imageSource!.getImageData(section.image)
-            .then((data) => {
-                if (data) {
-                    if(data.newname) {
-                        section.image = data.newname ;
-                    }
-                    page.setImage(data.data) ;
-                }
-            }) ;        
+        this.updateControls(section, page) ;     
 
         return page ;
     }
@@ -697,36 +655,6 @@ export class XeroEditFormView extends XeroView {
         this.deleteSectionByPage(this.tabbed_ctrl_!.selectedPageNumber) ;
     }
 
-    private setBackgroundImage(image: string, save: boolean = true) {
-        if (this.tabbed_ctrl_!.selectedPageNumber === -1) {
-            alert('You cannot set the background image without a section. Use the "Section" menu to add a section first.') ;
-            return ;
-        }
-
-        if (this.form_) {
-            let pageno = this.tabbed_ctrl_!.selectedPageNumber ;
-            let old_image = this.form_.sections[pageno].image ;
-            this.form_.sections[pageno].image = image ;
-            this.form_.sections[pageno].imageSize = undefined ;                 // Reset the image size so it will be recalculated
-            if (save) {
-                this.modified(new UndoStackEntry('edit', 'image', old_image)) ;
-            }
-
-            this.app.imageSource!.getImageData(image)
-                .then((data) => {
-                    if (data) {
-                        if(data.newname) {
-                            this.form_!.sections[pageno].image = data.newname ;
-                        }   
-                        this.section_pages_[pageno].setImage(data.data) ;
-                    }
-                }) ;
-        }
-    }
-
-    private receivedNewFormImageName(args: any) {
-        this.setBackgroundImage(args as string) ;
-    }
 
     private modified(undo: UndoStackEntry) : void {
         if (this.form_) {
@@ -901,24 +829,6 @@ export class XeroEditFormView extends XeroView {
     }
 
     private doLayout(index: number) {
-        if (!this.form_?.sections[index].imageSize) {
-            //
-            // For backwards compatibility, we need to set the image size
-            // if it doesn't exist. This becomes the baseline for the form and all scaling
-            //
-            let sz = this.section_pages_[index].imageSize ;
-            this.form_!.sections[index].imageSize = { width: sz.width, height: sz.height } ;
-            this.request('save-form', { type: this.type_, contents: this.form_!.json}) ;
-        }
-        else {
-            //
-            // We have an image size, scale the controls to align
-            //
-            let sz = this.section_pages_[index].imageSize ;
-            this.section_pages_[index].scaleControlsToImageSize(this.form_!.sections[index].imageSize!) ;
-            this.form_!.sections[index].imageSize = { width: sz.width, height: sz.height } ;
-            this.request('save-form', { type: this.type_, contents: this.form_!.json}) ;  
-        }
         this.section_pages_[index].doLayout() ;
     }
 
@@ -2165,10 +2075,6 @@ export class XeroEditFormView extends XeroView {
                 item.formctrl.update(item.olditem) ;
                 item.formctrl.updateFromItem(true, 0, bounds.top) ;
             }
-        }
-        else if (undo.oper === 'edit' && undo.obj === 'image') {
-            let item = undo.item as unknown as string ;
-            this.setBackgroundImage(item, false) ;
         }
         else if (undo.oper === 'add' && undo.obj === 'section') {
             let name = undo.item as unknown as string ;

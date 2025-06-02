@@ -49,7 +49,7 @@ export class BoxControl extends FormControl {
             this.box_ctrl_.style.borderStyle = item.borderStyle ;
             this.box_ctrl_.style.borderRadius = item.borderRadius + 'px' ;
             this.box_ctrl_.style.boxShadow = item.borderShadow ? '10px 5px 5px lightgray' : 'none' ;
-            this.box_ctrl_.style.borderCollapse = item.color ;
+            this.box_ctrl_.style.borderColor = item.color ;
             if (item.transparent) {
                 this.box_ctrl_.style.backgroundColor = 'transparent' ;
             }
