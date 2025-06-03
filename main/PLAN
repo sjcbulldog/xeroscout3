@@ -19,10 +19,12 @@
 - DONE: Fix scouting form look/feel, provide team or match # with color
 - DONE: Prompt before scouting a new team or match and generating data
 - DONE: WiFi sync, IP addr sync
-- Add IP Addr based syncing
+- DONE: Add IP Addr based syncing
 - Form scaling to tablet size
 - Test well as a checkpoint
 - Resize window (tablet)
+- Scout Reverse form
+- Scout Red vs Blue
 
 3.0.11
 ------

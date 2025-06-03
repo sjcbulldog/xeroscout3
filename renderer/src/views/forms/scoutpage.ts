@@ -5,22 +5,22 @@ import { XeroEditFormView } from "./editformview.js";
 
 export class XeroFormScoutSectionPage extends XeroWidget {
     private controls_ : FormControl[] = [] ;
-    private image_ : HTMLImageElement ;
     private formdiv_ : HTMLDivElement ;
+    private observer_ : ResizeObserver ;
+    private size_ : XeroSize ;
+    private scale_ : number = 1.0 ;
 
-    public constructor(formsize: XeroSize, data: string) {
+    public constructor(formsize: XeroSize) {
         super('div', 'xero-form-section-page') ;
 
-        this.formdiv_ = document.createElement('div') ;
-        this.formdiv_.className = 'xero-form-section-page-form' ;
-        this.formdiv_.style.width = `${formsize.width}px` ;
-        this.formdiv_.style.height = `${formsize.height}px` ;
+        this.size_ = formsize ;
 
-        this.image_ = document.createElement('img') ;
-        this.image_.className = 'xero-form-section-image' ;
-        this.image_.src = `data:image/png;base64,${data}` ;
-        this.formdiv_.appendChild(this.image_) ;
+        this.formdiv_ = document.createElement('div') ;
+        this.formdiv_.className = 'xero-form-section-scout-page-form' ;
         this.elem.appendChild(this.formdiv_) ;
+
+        this.observer_ = new ResizeObserver(this.resized.bind(this)) ;
+        this.observer_.observe(this.elem) ;
     }
 
     public get controls() : FormControl[] {
@@ -32,13 +32,13 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         this.addControlToLayout(control) ;
     }
 
-    public setImage(data: string) : void {
-        this.image_.src = `data:image/png;base64,${data}` ;
-    }
-
     public doLayout() : void {
-        this.elem.innerHTML = '' ;
-        this.elem.appendChild(this.image_) ;
+        this.formdiv_.innerHTML = '' ;
+
+        let fbounds = this.formdiv_.getBoundingClientRect() ;
+        let xscale = fbounds.width / this.size_.width ;
+        let yscale = fbounds.height / this.size_.height ;
+        this.scale_ = Math.min(xscale, yscale) ;
 
         for(let control of this.controls_) {
             control.resetHTMLControl() ;
@@ -55,12 +55,22 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         return undefined ;
     }   
 
-    private addControlToLayout(control: FormControl) : void {
+    public getPlaceOffset() : XeroSize {
         let bounds = this.elem.getBoundingClientRect() ;
-        let fbounds = this.formdiv_.getBoundingClientRect() ;        
+        let fbounds = this.formdiv_.getBoundingClientRect() ;
+        return new XeroSize(fbounds.left - bounds.left, fbounds.top) ;
+    }
 
-        console.log(`Adding control ${control.item.tag} bounds ${JSON.stringify(bounds)} to form bounds ${JSON.stringify(fbounds)}`) ;
+    private addControlToLayout(control: FormControl) : void {
+        let offset = this.getPlaceOffset() ;
+        control.createForScouting(this.formdiv_, this.scale_, offset.width, offset.height) 
+    }
 
-        control.createForScouting(this.formdiv_, fbounds.left, fbounds.top) ;
+    private resized(entries: ResizeObserverEntry[]) : void {
+        for(let entry of entries) {
+            if (entry.target === this.elem) {
+                this.doLayout() ;
+            }
+        }
     }
 }

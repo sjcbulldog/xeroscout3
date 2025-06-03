@@ -16,7 +16,6 @@ export abstract class FormControl {
     private origional_bounds_? : XeroRect ;
     private offset_? : XeroPoint ;
     private style_ : FormDisplayStyle = 'none' ;
-    private locked_ : boolean = false ;
     
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
@@ -24,11 +23,14 @@ export abstract class FormControl {
     }
 
     public get locked() : boolean {
-        return this.locked_ ;
+        if (!this.item.locked) {
+            return false ;
+        }
+        return this.item.locked ;
     }
 
     public set locked(locked: boolean) {
-        this.locked_ = locked ;
+        this.item.locked = locked ;
     }
 
     public get view() : XeroView {
@@ -216,7 +218,7 @@ export abstract class FormControl {
         this.item_ = item ;
     }
 
-    public abstract updateFromItem(editing: boolean, xoff?: number, yoff?: number) : void ;
+    public abstract updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void ;
 
     public createForEdit(parent: HTMLElement, xoff: number, yoff:number) : void {
         if(this.ctrl_ !== undefined) {
@@ -226,7 +228,7 @@ export abstract class FormControl {
         this.offset_ = new XeroPoint(xoff, yoff) ;
     }
 
-    public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void  {
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff:number) : void  {
         if(this.ctrl_ !== undefined) {
             throw new Error('Control already created') ;    
         }
@@ -251,12 +253,12 @@ export abstract class FormControl {
         this.item_.tag = tag ;
     }
 
-    protected setPosition(xoff:number, yoff:number, zpos?: number) {
+    protected setPosition(scale: number, xoff:number, yoff:number, zpos?: number) {
         if (xoff !== undefined && yoff !== undefined && this.ctrl) {
-            this.ctrl.style.left = (this.item.x + xoff) + 'px' ;
-            this.ctrl.style.top = (this.item.y + yoff) + 'px' ;
-            this.ctrl.style.width = this.item.width + 'px' ;
-            this.ctrl.style.height = this.item.height + 'px' ;
+            this.ctrl.style.left = (this.item.x * scale + xoff) + 'px' ;
+            this.ctrl.style.top = (this.item.y * scale + yoff) + 'px' ;
+            this.ctrl.style.width = this.item.width * scale + 'px' ;
+            this.ctrl.style.height = this.item.height * scale + 'px' ;
             this.ctrl.style.position = 'absolute' ;            
             this.ctrl.style.margin = '4px' ;     
             this.ctrl.style.zIndex = zpos ? zpos.toString() : '1000' ;

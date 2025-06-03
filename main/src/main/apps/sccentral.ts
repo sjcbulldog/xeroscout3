@@ -665,13 +665,18 @@ export class SCCentral extends SCBase {
 		}
 		else {
 			good = false;
-			ret.message = 'Internal equest for invalid form type' ;
+			ret.message = 'Internal request for invalid form type' ;
 		}
 
 		if (good) {
-			let jsonstr = fs.readFileSync(filename!).toString();
-			try {
-				let jsonobj = JSON.parse(jsonstr) as IPCForm ;
+			let jsonobj = this.project_!.form_mgr_!.getForm(arg) ;
+			if (jsonobj instanceof Error) {
+				let errobj = jsonobj as Error;
+				ret.message = errobj.message;
+			} else if (!jsonobj) {
+				ret.message = `No ${arg} form has been set` ;
+			}
+			else {
 				ret.form = jsonobj ;
 				ret.color = this.color_ ;
 				ret.reversed = this.reversed_ ;
@@ -679,14 +684,11 @@ export class SCCentral extends SCBase {
 				for(let image of jsonobj.images) {
 					this.sendImageData(image) ;
 				}
-			} catch (err) {
-				let errobj = err as Error;
-				ret.message = errobj.message;
+				this.sendToRenderer('send-form', ret);				
 			}
 		} else {
 			ret.message = `No ${arg} form has been set`;
 		}
-		this.sendToRenderer('send-form', ret);
 	}
 
 	public async sendMatchStatus() {

@@ -34,7 +34,7 @@ export abstract class EditFormControlDialog extends XeroDialog {
 
   public okButton(event: Event) {
     this.extractData(); // Extract the item data form the dialog
-    this.formctrl_.updateFromItem(true, undefined, undefined); // Make the control on the screen match the item data
+    this.formctrl_.updateFromItem(true, 1.0, NaN, NaN); // Make the control on the screen match the item data
     super.okButton(event); // Finish the edit operation, save the form, and dismiss the dialog
   }
 

@@ -42,10 +42,10 @@ export class UpDownControl extends FormControl {
         return new UpDownControl(this.view, this.item.tag, this.bounds) ;
     }
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCUpDownItem ;
-            this.setPosition(xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff) ;
 
             if (item.orientation === 'horizontal') {
                 this.ctrl.style.display = 'flex' ;
@@ -152,11 +152,11 @@ export class UpDownControl extends FormControl {
             this.ctrl.appendChild(this.downbutton_) ;
         }
 
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
     
-    public createForScouting(parent: HTMLElement, xoff: number, yoff: number) : void {
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number) : void {
         let item = this.item as IPCUpDownItem ;
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'scout') ;
@@ -186,7 +186,7 @@ export class UpDownControl extends FormControl {
             this.ctrl.appendChild(this.downbutton_) ;
         }
 
-        this.updateFromItem(false, xoff, yoff) ;
+        this.updateFromItem(false, scale, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 

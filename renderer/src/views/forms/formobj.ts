@@ -82,7 +82,6 @@ export class FormObject {
     public createNewSection() : IPCSection {
         let section : IPCSection = {
             name: this.findNewSectionName(),
-            image: 'blank',
             items: []
         }
         this.form_.sections.push(section) ;
@@ -100,16 +99,6 @@ export class FormObject {
         if (index >= 0 && index < this.form_.sections.length) {
             this.form_.sections.splice(index, 1) ;
         }   
-    }
-
-    public resetImages() : void {
-        this.form_.images = [] ;
-
-        for(let section of this.form_.sections) {
-            if(section.image) {
-                this.addImage(section.image) ;
-            }
-        }
     }
 
     public addImage(image: string) : void {

@@ -1,3 +1,4 @@
+import { IPCSize } from "../../ipc.js";
 import { XeroPoint, XeroRect, XeroSize } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
@@ -9,7 +10,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
     private holder_ : HTMLDivElement ;
     private formdiv_ : HTMLDivElement ;
 
-    public constructor(name: string, sz: XeroSize) {
+    public constructor(name: string, sz: IPCSize) {
         super('div', 'xero-form-section-page') ;
 
         this.holder_ = document.createElement('div') ;
@@ -26,7 +27,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
         this.holder_.appendChild(this.formdiv_) ;
     }
 
-    public setPageSize(sz: XeroSize) : void {
+    public setPageSize(sz: IPCSize) : void {
         this.formdiv_.style.width = `${sz.width}px` ;
         this.formdiv_.style.height = `${sz.height}px` ;
     }
@@ -59,10 +60,10 @@ export class XeroFormEditSectionPage extends XeroWidget {
     //
     // Find a control by its form position
     //
-    public findControlsByPosition(pt: XeroPoint) : FormControl[] {
+    public findControlsByPosition(pt: XeroPoint, locked: boolean = false) : FormControl[] {
         let ret : FormControl[] = [] ;
         for(let entry of this.controls_) {
-            if (entry.ctrl === undefined || entry.locked) {
+            if (entry.ctrl === undefined || entry.locked !== locked) {
                 continue ;
             }
 

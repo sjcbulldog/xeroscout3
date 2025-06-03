@@ -39,10 +39,10 @@ export class TextAreaControl extends FormControl {
         return new TextAreaControl(this.view, this.item.tag, this.bounds) ;
     }
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.area_) {
             let item = this.item as IPCTextAreaItem ;
-            this.setPosition(xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff) ;
             
             this.area_.rows = item.rows ;
             this.area_.cols = item.cols ;
@@ -66,12 +66,12 @@ export class TextAreaControl extends FormControl {
         this.setClassList(this.area_, 'edit', 'textarea') ;
         this.area_.disabled = true ;
 
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
         parent.appendChild(box) ;
     }
 
-    public createForScouting(parent: HTMLElement, xoff: number, yoff: number) : void {
-        super.createForEdit(parent, xoff, yoff) ;
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number) : void {
+        super.createForScouting(parent, scale, xoff, yoff) ;
         let box = document.createElement('div') ;
         this.setClassList(box, 'scout') ;
         this.ctrl = box ;
@@ -80,7 +80,7 @@ export class TextAreaControl extends FormControl {
         box.appendChild(this.area_) ;
         this.setClassList(this.area_, 'scout', 'textarea') ;
 
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, scale, xoff, yoff) ;
         parent.appendChild(box) ;
     }
 

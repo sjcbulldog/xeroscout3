@@ -47,7 +47,7 @@ export class ImageControl extends FormControl {
         return image ;
     }
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCImageItem ;
             this.image_src_.getImageData(item.image)
@@ -59,7 +59,7 @@ export class ImageControl extends FormControl {
                         this.setImageData(data.data) ;
                     }
                 }) ;
-            this.setPosition(xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff) ;
         }
     }
 
@@ -70,19 +70,19 @@ export class ImageControl extends FormControl {
 
         this.image_ = document.createElement('img') ;
         this.setClassList(this.image_, 'edit', 'image') ;
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
         this.ctrl.appendChild(this.image_) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void  {
-        super.createForScouting(parent, xoff, yoff) ;        
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff:number) : void  {
+        super.createForScouting(parent, scale, xoff, yoff) ;        
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'scout') ;
 
         this.image_ = document.createElement('img') ;
         this.setClassList(this.image_, 'scout', 'image') ;
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, scale, xoff, yoff) ;
         this.ctrl.appendChild(this.image_) ;        
         parent.appendChild(this.ctrl) ;
     }    

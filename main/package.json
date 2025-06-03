@@ -6,8 +6,9 @@
   "scripts": {
     "build-renderer": "cd ../renderer && npm run build",
     "interfaces": "copyfiles -f ../renderer/src/ipc.ts src/shared",
+    "tabletdb" : "copyfiles -f ../renderer/src/tabletdb.ts src/shared",
     "bundle": "copyfiles -f ../renderer/dist/renderer/xeroapp.bundle.js dist/renderer",
-    "copyfiles": "npm run bundle && npm run interfaces",
+    "copyfiles": "npm run bundle && npm run interfaces && npm run tabletdb",
     "renderer": "npm run build-renderer && npm run copyfiles",
     "compile": "tsc",
     "main": "npm run renderer && npm run compile",

@@ -45,6 +45,7 @@ export interface IPCFormItem {
     background: string ;
     transparent: boolean ;
     datatype: IPCDataValueType ;
+    locked?: boolean ;
 }
 
 export interface IPCLabelItem extends IPCFormItem {
@@ -112,13 +113,17 @@ export interface IPCSize {
 
 export interface IPCSection {
     name: string ;
-    image: string ;
-    imageSize?: IPCSize ;
     items: IPCFormItem[] ;
+}
+
+export interface IPCTablet {
+    name: string ;
+    size: IPCSize ;
 }
 
 export interface IPCForm {
     purpose: string | undefined ;
+    tablet: IPCTablet ;
     sections: IPCSection[] ;
     images: string[] ;
 }

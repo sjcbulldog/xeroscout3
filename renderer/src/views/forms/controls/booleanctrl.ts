@@ -37,12 +37,12 @@ export class BooleanControl extends FormControl {
         return new BooleanControl(this.view, this.item.tag, this.bounds) ;
     }
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCBooleanItem ;
             let ctrl = this.ctrl as HTMLInputElement ;
 
-            this.setPosition(xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff) ;
 
             ctrl.style.fontFamily = item.fontFamily ;
             ctrl.style.fontSize = item.fontSize + 'px' ;
@@ -63,19 +63,19 @@ export class BooleanControl extends FormControl {
         this.setClassList(this.input_, 'edit', 'checkbox') ;
         this.input_.type = 'checkbox' ;
         this.input_.disabled = true ;
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
         this.ctrl.appendChild(this.input_) ;
         parent.appendChild(this.ctrl) ;
     }
     
-    public createForScouting(parent: HTMLElement, xoff: number, yoff: number) : void {
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number) : void {
         this.ctrl = document.createElement('div') ;        
         this.setClassList(this.ctrl, 'scout') ;
 
         this.input_ = document.createElement('input') ;
         this.setClassList(this.input_, 'scout', 'checkbox') ;
         this.input_.type = 'checkbox' ;
-        this.updateFromItem(false, xoff, yoff) ;
+        this.updateFromItem(false, scale, xoff, yoff) ;
         this.ctrl.appendChild(this.input_) ;
         parent.appendChild(this.ctrl) ;
     }

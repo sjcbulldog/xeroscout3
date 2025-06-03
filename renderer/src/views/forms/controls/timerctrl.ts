@@ -38,10 +38,10 @@ export class TimerControl extends FormControl {
         return new TimerControl(this.view, this.item.tag, this.bounds) ;
     }
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCTimerItem ;
-            this.setPosition(xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff) ;
 
             this.start_stop_button_!.style.backgroundColor = item.background ;
             this.start_stop_button_!.style.color = item.color ;
@@ -101,12 +101,12 @@ export class TimerControl extends FormControl {
         this.start_stop_button_!.disabled = true ;
         this.ctrl.appendChild(this.start_stop_button_!) ;
 
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
 
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement, xoff: number, yoff: number): void {
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number): void {
         let item = this.item as IPCTimerItem ;
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'scout') ;
@@ -121,7 +121,7 @@ export class TimerControl extends FormControl {
         this.start_stop_button_!.innerText = 'Start' ;
         this.start_stop_button_!.addEventListener('click', this.startStopTimer.bind(this)) ;
         this.ctrl.appendChild(this.start_stop_button_!) ;
-        this.updateFromItem(false, xoff, yoff) ;
+        this.updateFromItem(false, scale, xoff, yoff) ;
         
         if (this.view instanceof XeroScoutFormView) {
             let view = this.view as XeroScoutFormView ;

@@ -4,8 +4,9 @@ import fs from "fs";
 import path from "path";
 import { DataManager } from "./datamgr";
 import { dialog } from "electron";
-import { IPCChoice, IPCChoicesItem, IPCColumnDesc, IPCFormControlType, IPCFormItem } from "../../shared/ipc";
+import { IPCChoice, IPCChoicesItem, IPCColumnDesc, IPCForm, IPCFormControlType, IPCFormItem } from "../../shared/ipc";
 import { match } from "assert";
+import { TabletDB } from "../../shared/tabletdb";
 
 export interface TagSource {
 	form: string;
@@ -246,9 +247,11 @@ export class FormManager extends Manager {
 
 	private createFormInternal(ftype: string, filename: string): string {
 		let target = path.join(this.location_, filename);
-		let jsonobj = {
-			form: ftype,
-			sections: []
+		let jsonobj : IPCForm = {
+			purpose: ftype,
+			sections: [],
+			images: [],
+			tablet: TabletDB.getDefaultTablet(),
 		};
 
 		let jsonstr = JSON.stringify(jsonobj, null, 4);
@@ -586,6 +589,36 @@ export class FormManager extends Manager {
 		return undefined;
 	}
 
+	public getForm(type: string) : IPCForm | Error {
+		let formfile: string | undefined = undefined;
+		if (type === "team") {
+			formfile = this.info_.teamform_;
+		} else if (type === "match") {
+			formfile = this.info_.matchform_;
+		} else {
+			return new Error("Invalid form type: " + type);
+		}
+
+		if (!formfile || formfile.length === 0) {
+			return new Error("No form found for type: " + type);
+		}
+
+		let fullpath = path.join(this.location_, formfile);
+		if (!fs.existsSync(fullpath)) {
+			return new Error("Form file does not exist: " + fullpath);
+		}
+		let jsonobj = FormManager.readJSONFile(fullpath) as IPCForm ;
+		if (jsonobj instanceof Error) {
+			return jsonobj as Error ;
+		}
+
+		if (!jsonobj.tablet) {
+			jsonobj.tablet = TabletDB.getDefaultTablet() ;
+		}
+
+		return jsonobj;
+	}
+
 	private static readJSONFile(filename: string): any {
 		let jsonobj: Object | Error;
 		try {
@@ -606,6 +639,9 @@ export class FormManager extends Manager {
 
 		try {
 			let jsonobj = FormManager.readJSONFile(formfile);
+			if (jsonobj instanceof Error) {
+				return jsonobj as Error ;
+			}
 			for (let section of jsonobj.sections) {
 				if (section.items && Array.isArray(section.items)) {
 					for (let obj of section.items) {
@@ -641,10 +677,14 @@ export class FormManager extends Manager {
 		return ret;
 	}
 
-	private checkOneFormDuplicates(formname: string, tmap: Map<string, TagInformation>) {
+	private checkOneFormDuplicates(formname: string, tmap: Map<string, TagInformation>) : undefined | Error {
 		let formfile = path.join(this.location_, formname);    
 		try {
 			let jsonobj = FormManager.readJSONFile(formfile);
+			if (jsonobj instanceof Error) {
+				return jsonobj as Error ;
+			}
+
 			for (let section of jsonobj.sections) {
 				if (section.items && Array.isArray(section.items)) {
 					for (let item of section.items) {
@@ -672,7 +712,10 @@ export class FormManager extends Manager {
 		}
 		catch (err) {
 			this.logger_.error("Error reading form file " + formfile + ": " + err);
+			return err as Error ;
 		}
+
+		return undefined ;
 	}
 
 	public  checkDuplicateTags() : TagInformation[] {
@@ -691,10 +734,14 @@ export class FormManager extends Manager {
 		return ret ;
 	}
 
-	private checkMisnamedTagsInternal(formname: string, tdata: TagInformation[]) {
+	private checkMisnamedTagsInternal(formname: string, tdata: TagInformation[]) : undefined | Error {
 		let formfile = path.join(this.location_, formname);    
 		try {
 			let jsonobj = FormManager.readJSONFile(formfile);
+			if (jsonobj instanceof Error) {
+				return jsonobj as Error ;
+			}
+
 			for (let section of jsonobj.sections) {
 				if (section.items && Array.isArray(section.items)) {
 					for (let item of section.items) {
@@ -717,7 +764,10 @@ export class FormManager extends Manager {
 		}
 		catch (err) {
 			this.logger_.error("Error reading form file " + formfile + ": " + err);
-		}		
+			return err as Error ;
+		}	
+		
+		return undefined ;
 	}
 
 	public checkMisnamedTags() : TagInformation[] {
@@ -728,7 +778,7 @@ export class FormManager extends Manager {
 		return tinfo ;
 	}
 
-	checkForms() {
+	public checkForms() {
 		if (this.info_.teamform_ && this.info_.teamform_.length > 0) {
 			let form = path.join(this.location_, this.info_.teamform_);
 			if (!fs.existsSync(form)) {

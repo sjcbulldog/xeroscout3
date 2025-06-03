@@ -37,12 +37,12 @@ export class TextControl extends FormControl {
         return new TextControl(this.view, this.item.tag, this.bounds) ;
     }    
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCTextItem ;
             let ctrl = this.ctrl as HTMLInputElement ;
 
-            this.setPosition(xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff) ;
             
             if (editing) {
                 ctrl.value = item.placeholder ;
@@ -67,11 +67,11 @@ export class TextControl extends FormControl {
         input.disabled = true ;
 
         this.ctrl = input ;
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement, xoff: number, yoff: number) : void {
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number) : void {
         let input = document.createElement('input') ;
         this.setClassList(input, 'scout') ;
         this.ctrl = input ;
@@ -88,7 +88,7 @@ export class TextControl extends FormControl {
             input.type = 'text' ;
         }
 
-        this.updateFromItem(false, xoff, yoff) ;
+        this.updateFromItem(false, scale, xoff, yoff) ;
         parent.appendChild(this.ctrl);
     }
 

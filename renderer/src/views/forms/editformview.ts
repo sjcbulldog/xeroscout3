@@ -13,7 +13,7 @@ import { MultipleChoiceControl  } from "./controls/choicectrl.js";
 import { SelectControl  } from "./controls/selectctrl.js";
 import { TimerControl  } from "./controls/timerctrl.js";
 import { XeroLogger  } from "../../utils/xerologger.js";
-import { IPCFormItem, IPCSection  } from "../../ipc.js";
+import { IPCFormItem, IPCSection, IPCTablet  } from "../../ipc.js";
 import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import { XeroFormEditSectionPage } from "./editpage.js";
 import { BoxControl } from "./controls/boxctrl.js";
@@ -23,7 +23,8 @@ import { KeybindingManager } from "./keybindings.js";
 import { KeybindingDialog } from "./dialogs/keybindingdialog.js";
 import { TextAreaControl } from "./controls/textareactrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
-import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoMoveResizeArgs, UndoMoveSectionArgs, UndoRenameSectionArgs, UndoStackEntry } from "./undo.js";
+import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoLockContorlArgs, UndoMoveResizeArgs, UndoMoveSectionArgs, UndoRenameSectionArgs, UndoStackEntry } from "./undo.js";
+import { TabletDB } from "../../tabletdb.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' | 'area-select';
 
@@ -32,6 +33,7 @@ export class XeroEditFormView extends XeroView {
     private static kSelectSameSpot = 5 ;
 
     private static kDefaultMiddleText = 'Right Click For Menu, F1 for keybindings' ;
+    private static kCustomTabletName = 'Custom' ;
 
     private instance_id_ : number = -1 ; 
 
@@ -48,12 +50,12 @@ export class XeroEditFormView extends XeroView {
     private titlediv_? : HTMLDivElement ;
     private sizediv_? : HTMLDivElement
     private tabdiv_? : HTMLElement ;
-    private size_select_? : HTMLSelectElement ;
+    private tablet_select_? : HTMLSelectElement ;
     private label_x_? : HTMLLabelElement ;
     private enter_x_? : HTMLInputElement ;
     private label_y_? : HTMLLabelElement ;
     private enter_y_? : HTMLInputElement ;
-    private rightdiv_? : HTMLDivElement ;
+    private change_? : HTMLButtonElement ;
     private area_select_div? : HTMLElement ;
     private area_select_start_? : XeroPoint ;
 
@@ -67,7 +69,6 @@ export class XeroEditFormView extends XeroView {
     private undo_stack_ : UndoStackEntry[] = [] ;
 
     private type_: string ;
-    private form_size_ : XeroSize = new XeroSize(0, 0) ;
     private ctrl_menu_ : XeroPopupMenu ;
     private form_? : FormObject ;
     private selected_ctrls_ : FormControl[] = [] ;
@@ -100,6 +101,8 @@ export class XeroEditFormView extends XeroView {
     private paste_bind_? : (e: ClipboardEvent) => void ;
     private focusbind_? : (e: FocusEvent) => void ;
     private blurbind_? : (e: FocusEvent) => void ;
+
+    private ignore_resize_ : boolean = false ;
 
     constructor(app: XeroApp, type: any) {
         super(app, 'xero-form-view') ;
@@ -246,7 +249,7 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('F1', false, false, false, 'Show key bindings', this.showKeyBindings.bind(this));
 
         this.keybindings_.addKeybinding('l', false, false, false, 'Lock the highlighted control', this.lockControl.bind(this));
-        this.keybindings_.addKeybinding('u', false, false, false, 'Unlock all controls', this.unlockAllControls.bind(this));
+        this.keybindings_.addKeybinding('u', false, false, false, 'Unlock any locked controls under the cursor', this.unlockLockedControlsUnderCursor.bind(this));
       
         this.keybindings_.addKeybinding('L', true, false, true, 'Shift the current section left', this.shiftSectionLeft.bind(this));
         this.keybindings_.addKeybinding('R', true, false, true, 'Shift the current section right', this.shiftSectionRight.bind(this));
@@ -310,15 +313,31 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('F11', false, false, false, 'Insert a new image control', this.addNewImageCtrl.bind(this));
     }
 
-    private unlockAllControls() {
+    private unlockLockedControlsUnderCursor() {
         if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
-            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].unlockAllControls() ;
+            let ctrls = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlsByPosition(this.cursor_, true) ;
+            for(let ctrl of ctrls) {
+                if (ctrl.locked) {
+                    ctrl.locked = false ;
+                    let args : UndoLockContorlArgs = {
+                        formctrl: ctrl,
+                        oldlocked: true
+                    } ;
+                    this.modified(new UndoStackEntry('lock', 'control', args)) ;
+                }
+            }
         }
     }
 
     private lockControl() {
         if (this.highlighted_ctrl_) {
             this.highlighted_ctrl_.locked = true ;
+            let args : UndoLockContorlArgs = {
+                formctrl: this.highlighted_ctrl_,
+                oldlocked: false
+            } ;
+            this.modified(new UndoStackEntry('lock', 'control', args)) ;
+            this.unhighlight() ;            
         }
     }
 
@@ -482,6 +501,8 @@ export class XeroEditFormView extends XeroView {
             this.createSectionPages() ;
             this.setCurrentSectionByIndex(0) ;
         }
+
+        this.setTargetTablet(this.form_.json.tablet) ;
     }
 
     private createSectionPages() {
@@ -573,7 +594,7 @@ export class XeroEditFormView extends XeroView {
     }
 
     private createSectionPageObject(section: IPCSection) : XeroFormEditSectionPage { 
-        let page = new XeroFormEditSectionPage(section.name, this.form_size_) ;
+        let page = new XeroFormEditSectionPage(section.name, this.form_!.json.tablet.size) ;
         this.updateControls(section, page) ;     
 
         return page ;
@@ -659,7 +680,6 @@ export class XeroEditFormView extends XeroView {
     private modified(undo: UndoStackEntry) : void {
         if (this.form_) {
             this.undo_stack_.push(undo) ;
-            this.form_.resetImages() ;
             this.request('save-form', { type: this.type_, contents: this.form_.json}) ;
         }
     }
@@ -670,57 +690,81 @@ export class XeroEditFormView extends XeroView {
         //
         if (this.tabbed_ctrl_ && this.tabbed_ctrl_.selectedPageNumber !== -1) {
             let page = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber] ;
-            page.setPageSize(this.form_size_) ;
+            page.setPageSize(this.form_!.json.tablet.size) ;
             this.doLayout(this.tabbed_ctrl_!.selectedPageNumber) ;
         }
-        this.rightdiv_!.innerText = `Page Size: ${this.form_size_.width} x ${this.form_size_.height}` ;
     }
 
-    private sizeChanged() {        
-        let name = this.size_select_!.value ;
-        this.setDisplay(name) ;
+    private setTargetTablet(tablet: IPCTablet, setModified: boolean = true) {
+        if (tablet && tablet.name) {
+            this.tablet_select_!.value = tablet.name ;
+            this.enter_x_!.value = tablet.size.width.toString() ;
+            this.enter_y_!.value = tablet.size.height.toString() ;
+            this.targetTabletChanged(setModified) ;
+        }
+    }
 
-        if (name === 'custom') {
-            this.otherSizeChanged() ;
+    //
+    // This is called when the select (pull down) menu for the form size changes
+    //
+    private targetTabletChanged(setModified: boolean = true) {
+        let name = this.tablet_select_!.value ;
+        if (name === XeroEditFormView.kCustomTabletName) {
+            this.enter_x_!.disabled = false ;
+            this.enter_y_!.disabled = false ;
+            this.change_!.disabled = false ;
+
+            let old = JSON.parse(JSON.stringify(this.form_!.json.tablet)) ;
+            this.form_!.json.tablet = {
+                name: XeroEditFormView.kCustomTabletName,
+                size: {
+                    width: parseInt(this.enter_x_!.value),
+                    height: parseInt(this.enter_y_!.value)
+                }
+            }
+            if (setModified) {
+                this.modified(new UndoStackEntry('edit', 'tablet', old)) ;
+            }            
         }
         else {
-            this.updatePageSize() ;
+            let tab = TabletDB.getTablet(name) ;
+            if (tab) {
+                let old = JSON.parse(JSON.stringify(this.form_!.json.tablet)) ;
+                this.form_!.json.tablet = tab ;   
+                if (setModified) {
+                    this.modified(new UndoStackEntry('edit', 'tablet', old)) ;
+                }
+
+                this.ignore_resize_ = true ;
+                this.enter_x_!.value = tab.size.width.toString() ;
+                this.enter_y_!.value = tab.size.height.toString() ;
+                this.ignore_resize_ = false ;
+
+                this.enter_x_!.disabled = true ;
+                this.enter_y_!.disabled = true ;
+                this.change_!.disabled = true ;
+            }
         }
+        this.updatePageSize() ; ;
     }
 
-    private setDisplay(name: string) {
-        switch(name) {
-            case 'dell':
-                this.form_size_ = new XeroSize(1292, 777) ;
-                this.updatePageSize() ;
-                this.enter_x_!.disabled = true ;
-                this.enter_x_!.value = '' ;
-                this.enter_y_!.disabled = true ;
-                this.enter_y_!.value = '' ;
-                break ;
-            case 'surface':
-                this.form_size_ = new XeroSize(1075, 1028) ;
-                this.updatePageSize() ;    
-                this.enter_x_!.disabled = true ;
-                this.enter_x_!.value = '' ;
-                this.enter_y_!.disabled = true ;
-                this.enter_y_!.value = '' ;
-                break ;
-            case 'custom':
-                this.enter_x_!.disabled = false ;
-                this.enter_x_!.value = this.form_size_.width.toString() ;
-                this.enter_y_!.disabled = false ;
-                this.enter_y_!.value = this.form_size_.height.toString() ;
-                this.updatePageSize() ;                   
-                return ;
+    private customFormSizeChanged() {    
+        if (this.ignore_resize_) {
+            return ;
         }
-    }
 
-    private otherSizeChanged() {
         let x = parseInt(this.enter_x_!.value) ;
         let y = parseInt(this.enter_y_!.value) ;
         if (!isNaN(x) && !isNaN(y)) {
-            this.form_size_ = new XeroSize(x, y) ;
+            let old = JSON.parse(JSON.stringify(this.form_!.json.tablet)) ;            
+            this.form_!.json.tablet = {
+                name: XeroEditFormView.kCustomTabletName,
+                size: {
+                    width: x,
+                    height: y
+                }
+            }
+            this.modified(new UndoStackEntry('edit', 'tablet', old)) ;
             this.updatePageSize() ;
         }
         else {
@@ -740,32 +784,27 @@ export class XeroEditFormView extends XeroView {
         this.sizediv_.className = 'xero-form-size-div' ;
         this.topdiv_.append(this.sizediv_) ;
 
-        this.size_select_ = document.createElement('select') ;
-        this.size_select_.className = 'xero-form-size-select' ;
-        this.size_select_.addEventListener('change', this.sizeChanged.bind(this)) ;
+        this.tablet_select_ = document.createElement('select') ;
+        this.tablet_select_.className = 'xero-form-size-select' ;
+        this.tablet_select_.addEventListener('change', this.targetTabletChanged.bind(this, true)) ;
+
+        for(let tab of TabletDB.getTabletNames()) {
+            option = document.createElement('option') ;
+            option.value = tab ;
+            option.innerText = tab ;
+            this.tablet_select_.append(option) ;
+        }
 
         option = document.createElement('option') ;
-        option.value = 'dell' ;
-        option.innerText = 'Dell Tablet' ;
-        this.size_select_.append(option) ;
-
-        option = document.createElement('option') ;
-        option.value = 'surface' ;
-        option.innerText = 'Microsoft Surface' ;
-        this.size_select_.append(option) ;
-        this.sizediv_.append(this.size_select_) ;
-
-        option = document.createElement('option') ;
-        option.value = 'custom' ;
-        option.innerText = 'Custom' ;
-        this.size_select_.append(option) ;
-        this.sizediv_.append(this.size_select_) ;
+        option.value = XeroEditFormView.kCustomTabletName ;
+        option.innerText = 'Custom Size' ;
+        this.tablet_select_.append(option) ;
+        this.sizediv_.append(this.tablet_select_) ;
 
         this.enter_x_ = document.createElement('input') ;
         this.enter_x_.type = 'number' ;
         this.enter_x_.className = 'xero-form-enter-coord' ;
         this.enter_x_.placeholder = 'X Value' ;
-        this.enter_x_.addEventListener('change', this.otherSizeChanged.bind(this)) ;
         
         this.label_x_ = document.createElement('label') ;
         this.label_x_.className = 'xero-form-coord-label' ;
@@ -778,7 +817,6 @@ export class XeroEditFormView extends XeroView {
         this.enter_y_.type = 'number' ;
         this.enter_y_.className = 'xero-form-enter-coord' ;
         this.enter_y_.placeholder = 'Y Value' ;
-        this.enter_y_.addEventListener('change', this.otherSizeChanged.bind(this)) ;
 
         this.label_y_ = document.createElement('label') ;
         this.label_y_.className = 'xero-form-coord-label' ;
@@ -787,15 +825,17 @@ export class XeroEditFormView extends XeroView {
         this.label_y_.append(this.enter_y_) ;
         this.enter_y_.disabled = true ;
 
+        this.change_ = document.createElement('button') ;
+        this.change_.className = 'xero-form-change-button' ;
+        this.change_.innerText = 'Change' ;
+        this.change_.addEventListener('click', this.customFormSizeChanged.bind(this)) ;
+        this.sizediv_.append(this.change_) ;
+
         this.titlediv_ = document.createElement('div') ;
         this.titlediv_.className = 'xero-form-title-div' ;
         let tname = this.type_.charAt(0).toUpperCase() + this.type_.slice(1) ;
         this.titlediv_.innerText = tname + ' Form' ;
         this.topdiv_.append(this.titlediv_) ;
-
-        this.rightdiv_ = document.createElement('div') ;
-        this.rightdiv_.className = 'xero-form-right-div' ;
-        this.topdiv_.append(this.rightdiv_) ;
 
         this.tabdiv_ = document.createElement('div') ;
         this.tabdiv_.className = 'xero-form-tab-div' ;
@@ -811,9 +851,6 @@ export class XeroEditFormView extends XeroView {
         this.tabbed_ctrl_.on('beforeSelectPage', this.beforeSectionChanged.bind(this)) ;
         this.tabbed_ctrl_.on('afterSelectPage', this.afterSectionChanged.bind(this)) ;
         this.tabbed_ctrl_.setParent(this.tabdiv_) ;
-
-        this.size_select_!.value = 'surface' ;
-        this.setDisplay(this.size_select_!.value) ;
     }
 
     private focus(ev: FocusEvent) : void {
@@ -1042,12 +1079,19 @@ export class XeroEditFormView extends XeroView {
                 return ;
             }
 
+            let args : UndoMoveResizeArgs[] = [] ;
             for(let frmctrl of this.selected_ctrls_) {
+                let arg : UndoMoveResizeArgs = {
+                    formctrl: frmctrl,
+                    oldbounds: new XeroRect(frmctrl.item.x, frmctrl.item.y, frmctrl.item.width, frmctrl.item.height)
+                } ;    
+                args.push(arg) ;            
                 frmctrl.item.x += dx ;
                 frmctrl.item.y += dy ;
                 frmctrl.positionUpdated() ;
                 this.displayMiddleBar() ;
             }
+            this.modified(new UndoStackEntry('move', 'control', args)) ;
         }
     }
 
@@ -1057,12 +1101,19 @@ export class XeroEditFormView extends XeroView {
             return ;
         }
 
+        let args : UndoMoveResizeArgs[] = [] ;
         for(let frmctrl of this.selected_ctrls_) {
+            let arg : UndoMoveResizeArgs = {
+                formctrl: frmctrl,
+                oldbounds: new XeroRect(frmctrl.item.x, frmctrl.item.y, frmctrl.item.width, frmctrl.item.height)
+            } ;    
+            args.push(arg) ;                
             frmctrl.item.width += dw ;
             frmctrl.item.height += dh ;
             frmctrl.positionUpdated() ;
             this.displayMiddleBar() ;
         }
+        this.modified(new UndoStackEntry('move', 'control', args)) ;
     }    
 
     private deleteControls(ctrls: FormControl[], save: boolean = true) {
@@ -2073,7 +2124,7 @@ export class XeroEditFormView extends XeroView {
             let items = undo.item as unknown as UndoEditArgs[] ;
             for(let item of items) {
                 item.formctrl.update(item.olditem) ;
-                item.formctrl.updateFromItem(true, 0, bounds.top) ;
+                item.formctrl.updateFromItem(true, 1.0, 0, bounds.top) ;        //' TODO: check me
             }
         }
         else if (undo.oper === 'add' && undo.obj === 'section') {
@@ -2097,10 +2148,17 @@ export class XeroEditFormView extends XeroView {
                 this.moveSectionInternal(item.page + 1, true, false) ;
             }
         }
+        else if (undo.oper === 'lock' && undo.obj === 'control') {
+            let item = undo.item as unknown as UndoLockContorlArgs ;
+            item.formctrl.locked = item.oldlocked ;
+        }
+        else if (undo.oper === 'edit' && undo.obj === 'tablet') {
+            let tab = undo.item as unknown as IPCTablet ;
+            this.setTargetTablet(tab, false) ;
+        }
 
         this.request('save-form', { type: this.type_, contents: this.form_.json}) ;       
     }
-
 
     private onResize(entries: ResizeObserverEntry[]) : void {
         for(let entry of entries) {

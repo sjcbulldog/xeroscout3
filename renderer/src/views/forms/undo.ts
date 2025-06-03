@@ -1,4 +1,4 @@
-import { IPCFormItem, IPCSection } from "../../ipc.js";
+import { IPCFormItem, IPCSection, IPCTablet } from "../../ipc.js";
 import { XeroRect } from "../../widgets/xerogeom.js";
 import { FormControl } from "./controls/formctrl.js";
 
@@ -32,8 +32,13 @@ export type UndoDeleteSectionArgs = {
     index: number ;
 }
 
-export type UndoOperType = 'add' | 'delete' | 'edit' | 'rename' | 'move' ;
-export type UndoObjType = 'section' | 'control' | 'image' ;
+export type UndoLockContorlArgs = {
+    formctrl: FormControl ;
+    oldlocked: boolean ;
+}
+
+export type UndoOperType = 'add' | 'delete' | 'edit' | 'rename' | 'move' | 'lock' ;
+export type UndoObjType = 'section' | 'control' | 'image' | 'tablet';
 export type UndoObjDataType = 
         FormControl[] |                     // Add control
         UndoDeleteSectionArgs |             // Delete section
@@ -42,7 +47,9 @@ export type UndoObjDataType =
         UndoMoveSectionArgs |               // Move section
         UndoEditArgs[] |                    // Edit control
         UndoMoveResizeArgs[] |              // Move control
-        string ;                            // Add section, 
+        IPCTablet |                         // Change target tablet
+        string |                            // Add section, 
+        UndoLockContorlArgs ;               // Lock control 
 
 export class UndoStackEntry {
     public readonly oper: UndoOperType ;

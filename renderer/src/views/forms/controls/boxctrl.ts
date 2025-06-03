@@ -40,10 +40,10 @@ export class BoxControl extends FormControl {
         return new BoxControl(this.view, this.item.tag, this.bounds) ;
     }
 
-    public updateFromItem(editing: boolean, xoff: number, yoff: number) : void {
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl && this.box_ctrl_) {
             let item = this.item as IPCBoxItem ;
-            this.setPosition(xoff, yoff, 900) ;
+            this.setPosition(scale, xoff, yoff, 900) ;
 
             this.box_ctrl_.style.borderWidth = item.borderWidth + 'px' ;
             this.box_ctrl_.style.borderStyle = item.borderStyle ;
@@ -68,12 +68,12 @@ export class BoxControl extends FormControl {
         this.setClassList(this.box_ctrl_, 'edit', 'box') ;
         this.ctrl.appendChild(this.box_ctrl_) ;
 
-        this.updateFromItem(true, xoff, yoff) ;
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
-    public createForScouting(parent: HTMLElement, xoff: number, yoff:number) : void {
-        super.createForScouting(parent, xoff, yoff) ;
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff:number) : void {
+        super.createForScouting(parent, xoff, yoff, scale) ;
         this.ctrl = document.createElement('div') ;
         this.setClassList(this.ctrl, 'scout') ;
 
@@ -81,7 +81,7 @@ export class BoxControl extends FormControl {
         this.setClassList(this.box_ctrl_, 'scout', 'box') ;      
         this.ctrl.appendChild(this.box_ctrl_) ;  
 
-        this.updateFromItem(false, xoff, yoff) ;
+        this.updateFromItem(false, scale, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
 
