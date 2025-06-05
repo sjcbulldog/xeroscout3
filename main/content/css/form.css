@@ -498,6 +498,16 @@
     grid-column-end: 1;
 }
 
+.xero-form-title {
+    text-align: center;
+    font-size: 36px;
+    font-family: Arial;
+    font-weight: bold;
+    grid-column-start: 2;
+    grid-column-end: 2;    
+    justify-content: center ;    
+}
+
 .xero-form-title-div {
     text-align: center;
     font-size: 36px;

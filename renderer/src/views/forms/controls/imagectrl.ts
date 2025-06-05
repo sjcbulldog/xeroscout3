@@ -51,6 +51,10 @@ export class ImageControl extends FormControl {
         }
     }
 
+    public get field() : boolean {
+        return (this.item as IPCImageItem).field ;
+    }
+
     public setImageData(image: string) : void {
         if (this.image_) {
             this.image_.src = `data:image/png;base64,${image}`

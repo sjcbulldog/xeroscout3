@@ -1,6 +1,7 @@
 import { XeroSize } from "../../widgets/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
+import { ImageControl } from "./controls/imagectrl.js";
 import { XeroEditFormView } from "./editformview.js";
 
 export class XeroFormScoutSectionPage extends XeroWidget {
@@ -9,11 +10,15 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private observer_ : ResizeObserver ;
     private size_ : XeroSize ;
     private scale_ : number = 1.0 ;
+    private reversed_ : boolean = false ;
+    private color_: string = 'blue' ;
 
-    public constructor(formsize: XeroSize) {
+    public constructor(formsize: XeroSize, color: string, reversed: boolean) {
         super('div', 'xero-form-section-page') ;
 
         this.size_ = formsize ;
+        this.color_ = color ;
+        this.reversed_ = reversed ;
 
         this.formdiv_ = document.createElement('div') ;
         this.formdiv_.className = 'xero-form-section-scout-page-form' ;
@@ -61,9 +66,41 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         return new XeroSize(fbounds.left - bounds.left, fbounds.top) ;
     }
 
+    private isOverField(control: FormControl) : FormControl | undefined {
+        let bounds = control.bounds ;
+
+        for(let ctrl of this.controls_) {
+            if (ctrl !== control && ctrl.item.type === 'image') {
+                let imgctrl = ctrl as ImageControl ;
+                if (imgctrl.field && imgctrl.bounds.intersects(bounds)) {
+                    return imgctrl ;
+                }
+            }
+        }
+        return undefined ;
+    }
+
     private addControlToLayout(control: FormControl) : void {
         let offset = this.getPlaceOffset() ;
+        let image = this.isOverField(control) ;
+        if (image && this.color_ !== 'blue') {
+            let dl = control.bounds.left - image.bounds.left ;
+            let x2 = image.bounds.right - dl - control.bounds.width ;
+            let dx = x2 - control.bounds.left ;
+            console.log(`Control ${control.item.tag} overlaps with field control ${image.item.tag}`) ;
+            console.log(`    Control bounds: ${control.bounds}`) ;
+            console.log(`    Image bounds: ${image.bounds}`) ;
+            console.log(`    x2 ${x2}, dx ${dx}`) ;       
+            offset = new XeroSize(offset.width + dx, offset.height) ;
+        }
         control.createForScouting(this.formdiv_, this.scale_, offset.width, offset.height) 
+
+        if (control.item.type === 'image') {
+            let imgctrl = control as ImageControl ;
+            if (imgctrl.field) {
+                imgctrl.tempMirrorX = this.reversed_ ;
+            }
+        }
     }
 
     private resized(entries: ResizeObserverEntry[]) : void {
