@@ -25,6 +25,7 @@ import { TextAreaControl } from "./controls/textareactrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
 import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoLockContorlArgs, UndoMoveResizeArgs, UndoMoveSectionArgs, UndoRenameSectionArgs, UndoStackEntry } from "./undo.js";
 import { TabletDB } from "../../tabletdb.js";
+import { RulesEngine } from "../../rulesengine.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' | 'area-select';
 
@@ -43,6 +44,7 @@ export class XeroEditFormView extends XeroView {
     private static shiftCtrlMoveControlAmount = 250 ;
 
     private keybindings_ : KeybindingManager = new KeybindingManager() ;
+    private rules_engine_? : RulesEngine ;
 
     private tabbed_ctrl_? : XeroTabbedWidget ;
     private section_pages_ : XeroFormEditSectionPage[] = [] ;
@@ -248,6 +250,7 @@ export class XeroEditFormView extends XeroView {
     private initKeybindings() {
         this.keybindings_.addKeybinding('F1', false, false, false, 'Show key bindings', this.showKeyBindings.bind(this));
 
+        this.keybindings_.addKeybinding('e', false, false, false, 'Display errors on selected controls', this.showErrors.bind(this));
         this.keybindings_.addKeybinding('l', false, false, false, 'Lock the highlighted control', this.lockControl.bind(this));
         this.keybindings_.addKeybinding('u', false, false, false, 'Unlock any locked controls under the cursor', this.unlockLockedControlsUnderCursor.bind(this));
       
@@ -311,6 +314,25 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('F9', false, false, false, 'Insert a new select control', this.addNewSelectCtrl.bind(this));
         this.keybindings_.addKeybinding('F10', false, false, false, 'Insert a new timer control', this.addNewTimerCtrl.bind(this));
         this.keybindings_.addKeybinding('F11', false, false, false, 'Insert a new image control', this.addNewImageCtrl.bind(this));
+    }
+
+    private showErrors() {
+        let text = '' ;
+        for(let ctrl of this.selected_ctrls_) {
+            if (ctrl.errors.length > 0) {
+                for(let err of ctrl.errors) {
+                    if (text.length > 0) {
+                        text += '<br>' ;
+                    }
+                    text += `${err}` ;
+                }
+            }
+        }
+
+        this.app.messageOverlay!.setTitle('Errors on Selected Controls') ;
+        this.app.messageOverlay!.setText(true, text) ;
+        this.app.messageOverlay!.setVisible(true) ;
+        this.app.messageOverlay!.setCloseButtonVisible(true) ;
     }
 
     private unlockLockedControlsUnderCursor() {
@@ -492,10 +514,18 @@ export class XeroEditFormView extends XeroView {
         else {
             alert('You cannot create a timer control without a section. Use the "Section" menu to add a section first.') ;
         }        
-    }     
+    }
+
+    private updateErrors(tag: string, errors: string[]) {
+        this.findControlByTag(tag)?.setErrors(errors) ;
+    }
 
     private receivedForm(args: any) {
-        this.form_ = new FormObject(args.form) ;        
+        this.form_ = new FormObject(args.form) ;
+        this.rules_engine_ = new RulesEngine(this.form_.json) ;
+        this.rules_engine_.on('errors', this.updateErrors.bind(this)) ;
+        this.rules_engine_.start(10) ;
+
         this.initDisplay() ;
         if (this.form_.sections.length) {
             this.createSectionPages() ;
@@ -681,6 +711,7 @@ export class XeroEditFormView extends XeroView {
         if (this.form_) {
             this.undo_stack_.push(undo) ;
             this.request('save-form', { type: this.type_, contents: this.form_.json}) ;
+            this.rules_engine_!.dirty = true ;
         }
     }
 
@@ -1166,12 +1197,8 @@ export class XeroEditFormView extends XeroView {
 
     private unselectCurrent(frmctrl: FormControl) {
         if (frmctrl) {
-            if (frmctrl.ctrl) {
-                let ctrl = frmctrl.ctrl ;
-                ctrl.style.border = 'none' ;
-                ctrl.style.margin = '4px' ;
-                this.dragging_ = 'none' ;
-            }
+            frmctrl.displayStyle = 'none' ;
+            this.dragging_ = 'none' ;
             let index = this.selected_ctrls_.indexOf(frmctrl) ;
             this.selected_ctrls_.splice(index, 1) ;
         }
@@ -2169,4 +2196,15 @@ export class XeroEditFormView extends XeroView {
             }
         }
     }      
+
+    private findControlByTag(tag: string) : FormControl | undefined {
+        for(let page of this.section_pages_) {
+            for(let ctrl of page.controls) {
+                if (ctrl.item && ctrl.item.tag === tag) {
+                    return ctrl ;
+                }
+            }
+        }
+        return undefined ;
+    }
 }

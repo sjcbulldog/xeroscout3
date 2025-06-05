@@ -1,6 +1,6 @@
 import {  XeroWidget  } from "../widgets/xerowidget.js";
 
-export class StatusOverlay extends XeroWidget {
+export class MessageOverlay extends XeroWidget {
     private static status_height_ = 300;
 
     private text_msg_: string = '';
@@ -17,6 +17,7 @@ export class StatusOverlay extends XeroWidget {
         super('div', 'xero-status-overlay');
 
         this.parent_ = parent ;
+        this.elem.style.zIndex = '2000' ;
 
         this.registerCallback('set-status-visible', this.setVisible.bind(this));
         this.registerCallback('set-status-text', this.setText.bind(this, false));
@@ -80,9 +81,9 @@ export class StatusOverlay extends XeroWidget {
             let bounds = this.parent_.elem.getBoundingClientRect() ;
 
             this.elem.style.left = `${bounds.left}px` ;
-            this.elem.style.top = `${bounds.bottom - StatusOverlay.status_height_}px`
+            this.elem.style.top = `${bounds.bottom - MessageOverlay.status_height_}px`
             this.elem.style.width = `${bounds.width}px` ;
-            this.elem.style.height = `${StatusOverlay.status_height_}px` ;
+            this.elem.style.height = `${MessageOverlay.status_height_}px` ;
         }
         else {
             this.elem.classList.remove('xero-status-overlay-visible');

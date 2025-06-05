@@ -23,17 +23,32 @@ export class ImageControl extends FormControl {
         fontWeight: 'normal',
         fontStyle: 'normal',
         datatype: 'null',
-        transparent: true
+        transparent: true,
+        field: false,
+        mirrorx: false,
+        mirrory: false,
     } ;
 
     private image_? : HTMLImageElement ;
     private image_src_ : ImageDataSource;
+    private tempMirrorX_ : boolean = false ;
 
     constructor(imsrc: ImageDataSource, view: XeroView, tag: string, bounds: XeroRect) {
         super(view, ImageControl.item_desc_) ;
         this.setTag(tag) ;
         this.setBounds(bounds) ;
         this.image_src_ = imsrc ;
+    }
+
+    public get tempMirrorX() : boolean {
+        return this.tempMirrorX_ ;
+    }
+
+    public set tempMirrorX(mirror: boolean) {
+        if (mirror != this.tempMirrorX_) {
+            this.tempMirrorX_ = mirror ;
+            this.updateImageScale() ;
+        }
     }
 
     public setImageData(image: string) : void {
@@ -57,6 +72,8 @@ export class ImageControl extends FormControl {
                             item.image = data.newname ;
                         }
                         this.setImageData(data.data) ;
+                        this.updateImageScale() ;
+     
                     }
                 }) ;
             this.setPosition(scale, xoff, yoff) ;
@@ -97,4 +114,25 @@ export class ImageControl extends FormControl {
 
     public setData(data:IPCTypedDataValue) : void {
     }    
+
+    private updateImageScale() : void {
+        let item = this.item as IPCImageItem ;        
+        if (this.effectiveMirrorX() && !item.mirrory) {
+            this.image_!.style.transform = 'scaleX(-1)' ;
+        }
+        else if (!this.effectiveMirrorX() && item.mirrory) {
+            this.image_!.style.transform = 'scaleY(-1)' ;
+        }
+        else if (this.effectiveMirrorX() && item.mirrory) {
+            this.image_!.style.transform = 'scaleX(-1) scaleY(-1)' ;
+        }
+        else {
+            this.image_!.style.transform = '' ;
+        }  
+    }    
+
+    private effectiveMirrorX() : boolean {
+        let item = this.item as IPCImageItem ;
+        return this.tempMirrorX_ !== item.mirrorx ;
+    }
 }

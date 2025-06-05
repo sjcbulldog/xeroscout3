@@ -41,7 +41,6 @@ export abstract class XeroDialog extends EventEmitter {
         this.parent_ = win ;
         this.prePlaceInit() ;
 
-
         let pbounds = win.getBoundingClientRect() ;
         let dbounds = this.popup_!.getBoundingClientRect() ;
         let obounds = this.popup_!.offsetParent!.getBoundingClientRect() ;
@@ -63,6 +62,7 @@ export abstract class XeroDialog extends EventEmitter {
     private prePlaceInit() {
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-form-edit-dialog' ;
+        this.popup_.style.zIndex = '1100' ;
 
         this.topbar_ = document.createElement('div') ;
         this.topbar_.className = 'xero-popup-form-edit-dialog-topbar' ;

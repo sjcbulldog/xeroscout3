@@ -1,4 +1,4 @@
-import {  IPCFormItem, IPCTypedDataValue  } from "../../../ipc.js";
+import {  IPCFormControlType, IPCFormItem, IPCTypedDataValue  } from "../../../ipc.js";
 import {  XeroPoint, XeroRect, XeroSize  } from "../../../widgets/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -16,10 +16,40 @@ export abstract class FormControl {
     private origional_bounds_? : XeroRect ;
     private offset_? : XeroPoint ;
     private style_ : FormDisplayStyle = 'none' ;
+
+    private errors_ : string[] = [] ;
+    private blink_timer_?: NodeJS.Timeout ;
+    private blink_state_ = false ;
     
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
         this.view_ = view ;
+    }
+
+    public get type() : IPCFormControlType {
+        return this.item_.type ;
+    }
+
+    public clearErrors() {
+        this.errors_ = [] ;
+    }
+
+    public get errors() : string[] {
+        return this.errors_ ;
+    }
+
+    public setErrors(errors: string[]) {
+        this.errors_ = [...errors] ;
+        if (this.ctrl_ && this.style_ === 'none') {
+            this.ctrl_.style.borderStyle = 'solid' ;
+            this.ctrl_.style.borderWidth = '4px' ;
+            this.ctrl_.style.borderColor = 'red' ;
+            this.ctrl_.style.margin = '0px' ;
+            if (this.blink_timer_ === undefined) {
+                this.blink_state_ = true ;
+                this.blink_timer_ = setInterval(this.blink.bind(this), 1000) ;
+            }
+        }
     }
 
     public get locked() : boolean {
@@ -69,10 +99,28 @@ export abstract class FormControl {
     public set displayStyle(style: FormDisplayStyle) {
         this.style_ = style ;
         if (this.ctrl_) {
+
             switch (style) {
                 case 'none':
-                    this.ctrl_.style.border = 'none' ;
-                    this.ctrl_.style.margin = '4px' ;
+                    if (this.errors_.length > 0) {
+                        this.ctrl_.style.borderStyle = 'solid' ;
+                        this.ctrl_.style.borderWidth = '4px' ;
+                        this.ctrl_.style.borderColor = 'red' ;
+                        this.ctrl_.style.margin = '0px' ;
+                        if (this.blink_timer_ === undefined) {
+                            this.blink_state_ = true ;
+                            this.blink_timer_ = setInterval(this.blink.bind(this), 1000) ;
+                        }
+                    }
+                    else {
+                        if (this.blink_timer_) {
+                            clearInterval(this.blink_timer_) ;
+                            this.blink_timer_ = undefined ;
+                            this.blink_state_ = false ;
+                        }
+                        this.ctrl_.style.border = 'none' ;
+                        this.ctrl_.style.margin = '4px' ;
+                    }
                     break ;
                 case 'selected':
                     this.ctrl_.style.borderStyle = 'solid' ;
@@ -93,6 +141,20 @@ export abstract class FormControl {
                     this.ctrl_.style.margin = '0px' ;                    
                     break ;
             }
+        }
+    }
+
+    private blink() {
+        if (this.ctrl_ && this.style_ === 'none' && this.errors_.length > 0) {
+            if (this.blink_state_) {
+                this.ctrl_.style.border = 'none' ;
+                this.ctrl_.style.margin = '4px' ;
+            } else {
+                this.ctrl_.style.borderStyle = 'solid' ;
+                this.ctrl_.style.borderWidth = '4px' ;
+                this.ctrl_.style.borderColor = 'red' ;
+            }
+            this.blink_state_ = !this.blink_state_ ;
         }
     }
 
@@ -239,13 +301,6 @@ export abstract class FormControl {
     public abstract createEditDialog() : EditFormControlDialog ;
     public abstract getData() : IPCTypedDataValue | undefined ;
     public abstract setData(data: any) : void ;
-
-    public scale(xscale: number, yscale: number) : void {
-        this.item_.x = Math.round(this.item_.x * xscale) ;
-        this.item_.y = Math.round(this.item_.y * yscale) ;
-        this.item_.width = Math.round(this.item_.width * xscale) ;
-        this.item_.height = Math.round(this.item_.height * yscale) ;
-    }
 
     protected abstract copyObject() : FormControl ;
 

@@ -1,7 +1,5 @@
-import {  EditFormControlDialog  } from "./editformctrldialog.js";
-import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCSelectItem  } from "../../../ipc.js";
-import { ColumnDefinition, TabulatorFull } from "tabulator-tables";
+import { FormControl  } from "../controls/formctrl.js";
+import { IPCSelectItem  } from "../../../ipc.js";
 import { EditWithItemsDialog } from "./editwithitemsdialog.js";
 
 export class EditSelectDialog extends EditWithItemsDialog {

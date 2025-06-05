@@ -395,6 +395,8 @@ xero-status-overlay-close-visible {
     flex-grow:1;
     border: 1px solid black;
     font-size: 18px;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .xero-team-status {

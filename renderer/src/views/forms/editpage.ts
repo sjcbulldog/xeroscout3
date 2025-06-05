@@ -95,6 +95,24 @@ export class XeroFormEditSectionPage extends XeroWidget {
         return ret ;
     }    
 
+    public findInterectingControls(ctrl: FormControl, filter?: (c: FormControl) => boolean) : FormControl[] {
+        let ret : FormControl[] = [] ;
+        for(let entry of this.controls_) {
+            if (entry === ctrl || entry.ctrl === undefined || entry.locked) {
+                continue ;
+            }
+
+            if (filter && !filter(entry)) {
+                continue ;
+            }
+
+            if (entry.bounds.intersects(ctrl.bounds)) {
+                ret.push(entry) ;
+            }
+        }
+        return ret ;
+    }
+
     public addControl(control: FormControl) : void {
         this.controls_.push(control) ;
         this.addControlToLayout(control) ;

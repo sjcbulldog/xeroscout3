@@ -13,7 +13,7 @@ import {  XeroEditFormView   } from "../views/forms/editformview.js";
 import {  XeroScoutFormView   } from "../views/forms/scoutformview.js";
 import {  XeroTeamStatus   } from "../views/teamstatus.js";
 import {  XeroMatchStatus   } from "../views/matchstatus.js";
-import {  StatusOverlay   } from "../status/StatusOverlay.js";
+import {  MessageOverlay   } from "../messages/messageoverlay.js";
 import {  XeroTeamDatabaseView   } from "../views/teamdbview.js";
 import {  XeroMatchDatabaseView   } from "../views/matchdbview.js";
 import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView   } from "../ipc.js";
@@ -38,7 +38,7 @@ export class XeroApp extends XeroMainProcessInterface {
     private right_view_pane_? : XeroWidget ;
     private current_view_ : XeroView | undefined ;
     private hintdb_? : HintManager ;
-    private status_overlay_? : StatusOverlay ;
+    private message_overlay_? : MessageOverlay ;
     private image_src_? : ImageDataSource ;
     private type_? : IPCAppType ;
 
@@ -64,7 +64,7 @@ export class XeroApp extends XeroMainProcessInterface {
         this.splitter_.on('changed', this.splitterChanged.bind(this)) ;
         this.splitter_.position = init.splitter || 10 ;
 
-        this.status_overlay_ = new StatusOverlay(this.right_view_pane_) ;
+        this.message_overlay_ = new MessageOverlay(this.right_view_pane_) ;
 
         this.status_ = new XeroStatusWindow(this.splitter_) ;
         this.status_.setParent(body) ;
@@ -88,6 +88,10 @@ export class XeroApp extends XeroMainProcessInterface {
 
     public get hintDB() {
         return this.hintdb_ ;
+    }
+
+    public get messageOverlay() {
+        return this.message_overlay_ ;
     }
 
     private updateStatusBar(args: IPCSetStatus) {

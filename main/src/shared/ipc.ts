@@ -54,6 +54,9 @@ export interface IPCLabelItem extends IPCFormItem {
 
 export interface IPCImageItem extends IPCFormItem {
     image: string ;
+    field: boolean ;
+    mirrorx: boolean ;
+    mirrory: boolean ;
 }
 
 export interface IPCBoxItem extends IPCFormItem {

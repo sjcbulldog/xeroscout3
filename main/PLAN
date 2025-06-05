@@ -20,11 +20,17 @@
 - DONE: Prompt before scouting a new team or match and generating data
 - DONE: WiFi sync, IP addr sync
 - DONE: Add IP Addr based syncing
-- Form scaling to tablet size
-- Test well as a checkpoint
-- Resize window (tablet)
+- DONE: Form scaling to tablet size
+- DONE: Resize window (tablet)
+- DONE: Image Control: Mirror X, Mirror Y
+- DONE: Check for duplicate tag
+- DONE: Check for illegal tag name
+- DONE: Check for duplicate choice values
+- DONE: Check for tag_#### form of name
+- DONE: Display errors for selected components
 - Scout Reverse form
 - Scout Red vs Blue
+- Test well as a checkpoint
 
 3.0.11
 ------
@@ -58,6 +64,5 @@ Attributions
 
 Bugs
 ----
-Fix scrolling problem on the bottom status window when lines exceed size of window.
 Make hint window look better
 Catch when closing the entire application if there is modified data in the database view.
