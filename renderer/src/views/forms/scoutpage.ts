@@ -84,9 +84,9 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         let offset = this.getPlaceOffset() ;
         let image = this.isOverField(control) ;
         if (image && this.color_ !== 'blue') {
-            let dl = control.bounds.left - image.bounds.left ;
-            let x2 = image.bounds.right - dl - control.bounds.width ;
-            let dx = x2 - control.bounds.left ;
+            let dl = this.scale_ * (control.bounds.left - image.bounds.left) ;
+            let x2 = this.scale_ * image.bounds.right - dl - this.scale_ * control.bounds.width ;
+            let dx = x2 - this.scale_ * control.bounds.left ;
             console.log(`Control ${control.item.tag} overlaps with field control ${image.item.tag}`) ;
             console.log(`    Control bounds: ${control.bounds}`) ;
             console.log(`    Image bounds: ${image.bounds}`) ;
