@@ -41,13 +41,24 @@ export abstract class FormControl {
     public setErrors(errors: string[]) {
         this.errors_ = [...errors] ;
         if (this.ctrl_ && this.style_ === 'none') {
-            this.ctrl_.style.borderStyle = 'solid' ;
-            this.ctrl_.style.borderWidth = '4px' ;
-            this.ctrl_.style.borderColor = 'red' ;
-            this.ctrl_.style.margin = '0px' ;
-            if (this.blink_timer_ === undefined) {
-                this.blink_state_ = true ;
-                this.blink_timer_ = setInterval(this.blink.bind(this), 1000) ;
+            if (this.errors_.length > 0) {
+                this.ctrl_.style.borderStyle = 'solid' ;
+                this.ctrl_.style.borderWidth = '4px' ;
+                this.ctrl_.style.borderColor = 'red' ;
+                this.ctrl_.style.margin = '0px' ;
+                if (this.blink_timer_ === undefined) {
+                    this.blink_state_ = true ;
+                    this.blink_timer_ = setInterval(this.blink.bind(this), 1000) ;
+                }
+            }
+            else {
+                if (this.blink_timer_) {
+                    clearInterval(this.blink_timer_) ;
+                    this.blink_timer_ = undefined ;
+                    this.blink_state_ = false ;
+                }
+                this.ctrl_.style.border = 'none' ;
+                this.ctrl_.style.margin = '4px' ;
             }
         }
     }

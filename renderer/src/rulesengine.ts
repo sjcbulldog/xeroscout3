@@ -87,6 +87,13 @@ export class RulesEngine extends EventEmitter {
         return this.dirty_ ;
     }
 
+    public reset() : void {
+        this.first_ = true ;
+        this.pageno_ = 0 ;
+        this.rule_ = 0 ;
+        this.dirty = true ;
+    }
+
     public set dirty(value: boolean) {
         this.dirty_ = value ;
         if (value) {
@@ -225,6 +232,7 @@ export class RulesEngine extends EventEmitter {
     }
 
     private emitErrorsFirst() : void {
+        this.emit('reset') ;
         for(let [tag, errors] of this.errors_) {
             if (errors.length > 0) {
                 this.emit('errors', tag, errors) ;

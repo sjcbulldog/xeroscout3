@@ -1,6 +1,7 @@
 import {  EventEmitter  } from "events";
 
 export abstract class XeroDialog extends EventEmitter {
+    private static first_ : boolean = true ;
     private title_ : string ;
     private moving_ : boolean ;
     private parent_? : HTMLElement ;
@@ -37,20 +38,33 @@ export abstract class XeroDialog extends EventEmitter {
         this.postPlaceInit() ;
     }
 
-    public showCentered(win: HTMLElement) {
-        this.parent_ = win ;
-        this.prePlaceInit() ;
-
-        let pbounds = win.getBoundingClientRect() ;
+    private centerDialog() {
+        let pbounds = this.parent_!.offsetParent!.getBoundingClientRect() ;
         let dbounds = this.popup_!.getBoundingClientRect() ;
-        let obounds = this.popup_!.offsetParent!.getBoundingClientRect() ;
 
-        let left = pbounds.left + (pbounds.width - dbounds.width) / 2 + obounds.left - pbounds.left ;
-        let top = pbounds.top + (pbounds.height - dbounds.height) / 2 + obounds.top - pbounds.top ;
+        let left = (pbounds.width / 2) - (dbounds.width / 2) ;
+        let top = (pbounds.height / 2) - (dbounds.height / 2) ;
+
+        console.log(`showCentered: ${this.parent_!.className}`) ;
+        console.log(`    pbounds: ${pbounds.left}, ${pbounds.top}, ${pbounds.width}, ${pbounds.height}`) ;
+        console.log(`    dbounds: ${dbounds.left}, ${dbounds.top}, ${dbounds.width}, ${dbounds.height}`) ;
+        console.log(`    left : ${left}`) ;
+        console.log(`    top  : ${top}`) ;
 
         this.popup_!.style.left = left + 'px' ;
         this.popup_!.style.top = top + 'px' ;
+    }
 
+    public showCentered(win: HTMLElement) {
+        this.parent_ = win ;
+        this.prePlaceInit() ;
+        if (XeroDialog.first_) {
+            setTimeout(this.centerDialog.bind(this), 100) ;
+            XeroDialog.first_ = false ;
+        }
+        else {
+            setTimeout(this.centerDialog.bind(this), 10) ;
+        }
         this.postPlaceInit() ;
     }
 

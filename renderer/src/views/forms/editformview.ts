@@ -232,7 +232,7 @@ export class XeroEditFormView extends XeroView {
 
     private editProperties(ev: KeyboardEvent) {
         let offset = this.getFormOffset() ;
-        this.editControlProperties(this.selected_ctrls_[0], this.cursor_.x, this.cursor_.y + offset.y) ;
+        this.editControlProperties() ;
     }
 
     private keybindingDialogClosed() {
@@ -520,9 +520,18 @@ export class XeroEditFormView extends XeroView {
         this.findControlByTag(tag)?.setErrors(errors) ;
     }
 
+    private resetErrors() {
+        for(let page of this.section_pages_) {
+            for(let ctrl of page.controls) {
+                ctrl.setErrors([]) ;
+            }
+        }
+    }
+
     private receivedForm(args: any) {
         this.form_ = new FormObject(args.form) ;
         this.rules_engine_ = new RulesEngine(this.form_.json) ;
+        this.rules_engine_.on('reset', this.resetErrors.bind(this)) ;
         this.rules_engine_.on('errors', this.updateErrors.bind(this)) ;
         this.rules_engine_.start(10) ;
 
@@ -711,7 +720,17 @@ export class XeroEditFormView extends XeroView {
         if (this.form_) {
             this.undo_stack_.push(undo) ;
             this.request('save-form', { type: this.type_, contents: this.form_.json}) ;
-            this.rules_engine_!.dirty = true ;
+
+            if (undo.oper === 'edit' && undo.obj === 'control') {
+                //
+                // Because the tag may have changed, we need to update the rules engine
+                // from the ground up so that errors go to the right place.
+                //
+                this.rules_engine_!.reset() ;
+            }
+            else {
+                this.rules_engine_!.dirty = true ;
+            }
         }
     }
 
@@ -1021,26 +1040,27 @@ export class XeroEditFormView extends XeroView {
     }
 
     private doubleClick(event: MouseEvent) {
-        if (!this.edit_dialog_ && !this.popup_menu_) {        
-            let x = event.clientX ;
-            let y = event.clientY ;        
-            let frmctrl = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlsByPosition(this.cursor_) ;            
-            this.editControlProperties(frmctrl[0], x, y) ;
-        }
+        this.editControlProperties() ;
     }
 
-    private editControlProperties(frmctrl: FormControl, x: number, y: number) {
+    private editControlProperties() {
+
+        if (this.popup_menu_ || this.edit_dialog_) {
+            return ;
+        }
+
+        if (this.selected_ctrls_.length === 0) {
+            alert('You must select a control to edit') ;
+            return ;
+        }
+
+        if (this.selected_ctrls_.length > 1) {
+            alert('You can only edit one control at a time') ;
+            return ;
+        }
+        let frmctrl = this.selected_ctrls_[0] ;
+
         this.dragging_ = 'none' ;
-        let bounds = this.getFormBounds() ;
-
-        if (x > bounds!.left + bounds!.width - 600) {
-            x = bounds!.left  + bounds!.width - 600 ;
-        }
-
-        if (y > bounds!.top + bounds!.height - 400) {
-            y = bounds!.top + bounds!.height - 400 ;
-        }
-
         let olditem = JSON.parse(JSON.stringify(frmctrl.item)) ;
 
         this.unselectCurrent(frmctrl) ;
@@ -1890,7 +1910,7 @@ export class XeroEditFormView extends XeroView {
             ] ;
 
             if (this.selected_ctrls_.length > 0) {                
-                items.push(new XeroPopupMenuItem('Properties', this.editControlProperties.bind(this, this.selected_ctrls_[0], event.clientX, event.clientY))) ;
+                items.push(new XeroPopupMenuItem('Properties', this.editControlProperties.bind(this))) ;
             }
 
             this.popup_menu_ = new XeroPopupMenu('main', items) ;
