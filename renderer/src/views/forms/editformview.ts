@@ -1911,6 +1911,16 @@ export class XeroEditFormView extends XeroView {
 
             if (this.selected_ctrls_.length > 0) {                
                 items.push(new XeroPopupMenuItem('Properties', this.editControlProperties.bind(this))) ;
+                let errs = false;
+                for(let frmctrl of this.selected_ctrls_) {
+                    if (frmctrl.errors && frmctrl.errors.length > 0) {
+                        errs = true ;
+                        break ;
+                    }
+                }
+                if (errs) {
+                    items.push(new XeroPopupMenuItem('Show Errors', this.showErrors.bind(this))) ;
+                }
             }
 
             this.popup_menu_ = new XeroPopupMenu('main', items) ;
