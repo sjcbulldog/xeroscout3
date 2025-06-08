@@ -1,4 +1,3 @@
-import { IPCSection } from "../../../ipc.js";
 import { XeroDialog } from "../../../widgets/xerodialog.js" ;
 
 export class EditSectionNameDialog extends XeroDialog {

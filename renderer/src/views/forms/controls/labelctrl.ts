@@ -1,5 +1,5 @@
-import {  IPCLabelItem, IPCTypedDataValue  } from "../../../ipc.js";
-import {  XeroRect  } from "../../../widgets/xerogeom.js";
+import {  IPCLabelItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
+import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 import {  EditLabelDialog  } from "../dialogs/editlabeldialog.js";

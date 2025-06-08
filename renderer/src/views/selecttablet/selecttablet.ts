@@ -1,5 +1,5 @@
 import { XeroApp } from "../../apps/xeroapp.js";
-import { IPCTabletDefn } from "../../ipc.js";
+import { IPCTabletDefn } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 import { SelectTabletDialog } from "./selecttabletdialog.js";
 

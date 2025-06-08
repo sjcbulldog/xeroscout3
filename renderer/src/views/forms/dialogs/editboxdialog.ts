@@ -1,6 +1,6 @@
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCBooleanItem, IPCBoxItem, IPCLabelItem  } from "../../../ipc.js";
+import { IPCBoxItem } from "../../../shared/ipc.js";
 
 export class EditBoxDialog extends EditFormControlDialog {
     private border_style_? : HTMLSelectElement ;

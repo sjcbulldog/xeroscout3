@@ -1,4 +1,4 @@
-import { IPCNamedDataValue, IPCTypedDataValue } from "../../ipc.js";
+import { IPCNamedDataValue, IPCTypedDataValue } from "../../shared/ipc.js";
 
 
 export class XeroFormDataValues {

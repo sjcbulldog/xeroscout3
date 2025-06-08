@@ -1,6 +1,6 @@
-import {  IPCChoiceValue, IPCMultipleChoiceItem, IPCTypedDataValue  } from "../../../ipc.js";
+import {  IPCChoiceValue, IPCMultipleChoiceItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
 import { DataValue } from "../../../utils/datavalue.js";
-import {  XeroRect  } from "../../../widgets/xerogeom.js";
+import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditChoiceDialog  } from "../dialogs/editchoicedialog.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
@@ -58,6 +58,8 @@ export class MultipleChoiceControl extends FormControl {
     private createVerticalChoices(item: IPCMultipleChoiceItem, editing: boolean) : void {
         let oper = editing ? 'edit' : 'view' ;
 
+        this.choice_ctrl_to_value_.clear() ;
+
         for(let choice of item.choices) {
             let tabrow = document.createElement('tr') ;
             this.setClassList(tabrow, oper, 'vertrow') ;
@@ -99,6 +101,8 @@ export class MultipleChoiceControl extends FormControl {
 
     private createHorizontalChoices(item: IPCMultipleChoiceItem, editing: boolean) : void {
         let oper = editing ? 'edit' : 'view' ;
+
+        this.choice_ctrl_to_value_.clear() ;        
 
         let tabrow = document.createElement('tr') ;
         this.setClassList(tabrow, oper, 'horizrow') ;
@@ -217,6 +221,17 @@ export class MultipleChoiceControl extends FormControl {
             let str = DataValue.toString(data) ;
             for(let ctrl of this.choice_ctrls_) {
                 if (this.choice_ctrl_to_value_.get(ctrl) === str) {
+                    ctrl.checked = true ;
+                }
+                else {
+                    ctrl.checked = false ;
+                }
+            }
+        }
+        else if (this.choice_ctrls_ && DataValue.isNumber(data)) {
+            let num = DataValue.toReal(data) ;
+            for(let ctrl of this.choice_ctrls_) {
+                if (this.choice_ctrl_to_value_.get(ctrl) === num) {
                     ctrl.checked = true ;
                 }
                 else {

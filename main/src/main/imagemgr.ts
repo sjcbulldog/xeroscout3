@@ -42,6 +42,10 @@ export class ImageManager {
         return Array.from(this.imagemap_.keys()) ;
     }
 
+    public hasImage(name: string) : boolean {
+        return this.imagemap_.has(name) ;
+    }
+
     public getImage(name : string) : string | undefined {
         // Get the image path for the given name
         if (this.imagemap_.has(name)) {

@@ -16,11 +16,12 @@ import {  XeroMatchStatus   } from "../views/matchstatus.js";
 import {  MessageOverlay   } from "../messages/messageoverlay.js";
 import {  XeroTeamDatabaseView   } from "../views/teamdbview.js";
 import {  XeroMatchDatabaseView   } from "../views/matchdbview.js";
-import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView   } from "../ipc.js";
-import { HintManager } from "../hintmgr.js";
+import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView   } from "../shared/ipc.js";
+import { HintManager } from "./hintmgr.js";
 import { ImageDataSource } from "./imagesrc.js";
 import { XeroSelectTablet } from "../views/selecttablet/selecttablet.js";
 import { XeroSyncIPAddrView } from "../views/syncipaddr/syncipaddr.js";
+import { ResizeBar } from "./resizebar.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
 export class XeroApp extends XeroMainProcessInterface {
     private viewmap_ : Map<string, any> = new Map() ;                   // Map of view name to class
 
+    private resize_bar_: ResizeBar ;
     private status_? : XeroStatusWindow ;
     private splitter_? : XeroSplitter ;
     private left_nav_pane_? : XeroNav ;
@@ -45,7 +47,14 @@ export class XeroApp extends XeroMainProcessInterface {
     constructor() {
         super() ;
 
+        this.resize_bar_ = new ResizeBar(50, true) ;
+        this.resize_bar_.elem.style.display = 'none' ;
+        this.resize_bar_.elem.style.left = '0px' ;
+        this.resize_bar_.elem.style.top = '100px' ;
+        this.resize_bar_.on('resized', this.resizeBarChangedSize.bind(this)) ;
+
         this.registerCallback('xero-app-init', this.init.bind(this)) ;
+        this.registerCallback('resize-window', this.resizeWinow.bind(this)) ;
     }
 
     private init(init: IPCAppInit) {
@@ -72,6 +81,20 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('update-main-window-view', this.updateView.bind(this)) ;
         this.registerCallback('send-app-status', this.updateStatusBar.bind(this)) ;
         this.registerViews() ;
+    }
+
+    private resizeWinow() {
+        if (this.status_) {
+            this.resize_bar_.elem.style.display = 'flex' ;
+            this.status_.elem.appendChild(this.resize_bar_.elem) ;
+        }
+    }
+
+    private resizeBarChangedSize(pcnt: number) {
+        if (this.splitter_) {
+            this.splitter_.position = pcnt ;
+            this.resize_bar_.elem.style.display = 'none' ;
+        }
     }
 
     private splitterChanged() {

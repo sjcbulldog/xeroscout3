@@ -469,11 +469,8 @@ export async function getImageData(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 1 && typeof args[0] === 'string') {
-            if (scappbase.applicationType === XeroAppType.Central) {
-                scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-                let central : SCCentral = scappbase as SCCentral ;
-                central.sendImageData(args[0]) ;
-            } 
+            scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+            scappbase.sendImageData(args[0]) ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});             

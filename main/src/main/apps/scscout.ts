@@ -7,7 +7,7 @@ import { TCPClient } from "../sync/tcpclient";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { MatchTablet, TeamTablet } from "../project/tabletmgr";
-import { IPCFormScoutData, IPCNamedDataValue, IPCScoutResult, IPCScoutResults, IPCTabletDefn } from "../../shared/ipc";
+import { IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 
 const mdns = require('mdns-js') ; 
 
@@ -398,6 +398,8 @@ export class SCScout extends SCBase {
     }
 
     public provideResults(res: IPCNamedDataValue[]) {
+        console.log('provideResults:', JSON.stringify(res)) ;
+
         this.addResults(this.current_scout_!, this.filterResults(res)) ;
         this.writeEventFile() ;
         this.logger_.silly('provideResults:' + this.current_scout_, res) ;
@@ -434,18 +436,12 @@ export class SCScout extends SCBase {
         }
 
         if (good) {
-            let images = ret.form!.images ;
-            if (images) {
-                for(let image of images) {
-                    this.sendImageData(image) ;
-                }
+            this.sendToRenderer('send-form', ret);
+            let data: IPCScoutResult | undefined = this.getResults(this.current_scout_!) ;
+            if (data) {
+                console.log('send-initial-values: ' + JSON.stringify(data.data)) ;
+                this.sendToRenderer('send-initial-values', data.data) ;
             }
-        }
-        this.sendToRenderer('send-form', ret);
-
-        let data: IPCScoutResult | undefined = this.getResults(this.current_scout_!) ;
-        if (data) {
-            this.sendToRenderer('send-initial-values', data.data) ;
         }
     }
 
@@ -690,19 +686,6 @@ export class SCScout extends SCBase {
         this.conn_?.send(new PacketObj(PacketType.ProvideResults, Buffer.from(jsonstr))) ;
     }
 
-    private needImages() : string[] {
-        let ret : string[] = [] ;
-        this.image_mgr_.rescanImageDirs() ;
-        for(let im of [ ...this.info_.matchform_!.images, ...this.info_.teamform_!.images]) {
-            if (!this.image_mgr_.getImage(im)) {
-                if (ret.indexOf(im) < 0) {
-                    ret.push(im) ;
-                }
-            }
-        }
-        return ret ;
-    }
-
     private needMatchResults() : string[] {
         let ret : string[] = [] ;
 
@@ -730,6 +713,44 @@ export class SCScout extends SCBase {
                 }
             }
         }
+        return ret ;
+    }
+
+    private getRequiredImagesFromSection(section: IPCSection) : string[] {
+        let ret : string [] = [] ;
+        for(let item of section.items) {
+            if (item.type === 'image') {
+                let imitem = item as IPCImageItem ;
+                ret.push(imitem.image) ;
+            }
+        }
+
+        return [...new Set(ret)] ;
+    }
+
+    private getRequiredImagesFromForm(form: IPCForm) : string[] {
+        let ret : string[] = [] ;
+        for(let section of form.sections) {
+            ret = [...ret, ... this.getRequiredImagesFromSection(section)];
+        }
+
+        return ret ;
+    }
+
+    private needImages() : string [] {
+        let images: string[] = [ 
+                ...this.getRequiredImagesFromForm(this.info_.teamform_), 
+                ... this.getRequiredImagesFromForm(this.info_.matchform_)] ;
+
+        let imlist = [...new Set(images)];
+        let ret: string[] = [] ;
+
+        for(let im of imlist) {
+            if (!this.image_mgr_.hasImage(im)) {
+                ret.push(im) ;
+            }
+        }
+
         return ret ;
     }
 
@@ -762,7 +783,7 @@ export class SCScout extends SCBase {
         }
         else if (this.needImages().length > 0) {
             this.conn_?.send(new PacketObj(PacketType.RequestImages, Buffer.from(JSON.stringify(this.needImages())))) ;
-            ret = true ;
+            ret = true ;            
         }
         
         if (!ret) {

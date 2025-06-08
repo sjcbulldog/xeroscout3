@@ -1,6 +1,6 @@
 import { Key } from "readline";
 import {  XeroApp  } from "../apps/xeroapp.js";
-import {  IPCSetView  } from "../ipc.js";
+import {  IPCSetView  } from "../shared/ipc.js";
 import {  XeroView  } from "./xeroview.js";
 
 export class XeroInfoView extends XeroView {

@@ -1,6 +1,6 @@
 import { CellComponent, TabulatorFull } from "tabulator-tables";
 import { XeroDialog } from "../../widgets/xerodialog.js";
-import { IPCProjColumnsConfig, IPCProjectColumnCfg } from "../../ipc.js";
+import { IPCProjColumnsConfig, IPCProjectColumnCfg } from "../../shared/ipc.js";
 
 export class ShowHideColumnsDialog extends XeroDialog {
     private colcfgs_ : IPCProjColumnsConfig ;

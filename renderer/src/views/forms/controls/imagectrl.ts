@@ -1,5 +1,5 @@
-import { IPCImageItem, IPCImageResponse, IPCTypedDataValue } from "../../../ipc.js";
-import { XeroRect } from "../../../widgets/xerogeom.js";
+import { IPCImageItem, IPCImageResponse, IPCTypedDataValue } from "../../../shared/ipc.js";
+import { XeroRect } from "../../../shared/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";
 import { EditImageDialog } from "../dialogs/editimagectrldialog.js";

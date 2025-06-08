@@ -1,5 +1,5 @@
 import { XeroApp  } from "../../apps/xeroapp.js";
-import { XeroPoint, XeroRect, XeroSize  } from "../../widgets/xerogeom.js";
+import { XeroPoint, XeroRect, XeroSize  } from "../../shared/xerogeom.js";
 import { XeroPopupMenu, XeroPopupMenuItem  } from "../../widgets/xeropopupmenu.js";
 import { XeroView  } from "../xeroview.js";
 import { LabelControl  } from "./controls/labelctrl.js";
@@ -13,7 +13,6 @@ import { MultipleChoiceControl  } from "./controls/choicectrl.js";
 import { SelectControl  } from "./controls/selectctrl.js";
 import { TimerControl  } from "./controls/timerctrl.js";
 import { XeroLogger  } from "../../utils/xerologger.js";
-import { IPCFormItem, IPCSection, IPCTablet  } from "../../ipc.js";
 import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import { XeroFormEditSectionPage } from "./editpage.js";
 import { BoxControl } from "./controls/boxctrl.js";
@@ -24,8 +23,9 @@ import { KeybindingDialog } from "./dialogs/keybindingdialog.js";
 import { TextAreaControl } from "./controls/textareactrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
 import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoLockContorlArgs, UndoMoveResizeArgs, UndoMoveSectionArgs, UndoRenameSectionArgs, UndoStackEntry } from "./undo.js";
-import { TabletDB } from "../../tabletdb.js";
-import { RulesEngine } from "../../rulesengine.js";
+import { RulesEngine } from "../../shared/rulesengine.js";
+import { IPCFormItem, IPCSection, IPCTablet } from "../../shared/ipc.js";
+import { TabletDB } from "../../shared/tabletdb.js";
 
 type DragState = 'none' | 'ulcorner' | 'lrcorner' | 'urcorner' | 'llcorner' | 'right' | 'left' | 'top' | 'bottom' | 'move' | 'all' | 'area-select';
 
@@ -352,7 +352,17 @@ export class XeroEditFormView extends XeroView {
     }
 
     private lockControl() {
-        if (this.highlighted_ctrl_) {
+        if (this.selected_ctrls_.length > 0) {
+            for(let ctrl of this.selected_ctrls_) {
+                ctrl.locked = true ;
+                let args : UndoLockContorlArgs = {
+                    formctrl: ctrl,
+                    oldlocked: false
+                } ;
+                this.modified(new UndoStackEntry('lock', 'control', args)) ;
+                this.unselectCurrent(ctrl) ;
+            }
+        } else if (this.highlighted_ctrl_) {
             this.highlighted_ctrl_.locked = true ;
             let args : UndoLockContorlArgs = {
                 formctrl: this.highlighted_ctrl_,

@@ -591,24 +591,6 @@ export class SCCentral extends SCBase {
 		this.project_!.form_mgr_!.saveForm(type, contents) ;
 	}
 
-	public sendImages() {
-		this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
-	}
-
-	public sendImageData(image: string) {
-		let ret : IPCImageResponse = {
-			newname: undefined,
-			name: image, 
-			data: this.getImageData(image)
-		}
-
-		if (!ret.data) {
-			ret.newname = 'missing' ;
-			ret.data = this.getImageData('missing') ;
-		}
-		this.sendToRenderer('send-image-data', ret) ;
-	}
-
 	public importImage() {
 		dialog.showOpenDialog(this.win_, {
 			title: 'Open event.json file for event',
@@ -680,10 +662,6 @@ export class SCCentral extends SCBase {
 				ret.form = jsonobj ;
 				ret.color = this.color_ ;
 				ret.reversed = this.reversed_ ;
-
-				for(let image of jsonobj.images) {
-					this.sendImageData(image) ;
-				}
 				this.sendToRenderer('send-form', ret);				
 			}
 		} else {
@@ -1899,11 +1877,11 @@ export class SCCentral extends SCBase {
 		path.then((pathname) => {
 			if (!pathname.canceled) {
 				let result = FormManager.validateForm(pathname.filePaths[0], "team") ;
-				if (result) {
-					dialog.showErrorBox("Error", 'Error processing team form file: ' + result.message);
+				if (result.length > 0) {
+					dialog.showErrorBox("Error", 'Error processing team form file: ' + result.join(', '));
 				}
 				else {
-					result = this.project_!.setTeamForm(pathname.filePaths[0]);
+					let result = this.project_!.setTeamForm(pathname.filePaths[0]);
 					if (result instanceof Error) {
 						dialog.showErrorBox("Error", 'Error processing team form file: ' + result.message);
 					}
@@ -1937,10 +1915,10 @@ export class SCCentral extends SCBase {
 			if (!pathname.canceled) {
 				let result = FormManager.validateForm(pathname.filePaths[0], "match");
 				if (result instanceof Error) {
-					dialog.showErrorBox("Error", 'Error processing match form file: ' + result.message);
+					dialog.showErrorBox("Error", 'Error processing match form file: ' + result.join(', '));
 				}
 				else {
-					result = this.project_!.setMatchForm(pathname.filePaths[0]);
+					let result = this.project_!.setMatchForm(pathname.filePaths[0]);
 					if (result instanceof Error) {
 						dialog.showErrorBox("Error", 'Error processing match form file: ' + result.message);
 					}

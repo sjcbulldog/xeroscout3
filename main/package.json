@@ -5,10 +5,9 @@
   "main": "dist/main.js",
   "scripts": {
     "build-renderer": "cd ../renderer && npm run build",
-    "interfaces": "copyfiles -f ../renderer/src/ipc.ts src/shared",
-    "tabletdb" : "copyfiles -f ../renderer/src/tabletdb.ts src/shared",
+    "copyshared": "copyfiles -f ../renderer/src/shared/*.ts src/shared",
     "bundle": "copyfiles -f ../renderer/dist/renderer/xeroapp.bundle.js dist/renderer",
-    "copyfiles": "npm run bundle && npm run interfaces && npm run tabletdb",
+    "copyfiles": "npm run bundle && npm run copyshared",
     "renderer": "npm run build-renderer && npm run copyfiles",
     "compile": "tsc",
     "main": "npm run renderer && npm run compile",

@@ -1,5 +1,5 @@
 import {  XeroApp  } from "../apps/xeroapp.js";
-import { XeroPoint } from "../widgets/xerogeom.js";
+import { XeroPoint } from "../shared/xerogeom.js";
 import { XeroPopup } from "../widgets/xeropopup.js";
 import {  XeroWidget  } from "../widgets/xerowidget.js";
 
@@ -7,6 +7,7 @@ export class XeroView extends XeroWidget {
     private app_ : XeroApp ;
     private hint_popup_ : XeroPopup ;
     private hintid_ : string | undefined ;
+    private hint_cb_ : ((hidden: boolean) => void) ;
     private empty_div_? : HTMLDivElement ;
     private span_?: HTMLSpanElement ;
 
@@ -14,7 +15,8 @@ export class XeroView extends XeroWidget {
         super('div', cname) ;
         this.app_ = app ;
         this.hint_popup_ = new XeroPopup() ;
-        this.hint_popup_.on('popup-closed', this.hintClosed.bind(this)) ;
+        this.hint_cb_ = this.hintClosed.bind(this) ;
+        this.hint_popup_.on('popup-closed', this.hint_cb_) ;
     }
 
     public get isOkToClose() : boolean {
@@ -23,6 +25,15 @@ export class XeroView extends XeroWidget {
 
     public get app() : XeroApp {
         return this.app_ ;
+    }
+
+    public close() : void {
+        super.close() ;
+
+        if (this.hint_popup_) {
+            this.hint_popup_.off('popup-closed', this.hint_cb_) ;
+            this.hint_popup_.closePopup() ;
+        }
     }
 
     public onVisible() {

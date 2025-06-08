@@ -1,7 +1,7 @@
 import { CellComponent, ColumnDefinition, TabulatorFull } from "tabulator-tables";
 import { FormControl } from "../controls/formctrl.js";
 import { EditFormControlDialog } from "./editformctrldialog.js";
-import { IPCChoice, IPCDataValueType } from "../../../ipc.js";
+import { IPCChoice, IPCDataValueType } from "../../../shared/ipc.js";
 import { XeroTabbedWidget } from "../../../widgets/xerotabbedwidget.js";
 
 export abstract class EditWithItemsDialog extends EditFormControlDialog {

@@ -24,6 +24,7 @@ import { TabletData, TabletManager } from './tabletmgr';
 import { ManualMatchData, MatchManager } from './matchmgr';
 import { GraphManager } from './graphmgr';
 import { IPCHint, IPCScoutResults } from '../../shared/ipc';
+import { RulesEngine } from '../../shared/rulesengine';
 
 export class Project {
     private static readonly keepLotsOfBackups = true ;
@@ -216,32 +217,11 @@ export class Project {
                 //
                 // Check for duplicate tags in the form definitions
                 //
-                let duplicates = this.form_mgr_!.checkDuplicateTags() ;
-                if (duplicates.length > 0) {
-                    let msg = 'Multiple form items with identical tags found in form definitions:' ;
-                    for (let tag of duplicates) {
-                        msg += '<br>' + tag.tag ;
-                        for(let src of tag.sources) {
-                            msg += '<br>&nbsp;&nbsp;&nbsp;&nbsp;form: ' + src.form + ', section: ' + src.section + ', type \'' + src.type + '\'';
-                        }
-                    }
-                    msg += '<br><br>Please correct the form definitions and try again' ;
-                    reject(new Error(msg)) ;
-                    return ;
-                }
-
-                //
-                // Check that none of the tags are of the form tag_#### where #### is a number.  This is the
-                // default tag name and should not be used in the form definitions to make the data meaningful.
-                //
-                let misnamed = this.form_mgr_!.checkMisnamedTags() ;
-                if (misnamed.length > 0) {
-                    let msg = 'Form items with tags of the form tag_#### found in form definitions:' ;
-                    for (let tag of misnamed) {
-                        msg += '<br>' + tag.tag ;
-                        for(let src of tag.sources) {
-                            msg += '<br>&nbsp;&nbsp;&nbsp;&nbsp;form: ' + src.form + ', section: ' + src.section + ', type \'' + src.type + '\'';
-                        }
+                let errors = this.form_mgr_!.checkFormsValid() ;
+                if (errors.length > 0) {
+                    let msg = 'Errors were found in the form definitions:' ;
+                    for (let err of errors) {
+                        msg += '<br>' + err ;
                     }
                     msg += '<br><br>Please correct the form definitions and try again' ;
                     reject(new Error(msg)) ;

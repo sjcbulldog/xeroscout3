@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { IPCChoice, IPCChoicesItem, IPCForm, IPCFormItem, IPCImageItem, IPCSelectItem } from "./ipc.js";
-import { XeroRect } from "./widgets/xerogeom.js";
+import { XeroRect } from "./xerogeom.js";
 
 export class RulesEngine extends EventEmitter {
     private form_ : IPCForm ;
@@ -33,6 +33,16 @@ export class RulesEngine extends EventEmitter {
         this.pageno_ = 0 ;
         this.dirty_ = true ;
         this.first_ = true ;
+    }
+
+    public get errors() : string[] {
+        let errors: string[] = [] ;
+        for(let [tag, errs] of this.errors_) {
+            if (errs.length > 0) {
+                errors.push(`${tag}: ${errs.join(', ')}`) ;
+            }
+        }
+        return errors ;
     }
 
     public start(t: number) {

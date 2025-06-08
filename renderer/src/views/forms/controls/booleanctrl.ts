@@ -1,6 +1,6 @@
-import {  IPCBooleanItem, IPCTypedDataValue  } from "../../../ipc.js";
+import {  IPCBooleanItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
 import { DataValue } from "../../../utils/datavalue.js";
-import {  XeroRect  } from "../../../widgets/xerogeom.js";
+import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditBooleanDialog  } from "../dialogs/editbooleandialog.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";

@@ -1,4 +1,4 @@
-import {  IPCTextAreaItem, IPCTextItem  } from "../../../ipc.js";
+import {  IPCTextAreaItem, IPCTextItem  } from "../../../shared/ipc.js";
 import {  FormControl  } from "../controls/formctrl.js";
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 

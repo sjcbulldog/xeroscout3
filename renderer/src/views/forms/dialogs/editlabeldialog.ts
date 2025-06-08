@@ -1,6 +1,6 @@
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCLabelItem  } from "../../../ipc.js";
+import {  IPCLabelItem  } from "../../../shared/ipc.js";
 
 export class EditLabelDialog extends EditFormControlDialog {
     private text_string_? : HTMLInputElement ;

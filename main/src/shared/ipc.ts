@@ -125,10 +125,9 @@ export interface IPCTablet {
 }
 
 export interface IPCForm {
-    purpose: string | undefined ;
+    purpose: IPCFormPurpose ;
     tablet: IPCTablet ;
     sections: IPCSection[] ;
-    images: string[] ;
 }
 
 

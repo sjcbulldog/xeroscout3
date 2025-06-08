@@ -30,9 +30,19 @@
 - DONE: Display errors for selected components
 - DONE: Scout Reverse form
 - DONE: Scout Red vs Blue
-- Test well as a checkpoint
+- DONE: Test well as a checkpoint
 
 3.0.11
+------
+- DONE: Apply rules checks at lock event
+- DONE: Implement resize bar for tablets
+- Sync data path all they way to the central data windows
+
+3.0.12
+------
+- Dataset editor
+
+3.0.13
 ------
 - dbview bad data formulas
   o Highlighting
@@ -40,25 +50,23 @@
     - horizontal splitter to dbview
     - database up top
     - report on bottom, click on line item goes to table cell
-- reverse form
 
-3.0.12
+3.0.14
 ------
-- Data Set Editor
 - Single Team Viewer
 - More general formula editing
 
-3.0.13
+3.0.15
 ------
 - Picklist Editor
 
-3.0.14
+3.0.16
 ------
 - Multi team View
 - Team Graphs
 - Spider Graphs (look at graphing package)
 
-3.0.15
+3.0.17
 ------
 Attributions
 

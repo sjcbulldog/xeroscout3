@@ -1,5 +1,5 @@
 import { CellComponent, RowComponent, TabulatorFull } from "tabulator-tables";
-import { IPCTabletDefn } from "../../ipc.js";
+import { IPCTabletDefn } from "../../shared/ipc.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 
 

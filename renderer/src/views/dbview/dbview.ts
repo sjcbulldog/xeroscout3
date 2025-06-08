@@ -1,10 +1,10 @@
 import { CellComponent, ColumnDefinition, RowComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../../apps/xeroapp.js";
-import {  IPCChange, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../ipc.js";
+import {  IPCChange, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../shared/ipc.js";
 import {  XeroView  } from "../xeroview.js";
 import { DataValue } from "../../utils/datavalue.js";
 import { XeroPopupMenu, XeroPopupMenuItem } from "../../widgets/xeropopupmenu.js";
-import { XeroPoint } from "../../widgets/xerogeom.js";
+import { XeroPoint } from "../../shared/xerogeom.js";
 import { ShowHideColumnsDialog } from "./dbhidedialog.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 

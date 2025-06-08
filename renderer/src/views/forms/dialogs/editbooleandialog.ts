@@ -1,6 +1,6 @@
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCBooleanItem  } from "../../../ipc.js";
+import {  IPCBooleanItem  } from "../../../shared/ipc.js";
 
 export class EditBooleanDialog extends EditFormControlDialog {
     private accent_color_? : HTMLInputElement ;

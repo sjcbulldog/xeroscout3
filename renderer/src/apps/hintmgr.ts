@@ -1,5 +1,5 @@
-import { IPCHint } from "./ipc.js";
-import { XeroMainProcessInterface } from "./widgets/xerocbtarget.js";
+import { IPCHint } from "../shared/ipc.js";
+import { XeroMainProcessInterface } from "../widgets/xerocbtarget.js";
 
 export class HintManager extends XeroMainProcessInterface {
     private hint_map_ : Map<string, IPCHint> ;

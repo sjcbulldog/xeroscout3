@@ -1,5 +1,5 @@
-import { IPCSize } from "../../ipc.js";
-import { XeroPoint, XeroRect, XeroSize } from "../../widgets/xerogeom.js";
+import { IPCSize } from "../../shared/ipc.js";
+import { XeroPoint, XeroRect, XeroSize } from "../../shared/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
 

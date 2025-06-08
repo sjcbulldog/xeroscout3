@@ -1,5 +1,5 @@
 import {  EventEmitter  } from "events";
-import {  XeroPoint  } from "./xerogeom.js";
+import {  XeroPoint  } from "../shared/xerogeom.js";
 
 export class XeroPopupMenuItem {
     private text_: string ;

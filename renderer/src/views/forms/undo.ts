@@ -1,5 +1,5 @@
-import { IPCFormItem, IPCSection, IPCTablet } from "../../ipc.js";
-import { XeroRect } from "../../widgets/xerogeom.js";
+import { IPCFormItem, IPCSection, IPCTablet } from "../../shared/ipc.js";
+import { XeroRect } from "../../shared/xerogeom.js";
 import { FormControl } from "./controls/formctrl.js";
 
 export type UndoRenameSectionArgs = {

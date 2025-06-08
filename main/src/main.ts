@@ -21,12 +21,10 @@ import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
 
-console.log("XeroScout starting...") ;
 const Config = require('electron-config') ;
 let config = new Config() ;
 
 function createWindow() : void {
-    console.log("Creating main window") ;
     const args = process.argv;
 
     let content = path.join(process.cwd(), 'content') ;
@@ -131,7 +129,6 @@ function createWindow() : void {
 }
 
 app.on("ready", () => {
-    console.log("XeroScout ready") ;
     ipcMain.on('sync-ipaddr', (event, ...args) => { syncIPAddr('splitter-changed', ...args)}) ;    
     ipcMain.on('splitter-changed', (event, ...args) => { splitterChanged('splitter-changed', ...args)}) ;
     ipcMain.on('get-nav-data', (event, ...args) => { getNavData('get-nav-data', ...args)});
@@ -197,14 +194,12 @@ app.on("ready", () => {
 }) ;
 
 app.on('window-all-closed', () => {
-    console.log("All windows closed") ;
     if (process.platform !== 'darwin') {
         app.quit();
     }
 });
 
 app.on('before-quit', (ev) => {
-    console.log("Before quit") ;
     if (scappbase) {
         if (!scappbase.canQuit()) {
             ev.preventDefault() ;

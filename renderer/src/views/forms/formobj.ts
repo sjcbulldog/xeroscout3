@@ -1,4 +1,4 @@
-import {  IPCForm, IPCFormControlType, IPCFormItem, IPCSection, IPCTypedDataValue  } from "../../ipc.js";
+import {  IPCForm, IPCFormControlType, IPCFormItem, IPCSection, IPCTypedDataValue  } from "../../shared/ipc.js";
 
 export class FormObject {
     private form_ : IPCForm ;
@@ -17,10 +17,6 @@ export class FormObject {
 
     public get sections() : IPCSection[] {
         return this.form_.sections ;
-    }
-
-    public get images() : string[] {
-        return this.form_.images ;  
     }
 
     public findItemByTag(tag: string) : IPCFormItem | undefined {
@@ -99,12 +95,6 @@ export class FormObject {
         if (index >= 0 && index < this.form_.sections.length) {
             this.form_.sections.splice(index, 1) ;
         }   
-    }
-
-    public addImage(image: string) : void {
-        if (!this.form_.images.includes(image)) {
-            this.form_.images.push(image) ;
-        }
     }
 
     public getItemFromTag(tag: string) : IPCFormItem | undefined {

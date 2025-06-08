@@ -1,5 +1,5 @@
 import { FormControl  } from "../controls/formctrl.js";
-import { IPCSelectItem  } from "../../../ipc.js";
+import { IPCSelectItem  } from "../../../shared/ipc.js";
 import { EditWithItemsDialog } from "./editwithitemsdialog.js";
 
 export class EditSelectDialog extends EditWithItemsDialog {

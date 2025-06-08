@@ -45,12 +45,6 @@ export abstract class XeroDialog extends EventEmitter {
         let left = (pbounds.width / 2) - (dbounds.width / 2) ;
         let top = (pbounds.height / 2) - (dbounds.height / 2) ;
 
-        console.log(`showCentered: ${this.parent_!.className}`) ;
-        console.log(`    pbounds: ${pbounds.left}, ${pbounds.top}, ${pbounds.width}, ${pbounds.height}`) ;
-        console.log(`    dbounds: ${dbounds.left}, ${dbounds.top}, ${dbounds.width}, ${dbounds.height}`) ;
-        console.log(`    left : ${left}`) ;
-        console.log(`    top  : ${top}`) ;
-
         this.popup_!.style.left = left + 'px' ;
         this.popup_!.style.top = top + 'px' ;
     }

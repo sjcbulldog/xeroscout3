@@ -1,6 +1,6 @@
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCUpDownItem  } from "../../../ipc.js";
+import {  IPCUpDownItem  } from "../../../shared/ipc.js";
 
 export class EditUpDownControlDialog extends EditFormControlDialog {
     private min_value_? : HTMLInputElement ;

@@ -1,6 +1,6 @@
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCImageItem, IPCLabelItem  } from "../../../ipc.js";
+import { IPCImageItem } from "../../../shared/ipc.js";
 
 export class EditImageDialog extends EditFormControlDialog {
     private image_name_? : HTMLSelectElement ;

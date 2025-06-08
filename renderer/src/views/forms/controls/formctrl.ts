@@ -1,5 +1,5 @@
-import {  IPCFormControlType, IPCFormItem, IPCTypedDataValue  } from "../../../ipc.js";
-import {  XeroPoint, XeroRect, XeroSize  } from "../../../widgets/xerogeom.js";
+import {  IPCFormControlType, IPCFormItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
+import {  XeroPoint, XeroRect, XeroSize  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 

@@ -6,7 +6,7 @@ import * as winston from "winston";
 import * as crypto from "crypto";
 import settings from "electron-settings";
 import { ImageManager } from "../imagemgr";
-import { IPCAppInit, IPCAppType, IPCSetView } from "../../shared/ipc";
+import { IPCAppInit, IPCAppType, IPCImageResponse, IPCSetView } from "../../shared/ipc";
 
 export enum XeroAppType {
 	None,
@@ -132,7 +132,25 @@ export abstract class SCBase {
 
 		return ret;
 	}
- 
+
+	public sendImages() {
+		this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
+	}
+
+	public sendImageData(image: string) {
+		let ret : IPCImageResponse = {
+			newname: undefined,
+			name: image, 
+			data: this.getImageData(image)
+		}
+
+		if (!ret.data) {
+			ret.newname = 'missing' ;
+			ret.data = this.getImageData('missing') ;
+		}
+		this.sendToRenderer('send-image-data', ret) ;
+	}	
+
 	protected versionToString(v: XeroVersion) {
 		return v.major + "." + v.minor + "." + v.patch;
 	}

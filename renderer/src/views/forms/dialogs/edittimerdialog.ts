@@ -1,6 +1,6 @@
 import {  EditFormControlDialog  } from "./editformctrldialog.js";
 import {  FormControl  } from "../controls/formctrl.js";
-import {  IPCTimerItem  } from "../../../ipc.js";
+import {  IPCTimerItem  } from "../../../shared/ipc.js";
 
 export class EditTimerDialog extends EditFormControlDialog {
     constructor(formctrl: FormControl) {

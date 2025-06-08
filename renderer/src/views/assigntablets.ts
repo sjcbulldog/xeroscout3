@@ -1,5 +1,5 @@
 import {  XeroApp  } from "../apps/xeroapp.js";
-import {  IPCFormPurpose, IPCSetView, IPCTabletDefn  } from "../ipc.js";
+import {  IPCFormPurpose, IPCSetView, IPCTabletDefn  } from "../shared/ipc.js";
 import {  XeroView  } from "./xeroview.js";
 
 export class XeroAssignTablets extends XeroView {

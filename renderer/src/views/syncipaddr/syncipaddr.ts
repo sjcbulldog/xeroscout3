@@ -1,5 +1,5 @@
 import { XeroApp } from "../../apps/xeroapp.js";
-import { IPCSetView } from "../../ipc.js";
+import { IPCSetView } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 import { SyncSetupDialog } from "./syncdialog.js";
 

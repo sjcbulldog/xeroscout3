@@ -1,5 +1,5 @@
 import {  XeroMainProcessInterface  } from "./xerocbtarget.js";
-import {  XeroRect  } from "./xerogeom.js";
+import {  XeroRect  } from "../shared/xerogeom.js";
 
 declare global {
     interface HTMLElement {
@@ -16,10 +16,6 @@ export class XeroWidget extends XeroMainProcessInterface {
         
         this.elem = document.createElement(etype);
         this.elem.className = cname;
-    }
-
-    public close() {
-        this.unregisterAllCallbacks();
     }
 
     public parent(): HTMLElement {

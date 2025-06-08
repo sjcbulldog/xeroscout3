@@ -1,6 +1,6 @@
-import {  IPCTimerItem, IPCTypedDataValue  } from "../../../ipc.js";
+import {  IPCTimerItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
 import { DataValue } from "../../../utils/datavalue.js";
-import {  XeroRect  } from "../../../widgets/xerogeom.js";
+import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 import {  EditTimerDialog  } from "../dialogs/edittimerdialog.js";

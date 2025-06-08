@@ -1,6 +1,6 @@
-import {  IPCTypedDataValue, IPCUpDownItem  } from "../../../ipc.js";
+import {  IPCTypedDataValue, IPCUpDownItem  } from "../../../shared/ipc.js";
 import { DataValue } from "../../../utils/datavalue.js";
-import {  XeroRect  } from "../../../widgets/xerogeom.js";
+import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 import {  EditUpDownControlDialog  } from "../dialogs/editupdowndialog.js";

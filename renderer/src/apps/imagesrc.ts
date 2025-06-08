@@ -1,4 +1,4 @@
-import { IPCImageResponse } from "../ipc.js";
+import { IPCImageResponse } from "../shared/ipc.js";
 import { XeroMainProcessInterface } from "../widgets/xerocbtarget.js";
 
 interface ImageWaiters {

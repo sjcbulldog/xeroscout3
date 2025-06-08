@@ -1,6 +1,6 @@
 import {  FormControl  } from "../controls/formctrl.js";
 import {  XeroDialog  } from "../../../widgets/xerodialog.js";
-import {  IPCDataValueType  } from "../../../ipc.js";
+import { IPCDataValueType } from "../../../shared/ipc.js";
 
 export interface FontData {
   family: string;

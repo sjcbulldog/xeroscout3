@@ -1,5 +1,5 @@
+import { IPCMultipleChoiceItem } from "../../../shared/ipc.js";
 import { FormControl  } from "../controls/formctrl.js";
-import { IPCMultipleChoiceItem  } from "../../../ipc.js";
 import { EditWithItemsDialog } from "./editwithitemsdialog.js";
 
 export class EditChoiceDialog extends EditWithItemsDialog {

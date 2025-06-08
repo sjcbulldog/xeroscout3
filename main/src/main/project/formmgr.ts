@@ -4,20 +4,9 @@ import fs from "fs";
 import path from "path";
 import { DataManager } from "./datamgr";
 import { dialog } from "electron";
-import { IPCChoice, IPCChoicesItem, IPCColumnDesc, IPCForm, IPCFormControlType, IPCFormItem } from "../../shared/ipc";
-import { match } from "assert";
+import { IPCChoice, IPCChoicesItem, IPCColumnDesc, IPCForm, IPCFormControlType, IPCFormItem, IPCFormPurpose } from "../../shared/ipc";
 import { TabletDB } from "../../shared/tabletdb";
-
-export interface TagSource {
-	form: string;
-	section: string;
-	type: IPCFormControlType
-}
-
-export interface TagInformation {
-	tag: string;
-	sources: TagSource[];
-}
+import { RulesEngine } from "../../shared/rulesengine";
 
 export class FormInfo {
 	public teamform_?: string; // The path to the form for team scouting
@@ -55,54 +44,54 @@ export class FormManager extends Manager {
 		return undefined;
 	}
 
-	public static validateForm(filename: string, type: string): Error | undefined {
-		let obj = FormManager.readJSONFile(filename);
+	public static validateForm(filename: string, type: string): string[] {
+		let ret: string[] = [];
+
+		let obj = FormManager.readJSONFile(filename) ;
 		if (obj instanceof Error) {
-			return obj as Error ;
+			ret.push(filename + ": " + (obj as Error).message);
+			return ret;
 		}
 
-		if (!obj.form) {
-			return new Error(
+		let fobj = obj as IPCForm ;
+		if (!fobj.purpose) {
+			ret.push(
 				filename +
-					': the form is missing the "form" field to indicate form type'
+					': the form is missing the "purpose" field to indicate form type'
 			);
+			return ret ;
 		}
 
-		if (obj.form !== type && type !== "*") {
-			return new Error(
-				filename +
+		if (fobj.purpose !== type) {
+			ret.push(filename +
 					": the form type is not valid, expected '" +
 					type +
 					"' but form '" +
 					obj.form +
 					"'"
 			);
+			return ret ;
 		}
 
-		if (!obj.sections) {
-			return new Error(
+		if (!fobj.sections) {
+			ret.push(
 				filename +
 					": the form is missing the 'sections' field to indicate form type"
 			);
+			return ret ;
 		}
 
-		if (!Array.isArray(obj.sections)) {
-				return new Error(
-						filename +
-								": the form is missing the 'sections' field to indicate form type"
-						);
+		if (!Array.isArray(fobj.sections)) {
+			ret.push (
+					filename +
+							": the form is missing the 'sections' field to indicate form type"
+					);
+			return ret ;
 		}
 
-		let num = 1;
-		for (let sect of obj.sections) {
-			let result = this.validateSection(filename, num, sect);
-			if (result instanceof Error) {
-				return result;
-			}
-			num++;
-		}
-
-		return undefined;
+		let rulesengine = new RulesEngine(fobj) ;
+		rulesengine.doRulesWork(Number.MAX_SAFE_INTEGER) ;
+		return rulesengine.errors ;
 	}
 
 	public setMatchForm(filename: string): Error | undefined {
@@ -245,348 +234,17 @@ export class FormManager extends Manager {
 		return true ;
 	}
 
-	private createFormInternal(ftype: string, filename: string): string {
+	private createFormInternal(ftype: IPCFormPurpose, filename: string): string {
 		let target = path.join(this.location_, filename);
 		let jsonobj : IPCForm = {
 			purpose: ftype,
 			sections: [],
-			images: [],
 			tablet: TabletDB.getDefaultTablet(),
 		};
 
 		let jsonstr = JSON.stringify(jsonobj, null, 4);
 		fs.writeFileSync(target, jsonstr);
 		return filename ;
-	}
-
-	private static validateTag(tag: string): boolean {
-		return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(tag);
-	}
-
-	private static validateImageItem(
-		filename: string,
-		sectno: number,
-		itemno: number,
-		item: any
-	): Error | undefined {
-		if (item.type === "multi") {
-			if (item.datatype) {
-				if (typeof item.datatype !== "string") {
-					return new Error(
-						filename +
-							": section " +
-							sectno +
-							" item " +
-							itemno +
-							"the field 'datatype' is defined but is not a string"
-					);
-				}
-
-				let dt = item.datatype.toLowerCase();
-				if (dt !== "integer" && dt !== "real") {
-					return new Error(
-						filename +
-							": section " +
-							sectno +
-							" item " +
-							itemno +
-							"the field 'datatype' is defined but is not a valid type: 'integer' or 'real'"
-					);
-				}
-			}
-		}
-		return undefined;
-	}
-
-	private static validateItem(
-		filename: string,
-		sectno: number,
-		itemno: number,
-		item: any
-	): Error | undefined {
-		if (!item.name) {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'name' is not defined"
-			);
-		}
-
-		if (typeof item.name !== "string") {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'name' is defined, but is not a string"
-			);
-		}
-
-		if (!item.type) {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'type' is not defined"
-			);
-		}
-
-		if (typeof item.type !== "string") {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'type' is defined, but is not a string"
-			);
-		}
-
-		if (
-			item.type != "boolean" &&
-			item.type != "text" &&
-			item.type != "choice" &&
-			item.type != "updown"
-		) {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'type' is " +
-					item.type +
-					" which is not valid.  Must be 'boolean', 'text', 'updown', 'choice', or 'select'"
-			);
-		}
-
-		if (!item.tag) {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'tag' is not defined"
-			);
-		}
-
-		if (typeof item.tag !== "string") {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'tag' is defined, but is not a string"
-			);
-		}
-
-		if (!this.validateTag(item.tag)) {
-			return new Error(
-				filename +
-					": section " +
-					sectno +
-					" item " +
-					itemno +
-					"the field 'tag' has a value '" +
-					item.tag +
-					"'which is not valid, must start with a letter and be composed of letters, numbers, and underscores"
-			);
-		}
-
-		if (item.type === "text") {
-			if (item.maxlen === undefined) {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'maxlen' is not defined and is required for an item of type 'text'"
-				);
-			}
-
-			if (typeof item.maxlen !== "number") {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'maxlen' is defined but is not a number"
-				);
-			}
-		} else if (item.type === "boolean") {
-			// NONE
-		} else if (item.type === "updown") {
-			if (item.minimum === undefined) {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'minimum' is not defined and is required for an item of type 'updown'"
-				);
-			}
-
-			if (typeof item.minimum !== "number") {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'minimum' is defined but is not a number"
-				);
-			}
-
-			if (item.maximum === undefined) {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'maximum' is not defined and is required for an item of type 'updown'"
-				);
-			}
-
-			if (typeof item.maximum !== "number") {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'maximum' is defined but is not a number"
-				);
-			}
-
-			if (item.maximum <= item.minimum) {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'maximum' is less than the field 'minimum'"
-				);
-			}
-		} else if (item.type === "choice") {
-			if (item.choices === undefined) {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'choices' is not defined and is required for an item of type 'choice'"
-				);
-			}
-
-			if (!Array.isArray(item.choices)) {
-				return new Error(
-					filename +
-						": section " +
-						sectno +
-						" item " +
-						itemno +
-						"the field 'choices' is defined but is not an array"
-				);
-			}
-
-			let choiceno = 1;
-			for (let choice of item.choices) {
-				if (typeof choice !== "string" && typeof choice !== "number") {
-					let msg: string =
-						"choice " +
-						choiceno +
-						": the value is neither a 'string', nor a 'number'";
-					return new Error(
-						filename + ": section " + sectno + " item " + itemno + msg
-					);
-				}
-				choiceno++;
-			}
-		}
-
-		return undefined;
-	}
-
-	private static validateSection(
-		filename: string,
-		num: number,
-		sect: any
-	): Error | undefined {
-		let isImage = false;
-
-		if (!sect.name) {
-			return new Error(
-				filename + ": section " + num + "the field 'name' is not defined"
-			);
-		}
-
-		if (typeof sect.name !== "string") {
-			return new Error(
-				filename +
-					": section " +
-					num +
-					"the field 'name' is defined, but is not a string"
-			);
-		}
-
-		if (sect.image) {
-			if (typeof sect.image !== "string") {
-				return new Error(
-					filename +
-						": section " +
-						num +
-						"the field 'image' is defined, but is not a string"
-				);
-			}
-			isImage = true;
-		}
-
-		if (!sect.items) {
-			return new Error(
-				filename + ": section " + num + "the field 'items' is not defined"
-			);
-		}
-
-		if (!Array.isArray(sect.items)) {
-			return new Error(
-				filename +
-					": section " +
-					num +
-					"the field 'items' is defined, but is not an array"
-			);
-		}
-
-		let itemnum = 1;
-		for (let item of sect.items) {
-			if (isImage) {
-				let err = this.validateImageItem(filename, num, itemnum, item);
-				if (err) {
-					return err;
-				}
-			} else {
-				let err = this.validateItem(filename, num, itemnum, item);
-				if (err) {
-					return err;
-				}
-			}
-			itemnum++;
-		}
-
-		return undefined;
 	}
 
 	public getForm(type: string) : IPCForm | Error {
@@ -677,105 +335,26 @@ export class FormManager extends Manager {
 		return ret;
 	}
 
-	private checkOneFormDuplicates(formname: string, tmap: Map<string, TagInformation>) : undefined | Error {
-		let formfile = path.join(this.location_, formname);    
-		try {
-			let jsonobj = FormManager.readJSONFile(formfile);
-			if (jsonobj instanceof Error) {
-				return jsonobj as Error ;
-			}
+	public  checkFormsValid() : string[] {
+		let ret: string[] = [] ;
 
-			for (let section of jsonobj.sections) {
-				if (section.items && Array.isArray(section.items)) {
-					for (let item of section.items) {
-						if (item.type === "image" || item.type === "label" || item.type === "box") {
-							// Skip any control that does not provide data, as these are not stored in the database
-							// and do not need to be checked for duplicate tags
-							this.logger_.debug(`Skipping item ${item.name} of type ${item.type} in form ${formname} section ${section.name}`) ;
-							continue;
-						}
-						
-						let tag = item.tag;
-						if (tmap.has(tag)) {
-							let info = tmap.get(tag);
-							if (info) {
-								info.sources.push({ form: formname, section: section.name, type: item.type });
-							}
-						} else {
-							let info: TagInformation = { tag: tag, sources: [] };
-							info.sources.push({ form: formname, section: section.name, type: item.type });
-							tmap.set(tag, info);
-						}
-					}
-				}
-			}
-		}
-		catch (err) {
-			this.logger_.error("Error reading form file " + formfile + ": " + err);
-			return err as Error ;
-		}
-
-		return undefined ;
-	}
-
-	public  checkDuplicateTags() : TagInformation[] {
-		let tmap: Map<string, TagInformation> = new Map<string, TagInformation>() ;
-		let ret : TagInformation[] = [] ;
-
-		this.checkOneFormDuplicates(this.info_.teamform_!, tmap) ;
-		this.checkOneFormDuplicates(this.info_.matchform_!, tmap) ;
-
-		for(let values of tmap.values()) {
-			if (values.sources.length > 1) {
-				ret.push(values) ;
+		if (this.info_.teamform_ && this.info_.teamform_.length > 0) {
+			let form = path.join(this.location_, this.info_.teamform_);
+			let err = FormManager.validateForm(form, "team");
+			for(let e of err) {
+				ret.push('team form: ' + e);
 			}
 		}
 
-		return ret ;
-	}
-
-	private checkMisnamedTagsInternal(formname: string, tdata: TagInformation[]) : undefined | Error {
-		let formfile = path.join(this.location_, formname);    
-		try {
-			let jsonobj = FormManager.readJSONFile(formfile);
-			if (jsonobj instanceof Error) {
-				return jsonobj as Error ;
-			}
-
-			for (let section of jsonobj.sections) {
-				if (section.items && Array.isArray(section.items)) {
-					for (let item of section.items) {
-						if (item.type === "image" || item.type === "label" || item.type === "box") {
-							// Skip any control that does not provide data, as these are not stored in the database
-							// and do not need to be checked for duplicate tags
-							this.logger_.debug(`Skipping item ${item.name} of type ${item.type} in form ${formname} section ${section.name}`) ;
-							continue;
-						}
-
-						if (/tag_[0-9]+/.test(item.tag)) {
-							// This is a misnamed tag, add it to the list
-							let info: TagInformation = { tag: item.tag, sources: [] };
-							info.sources.push({ form: formname, section: section.name, type: item.type });
-							tdata.push(info);
-						}
-					}
-				}
+		if (this.info_.matchform_ && this.info_.matchform_.length > 0) {
+			let form = path.join(this.location_, this.info_.matchform_);
+			let err = FormManager.validateForm(form, "match");
+			for(let e of err) {
+				ret.push('match form: ' + e);
 			}
 		}
-		catch (err) {
-			this.logger_.error("Error reading form file " + formfile + ": " + err);
-			return err as Error ;
-		}	
-		
-		return undefined ;
-	}
 
-	public checkMisnamedTags() : TagInformation[] {
-		let tinfo: TagInformation[] = [] ;
-
-		this.checkMisnamedTagsInternal(this.info_.teamform_!, tinfo) ;
-		this.checkMisnamedTagsInternal(this.info_.matchform_!, tinfo) ;
-		return tinfo ;
+		return ret ;	
 	}
 
 	public checkForms() {

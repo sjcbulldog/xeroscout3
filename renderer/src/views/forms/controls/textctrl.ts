@@ -1,6 +1,6 @@
-import {  IPCTextItem, IPCTypedDataValue  } from "../../../ipc.js";
+import {  IPCTextItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
 import { DataValue } from "../../../utils/datavalue.js";
-import {  XeroRect  } from "../../../widgets/xerogeom.js";
+import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditFormControlDialog  } from "../dialogs/editformctrldialog.js";
 import {  EditLabelDialog  } from "../dialogs/editlabeldialog.js";
@@ -72,6 +72,8 @@ export class TextControl extends FormControl {
     }
 
     public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number) : void {
+        console.log(`Creating TextControl for scouting with scale ${scale}, xoff ${xoff}, yoff ${yoff}`) ;
+        
         let input = document.createElement('input') ;
         this.setClassList(input, 'scout') ;
         this.ctrl = input ;
@@ -113,8 +115,13 @@ export class TextControl extends FormControl {
             else if (this.item.datatype === 'string' && DataValue.isString(data)) {
                 str = DataValue.toDisplayString(data) ;                
             }
-            let area = this.ctrl as HTMLInputElement ;
-            area.value = str ;
+
+            let ctrl : HTMLInputElement = this.ctrl as HTMLInputElement ;
+            ctrl.value = str ;
+
+            console.log(`Setting text control data (type = '${this.item.datatype}' to '${str}'`) ;
+            console.log(`    Input Type ${ctrl.type}`) ;
+            console.log(`    After Delay - Value ${ctrl.value}`) ;
         }
     }
 }

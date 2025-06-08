@@ -1,10 +1,12 @@
-import { XeroSize } from "../../widgets/xerogeom.js";
+import { XeroSize } from "../../shared/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
 import { XeroEditFormView } from "./editformview.js";
+import { XeroFormDataValues } from "./formdatavalues.js";
 
 export class XeroFormScoutSectionPage extends XeroWidget {
+    private data_ : XeroFormDataValues ;
     private controls_ : FormControl[] = [] ;
     private formdiv_ : HTMLDivElement ;
     private observer_ : ResizeObserver ;
@@ -13,9 +15,10 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private reversed_ : boolean = false ;
     private color_: string = 'blue' ;
 
-    public constructor(formsize: XeroSize, color: string, reversed: boolean) {
+    public constructor(data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean) {
         super('div', 'xero-form-section-page') ;
 
+        this.data_ = data ;
         this.size_ = formsize ;
         this.color_ = color ;
         this.reversed_ = reversed ;
@@ -87,10 +90,6 @@ export class XeroFormScoutSectionPage extends XeroWidget {
             let dl = this.scale_ * (control.bounds.left - image.bounds.left) ;
             let x2 = this.scale_ * image.bounds.right - dl - this.scale_ * control.bounds.width ;
             let dx = x2 - this.scale_ * control.bounds.left ;
-            console.log(`Control ${control.item.tag} overlaps with field control ${image.item.tag}`) ;
-            console.log(`    Control bounds: ${control.bounds}`) ;
-            console.log(`    Image bounds: ${image.bounds}`) ;
-            console.log(`    x2 ${x2}, dx ${dx}`) ;       
             offset = new XeroSize(offset.width + dx, offset.height) ;
         }
         control.createForScouting(this.formdiv_, this.scale_, offset.width, offset.height) 
@@ -100,6 +99,11 @@ export class XeroFormScoutSectionPage extends XeroWidget {
             if (imgctrl.field) {
                 imgctrl.tempMirrorX = this.reversed_ ;
             }
+        }
+
+        let data = this.data_.get(control.item.tag) ;
+        if (data) {
+            control.setData(data) ;
         }
     }
 
