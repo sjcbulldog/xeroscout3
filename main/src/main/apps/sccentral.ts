@@ -21,9 +21,9 @@ import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { DataValue } from "../model/datavalue";
 import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCForm, IPCScoutResult, IPCScoutResults, IPCImageResponse } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
+import { DataValue } from "../../shared/datavalue";
 
 const mdns = require('mdns-js') ;
 
@@ -891,8 +891,8 @@ export class SCCentral extends SCBase {
 		this.project_?.formula_mgr_?.renameFormula(oldname, newname) ;
 	}	
 
-	public updateFormula(name: string, exprstr: string) : void {
-		this.project_?.formula_mgr_?.addFormula(name, exprstr) ;
+	public updateFormula(name: string, desc: string, exprstr: string) : void {
+		this.project_?.formula_mgr_?.addFormula(name, desc, exprstr) ;
 	}	
 
 	public deleteFormula(name: string) : void {
@@ -1408,6 +1408,15 @@ export class SCCentral extends SCBase {
 			
 			if (this.project_.info?.locked_) {
 				treedata.push({
+					type: 'icon',
+					command: SCCentral.viewFormulas,
+					title: "Formulas",
+					icon: this.getIconData('formula.png'),
+					width: dims,
+					height: dims	
+				});
+
+				treedata.push({
 					type: "icon",
 					command: SCCentral.viewDataSets,
 					title: "Data Sets",
@@ -1457,15 +1466,6 @@ export class SCCentral extends SCBase {
 					command: SCCentral.viewSpider,
 					title: "Spider Graph",
 					icon: this.getIconData('spider.png'),
-					width: dims,
-					height: dims	
-				});
-
-				treedata.push({
-					type: 'icon',
-					command: SCCentral.viewFormulas,
-					title: "Formulas",
-					icon: this.getIconData('formula.png'),
 					width: dims,
 					height: dims	
 				});

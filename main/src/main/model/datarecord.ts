@@ -1,5 +1,4 @@
 import { IPCTypedDataValue } from "../../shared/ipc";
-import { DataValue } from "./datavalue";
 
 export class DataRecord {
     private data_ : Map<string, IPCTypedDataValue> ;

@@ -1,7 +1,6 @@
 import winston from "winston" ;
 import { Manager } from "./manager";
 import { DataManager } from "./datamgr";
-import { DataValue } from "../model/datavalue";
 import { IPCTypedDataValue } from "../../shared/ipc";
 
 //

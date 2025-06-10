@@ -4,8 +4,8 @@ import winston from 'winston';
 import { format } from '@fast-csv/format';
 import { EventEmitter } from 'events';
 import { DataRecord } from './datarecord';
-import { IPCChoice, IPCTypedDataValue, IPCDataValueType, IPCColumnDesc, IPCColumnDefnSource, IPCChange } from '../../shared/ipc';
-import { DataValue } from './datavalue';
+import { IPCTypedDataValue, IPCDataValueType, IPCColumnDesc, IPCColumnDefnSource, IPCChange } from '../../shared/ipc';
+import { DataValue } from '../../shared/datavalue' ;
 
 export class DataModelInfo {
     public col_descs_ : IPCColumnDesc[] = [] ;

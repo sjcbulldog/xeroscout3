@@ -4,7 +4,7 @@ import winston from 'winston';
 import { BAMatch } from '../extnet/badata';
 import { SCBase } from '../apps/scbase';
 import { DataRecord } from './datarecord';
-import { DataValue } from './datavalue';
+import { DataValue } from '../../shared/datavalue' ;
 import { IPCColumnDesc, IPCScoutResults, IPCTypedDataValue } from '../../shared/ipc';
 
 export class MatchDataModel extends DataModel {

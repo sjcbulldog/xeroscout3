@@ -1,14 +1,10 @@
 import winston from "winston";
 import { Manager } from "./manager" ;
-import { Expr } from "../expr/expr";
-
-export interface Formula {
-    name: string,
-    formula: string
-}
+import { Expr } from "../../shared/expr";
+import { IPCFormula } from "../../shared/ipc" ;
 
 export class FormulaInfo {
-    public formulas_ : Formula[] = [] ;                 // Formulas that can be used in the single team summary 
+    public formulas_ : IPCFormula[] = [] ;                 // Formulas that can be used in the single team summary 
 }
 
 export class FormulaManager extends Manager {
@@ -20,7 +16,7 @@ export class FormulaManager extends Manager {
         this.info_ = info ;
     }
 
-    public getFormulas() : Formula[] {
+    public getFormulas() : IPCFormula[] {
         return this.info_.formulas_ ;
     }
 
@@ -84,14 +80,15 @@ export class FormulaManager extends Manager {
         }
     }
 
-    public addFormula(name: string, formula: string) : void {
+    public addFormula(name: string, desc: string, formula: string) : void {
         let index = this.findFormulaIndex(name) ;
         if (index != -1) {
             this.info_.formulas_[index].formula = formula ;
         }
         else {      
-            let f : Formula = {
+            let f : IPCFormula = {
                 name: name,
+                desc: desc,
                 formula: formula
             } ;
 

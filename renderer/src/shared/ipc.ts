@@ -205,3 +205,16 @@ export interface IPCImageResponse {
     newname: string | undefined ;
     data: string ;
 }
+
+export interface IPCCheckDBViewFormula {
+    formula: string ;
+    message: string ;
+    background: string ;
+    color: string ;
+}
+
+export interface IPCFormula {
+    name: string,
+    desc: string,
+    formula: string
+}

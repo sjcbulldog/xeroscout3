@@ -1,5 +1,5 @@
 import { IPCTextAreaItem, IPCTypedDataValue } from "../../../shared/ipc.js";
-import { DataValue } from "../../../utils/datavalue.js";
+import { DataValue } from "../../../shared/datavalue.js";;
 import { XeroRect } from "../../../shared/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";

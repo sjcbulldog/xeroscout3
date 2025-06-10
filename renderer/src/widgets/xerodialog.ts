@@ -17,9 +17,12 @@ export abstract class XeroDialog extends EventEmitter {
     private mouse_up_handler_ : (event: MouseEvent) => void ;
     private key_down_handler_ : (event: KeyboardEvent) => void ;
 
-    constructor(title: string) {
+    private yes_no_? : boolean ;
+
+    constructor(title: string, yes_no: boolean = false) {
         super() ;
 
+        this.yes_no_ = yes_no ;
         this.title_ = title ;
         this.moving_ = false ;
 
@@ -164,13 +167,13 @@ export abstract class XeroDialog extends EventEmitter {
 
     public populateButtons(div: HTMLDivElement) {
         let okbutton = document.createElement('button') ;
-        okbutton.innerText = 'OK' ;
+        okbutton.innerText = this.yes_no_ ? 'Yes' : 'OK' ;
         okbutton.className = 'xero-popup-form-edit-dialog-button' ;
         okbutton.addEventListener('click', this.okButton.bind(this)) ;
         div.appendChild(okbutton) ;
 
         let cancelbutton = document.createElement('button') ;
-        cancelbutton.innerText = 'Cancel' ;
+        cancelbutton.innerText = this.yes_no_ ? 'No' : 'Cancel' ;
         cancelbutton.className = 'xero-popup-form-edit-dialog-button' ;
         cancelbutton.addEventListener('click', this.cancelButton.bind(this)) ;
         div.appendChild(cancelbutton) ;

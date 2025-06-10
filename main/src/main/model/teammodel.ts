@@ -4,7 +4,7 @@ import winston from 'winston';
 import { BAOprData, BARankingData, BARankings, BATeam } from '../extnet/badata';
 import { SCBase } from '../apps/scbase';
 import { DataRecord } from './datarecord';
-import { DataValue } from './datavalue';
+import { DataValue } from '../../shared/datavalue' ;
 import { IPCColumnDesc, IPCScoutResults } from '../../shared/ipc';
 
 interface scoutvalue {

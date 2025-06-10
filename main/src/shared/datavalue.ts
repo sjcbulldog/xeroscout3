@@ -1,4 +1,4 @@
-import { IPCTypedDataValue, IPCDataValueType } from "../../shared/ipc";
+import { IPCDataValueType, IPCTypedDataValue } from "./ipc.js";
 
 export class DataValue {
 

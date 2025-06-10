@@ -1,12 +1,13 @@
 import { CellComponent, ColumnDefinition, RowComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../../apps/xeroapp.js";
-import {  IPCChange, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../shared/ipc.js";
+import {  IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../shared/ipc.js";
 import {  XeroView  } from "../xeroview.js";
-import { DataValue } from "../../utils/datavalue.js";
 import { XeroPopupMenu, XeroPopupMenuItem } from "../../widgets/xeropopupmenu.js";
 import { XeroPoint } from "../../shared/xerogeom.js";
 import { ShowHideColumnsDialog } from "./dbhidedialog.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
+import { DBViewFormulaDialog } from "./dbformdialog.js";
+import { DataValue } from "../../shared/datavalue.js";
 
 export class DatabaseView extends XeroView {
     private col_cfgs_? : IPCProjColumnsConfig ;
@@ -21,6 +22,7 @@ export class DatabaseView extends XeroView {
     private context_menu_ : XeroPopupMenu ;
     private dirty_ : boolean ;
     private reverting_ : boolean ;
+    private formulas_ : IPCCheckDBViewFormula[] = [] ;
 
     protected constructor(app: XeroApp, clname: string, type: string) {
         super(app, clname);
@@ -29,7 +31,15 @@ export class DatabaseView extends XeroView {
         this.dirty_ = false ;
         this.reverting_ = false ;
 
+        this.formulas_.push({
+            formula: 'ABS(al4 + al3 + al2 + al1 - ba_autoCoralCount) > 1',
+            message: 'autoCoralCount is not equal to the sum of the scouted values',
+            background: 'red',
+            color: 'yellow',
+        }) ;        
+
         this.registerCallback('send-' + type + '-db', this.receiveData.bind(this));
+        this.registerCallback('send-' + type + '-check-formulas', this.receivedCheckFormulas.bind(this));
         this.request('get-' + type + '-db') ;
 
         let items : XeroPopupMenuItem[] = [
@@ -396,6 +406,18 @@ export class DatabaseView extends XeroView {
         this.dialog_.showRelative(this.table_div_!, 100, 100) ;
     }
 
+    private formulaDialogClosed(changed: boolean) {
+        if (changed) {
+        }
+    }
+
+    private receivedCheckFormulas(data: IPCCheckDBViewFormula[]) {
+        this.formulas_ = data ;
+    }
+
     private validDataFormulas() {
+        this.dialog_ = new DBViewFormulaDialog(this.formulas_) ;
+        this.dialog_.on('closed', this.formulaDialogClosed.bind(this)) ;
+        this.dialog_.showCentered(this.table_div_!) ;
     }
 }

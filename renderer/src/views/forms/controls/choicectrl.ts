@@ -1,5 +1,5 @@
 import {  IPCChoiceValue, IPCMultipleChoiceItem, IPCTypedDataValue  } from "../../../shared/ipc.js";
-import { DataValue } from "../../../utils/datavalue.js";
+import { DataValue } from "../../../shared/datavalue.js";;
 import {  XeroRect  } from "../../../shared/xerogeom.js";
 import {  XeroView  } from "../../xeroview.js";
 import {  EditChoiceDialog  } from "../dialogs/editchoicedialog.js";

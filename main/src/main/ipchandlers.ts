@@ -397,8 +397,8 @@ export async function updateFormula(cmd: string, ...args: any[]) {
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
             let data = args[0] as any[] ;
-            if (data.length === 2 && typeof data[0] === 'string' && typeof data[1] === 'string') {
-                central.updateFormula(data[0] as string, data[1] as string) ;
+            if (data.length === 3 && typeof data[0] === 'string' && typeof data[1] === 'string' && typeof data[2] === 'string') {
+                central.updateFormula(data[0] as string, data[1] as string, data[2] as string) ;
             }
             else {
                 scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});                 

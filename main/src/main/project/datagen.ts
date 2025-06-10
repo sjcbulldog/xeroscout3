@@ -1,5 +1,5 @@
 import * as fs from 'fs' ;
-import { DataValue } from '../model/datavalue';
+import { DataValue } from '../../shared/datavalue' ;
 import { IPCScoutResults, IPCTextAreaItem } from '../../shared/ipc';
 
 export class DataGenerator

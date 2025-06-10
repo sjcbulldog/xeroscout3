@@ -7,7 +7,7 @@ export class ShowHideColumnsDialog extends XeroDialog {
     private table_? : TabulatorFull ;
 
     constructor(colcfg: IPCProjColumnsConfig) {
-        super('Edit Section Name') ;
+        super('Show/Hide/Freeze Columns') ;
         this.colcfgs_ = colcfg ;
     }
 

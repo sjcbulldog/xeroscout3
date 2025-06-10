@@ -6,7 +6,7 @@ import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { MatchSet } from "./datasetmgr";
-import { DataValue } from "../model/datavalue";
+import { DataValue } from '../../shared/datavalue' ;
 import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";

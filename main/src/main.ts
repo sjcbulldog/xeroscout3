@@ -1,4 +1,4 @@
-import { app, crashReporter, BrowserWindow, BrowserWindowConstructorOptions, dialog, ipcMain, Menu } from "electron";
+import { app, BrowserWindow, BrowserWindowConstructorOptions, crashReporter, dialog, ipcMain, Menu } from "electron";
 import * as path from "path";
 import { SCBase } from "./main/apps/scbase";
 import { SCScout } from "./main/apps/scscout";
@@ -20,6 +20,9 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
+
+crashReporter.start({}) ;
+console.log("XeroScout Main Process Starting") ;
 
 const Config = require('electron-config') ;
 let config = new Config() ;
@@ -102,6 +105,7 @@ function createWindow() : void {
     win
       .loadFile(scappbase!.basePage())
       .then(() => {
+    console.log("XeroScout Main Process Ready") ;         
         scappbase?.mainWindowLoaded() ;
       })
       .catch((e) => {
@@ -128,7 +132,9 @@ function createWindow() : void {
     scappbase!.windowCreated() ;
 }
 
+console.log("XeroScout Main Process Starting") ;
 app.on("ready", () => {
+    console.log("XeroScout Main Process Ready") ;    
     ipcMain.on('sync-ipaddr', (event, ...args) => { syncIPAddr('splitter-changed', ...args)}) ;    
     ipcMain.on('splitter-changed', (event, ...args) => { splitterChanged('splitter-changed', ...args)}) ;
     ipcMain.on('get-nav-data', (event, ...args) => { getNavData('get-nav-data', ...args)});

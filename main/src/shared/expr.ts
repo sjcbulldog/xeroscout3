@@ -1,5 +1,9 @@
-import { IPCTypedDataValue, IPCDataValueType } from "../../shared/ipc";
-import { DataValue } from "../model/datavalue";
+import { DataValue } from "./datavalue.js";
+import { IPCDataValueType, IPCTypedDataValue } from "./ipc.js";
+
+export interface IPCFunctionDef {
+  name: string ;
+}
 
 export class ExprNode {
   public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
@@ -717,15 +721,26 @@ export class Expr {
   private str_: string;
 
   private static inited_: boolean = false;
-  private static functions_: Map<string, ExprFunctionDef> = new Map<
-    string,
-    ExprFunctionDef
-  >();
+  private static functions_: Map<string, ExprFunctionDef> = new Map<string, ExprFunctionDef>();
 
   private constructor(str: string, node: ExprNode | null, err: Error | null) {
     this.expr_ = node;
     this.err_ = err;
     this.str_ = str;
+  }
+
+  public static availableFunctions() : IPCFunctionDef[] {
+    if (!Expr.inited_) {
+      Expr.initFunctions();
+    }
+
+    let ret: IPCFunctionDef[] = [];
+    for (let func of Expr.functions_.values()) {
+      ret.push({
+        name: func.getName(),
+      }) ;
+    }
+    return ret;
   }
 
   public static registerFunction(

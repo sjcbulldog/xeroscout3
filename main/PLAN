@@ -1,5 +1,5 @@
 3.0.9 (RELEASED)
------
+----------------
 - DONE: Get rid of the top of the dbview
 - DONE: Add context menu with save changes, restore changes, hide/unhide columns, formulas (not implemented)
 - DONE: Send freeze, width, show/hide, and column order information back to main
@@ -11,8 +11,8 @@
 - DONE: Add save command from menu
 - DONE: Add revert command from menu 
 
-3.0.10
-------
+3.0.10 (RELEASED)
+-----------------
 - DONE: Get scouting application up and running
 - DONE: syncing working via direct network connection
 - DONE: Get syncing working via cable
@@ -32,11 +32,11 @@
 - DONE: Scout Red vs Blue
 - DONE: Test well as a checkpoint
 
-3.0.11
-------
+3.0.11 (RELEASED)
+-----------------
 - DONE: Apply rules checks at lock event
 - DONE: Implement resize bar for tablets
-- Sync data path all they way to the central data windows
+- DONE: Sync data path all they way to the central data windows
 
 3.0.12
 ------
@@ -44,12 +44,9 @@
 
 3.0.13
 ------
-- dbview bad data formulas
-  o Highlighting
-  o Report
-    - horizontal splitter to dbview
-    - database up top
-    - report on bottom, click on line item goes to table cell
+- Database View
+  o Highlighting based on formula
+  o Report based on forumla
 
 3.0.14
 ------

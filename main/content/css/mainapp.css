@@ -314,6 +314,13 @@ body {
     padding-top: 10px ;
 }
 
+.xero-popup-form-edit-dialog-label-error {
+    font: arial;
+    font-size: 32px;
+    color: red;
+    padding-top: 10px ;
+}
+
 .xero-popup-form-edit-dialog-input {
     background-color: wheat;
     font: arial;
