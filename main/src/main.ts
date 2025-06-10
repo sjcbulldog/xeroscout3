@@ -21,9 +21,6 @@ import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
 
-crashReporter.start({}) ;
-console.log("XeroScout Main Process Starting") ;
-
 const Config = require('electron-config') ;
 let config = new Config() ;
 
@@ -132,7 +129,6 @@ function createWindow() : void {
     scappbase!.windowCreated() ;
 }
 
-console.log("XeroScout Main Process Starting") ;
 app.on("ready", () => {
     console.log("XeroScout Main Process Ready") ;    
     ipcMain.on('sync-ipaddr', (event, ...args) => { syncIPAddr('splitter-changed', ...args)}) ;    
@@ -215,3 +211,5 @@ app.on('before-quit', (ev) => {
         }
     }
 }) ;
+
+process.exit(1) ;

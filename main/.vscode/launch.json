@@ -28,11 +28,7 @@
         "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
       },
       "args": [
-        ".",
-        "--enable-logging",
-        "--remote-debugging-port=9222",
-        "central",
-        "C:/users/butch/OneDrive/Documents/events/e1/event.json"
+        "."
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
