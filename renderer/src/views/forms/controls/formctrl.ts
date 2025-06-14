@@ -9,6 +9,8 @@ export abstract class FormControl {
     public static fuzzyEdgeSpacing = 10 ;
     public static kMinimumWidth = 20 ;
     public static kMinimumHeight = 20 ;
+    
+    private static instance_count_ = 0 ;
 
     private view_ : XeroView ;
     private item_ : IPCFormItem ;
@@ -20,6 +22,8 @@ export abstract class FormControl {
     private errors_ : string[] = [] ;
     private blink_timer_?: NodeJS.Timeout ;
     private blink_state_ = false ;
+
+    private instance_ : number = FormControl.instance_count_++ ;
     
     constructor(view: XeroView, item: IPCFormItem) {
         this.item_ = JSON.parse(JSON.stringify(item)) ;
@@ -38,7 +42,13 @@ export abstract class FormControl {
         return this.errors_ ;
     }
 
+    public get instance() : number {
+        return this.instance_ ;
+    }
+
     public setErrors(errors: string[]) {
+        console.log(`Setting errors for control ${this.instance_} (${this.item_.tag}) to ${errors}`) ;
+
         this.errors_ = [...errors] ;
         if (this.ctrl_ && this.style_ === 'none') {
             if (this.errors_.length > 0) {

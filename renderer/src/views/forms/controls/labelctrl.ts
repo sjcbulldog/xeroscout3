@@ -38,7 +38,7 @@ export class LabelControl extends FormControl {
     public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
         if (this.ctrl) {
             let item = this.item as IPCLabelItem ;
-            this.setPosition(scale, xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff, 950) ;
 
             this.ctrl.innerText = item.text ;
             this.ctrl.style.fontFamily = item.fontFamily ;

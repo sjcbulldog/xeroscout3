@@ -102,7 +102,6 @@ function createWindow() : void {
     win
       .loadFile(scappbase!.basePage())
       .then(() => {
-    console.log("XeroScout Main Process Ready") ;         
         scappbase?.mainWindowLoaded() ;
       })
       .catch((e) => {
@@ -130,7 +129,6 @@ function createWindow() : void {
 }
 
 app.on("ready", () => {
-    console.log("XeroScout Main Process Ready") ;    
     ipcMain.on('sync-ipaddr', (event, ...args) => { syncIPAddr('splitter-changed', ...args)}) ;    
     ipcMain.on('splitter-changed', (event, ...args) => { splitterChanged('splitter-changed', ...args)}) ;
     ipcMain.on('get-nav-data', (event, ...args) => { getNavData('get-nav-data', ...args)});
@@ -211,5 +209,3 @@ app.on('before-quit', (ev) => {
         }
     }
 }) ;
-
-process.exit(1) ;

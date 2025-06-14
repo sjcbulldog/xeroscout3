@@ -132,9 +132,7 @@ export class XeroFormEditSectionPage extends XeroWidget {
     }
 
     public getPlaceOffset() : XeroSize {
-        let bounds = this.elem.getBoundingClientRect() ;
-        let fbounds = this.formdiv_.getBoundingClientRect() ;
-        return new XeroSize(fbounds.left - bounds.left + this.formdiv_.scrollLeft, fbounds.top + this.formdiv_.scrollTop) ;
+        return XeroSize.zero ;
     }
 
     private holderScrolled(ev: Event) : void {
@@ -146,25 +144,57 @@ export class XeroFormEditSectionPage extends XeroWidget {
         let cbounds : XeroRect = XeroRect.fromDOMRect(ctrl.ctrl!.getBoundingClientRect()) ;
         let fbounds : XeroRect = XeroRect.fromDOMRect(this.holder_.getBoundingClientRect()) ;
 
-        let vbounds = fbounds.offset(new XeroSize(this.holder_.scrollLeft, this.holder_.scrollTop)) ;
-        
-        let ints = fbounds.intersection(cbounds) ;
+        let left = -4 ;
+        let right = -8 ;
+        let top = -4 ;
+        let bottom = -8 ;
 
-        let left = -10 ;
-        let right = -10 ;
-        let top = -10 ;
-        let bottom = -10 ;
+        let vsbar = 0 ;
+        let hsbar = 0 ;
+
+        if (this.holder_.clientWidth !== this.holder_.scrollWidth) {
+            vsbar = this.holder_.offsetWidth - this.holder_.clientWidth ;
+        }
+
+        if (this.holder_.clientHeight !== this.holder_.scrollHeight) {
+            hsbar = this.holder_.offsetHeight - this.holder_.clientHeight ;
+        }
 
         if (cbounds.left < fbounds.left) {
             left = fbounds.left - cbounds.left ;
+        }
+
+        if (cbounds.right > fbounds.right) {
+            right = cbounds.right - fbounds.right  + vsbar ;
         }
 
         if (cbounds.top < fbounds.top) {
             top = fbounds.top - cbounds.top ;
         }
 
+        if (cbounds.bottom > fbounds.bottom) {
+            bottom = cbounds.bottom - fbounds.bottom + hsbar ;
+        }
+
+        console.log(`Clip rect: ${left}, ${right}, ${top}, ${bottom}`) ;
+        console.log(`  Control bounds: ${cbounds}`) ;
+        console.log(`  Form bounds: ${fbounds}`) ;
+        console.log('\n\n') ;
+
         let clip = `inset(${top}px ${right}px ${bottom}px ${left}px)` ;
         return clip ;
+    }
+
+    public clipControl(control: FormControl) : void {
+        if (control.ctrl === undefined) {
+            return ;
+        }
+        let clip = this.getClipRect(control) ;
+        if (clip !== undefined) {
+            control.ctrl.style.clipPath = clip ;
+        } else {
+            control.ctrl.style.clipPath = '' ;
+        }
     }
 
     private addControlToLayout(control: FormControl) : void {

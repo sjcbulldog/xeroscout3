@@ -36,6 +36,7 @@ export class XeroPoint {
 export class XeroSize {
     public readonly width: number;
     public readonly height: number;
+    public static readonly zero = new XeroSize(0, 0);
 
     constructor(public wid: number, public hei: number) {
         this.width = wid;
@@ -56,6 +57,7 @@ export class XeroRect {
     public readonly y: number;
     public readonly width: number;
     public readonly height: number;
+    public static zero = new XeroRect(0, 0, 0, 0);
 
     constructor(public xv: number, public yv: number, public wv: number, public hv: number) {
         this.x = xv;

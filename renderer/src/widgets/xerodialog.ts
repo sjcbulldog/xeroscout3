@@ -31,6 +31,10 @@ export abstract class XeroDialog extends EventEmitter {
         this.key_down_handler_ = this.keyDown.bind(this) ;
     }
 
+    public get popup() : HTMLDivElement | undefined {
+        return this.popup_ ;
+    }
+
     public showRelative(win: HTMLElement, x: number, y: number) {
         this.parent_ = win ;
         this.prePlaceInit() ;
@@ -55,6 +59,7 @@ export abstract class XeroDialog extends EventEmitter {
     public showCentered(win: HTMLElement) {
         this.parent_ = win ;
         this.prePlaceInit() ;
+
         if (XeroDialog.first_) {
             setTimeout(this.centerDialog.bind(this), 100) ;
             XeroDialog.first_ = false ;
@@ -67,7 +72,7 @@ export abstract class XeroDialog extends EventEmitter {
 
     private postPlaceInit() {
         document.addEventListener('keydown', this.key_down_handler_) ;
-        this.topbar_!.addEventListener('mousedown', this.mouseDown.bind(this)) ;        
+        this.topbar_!.addEventListener('mousedown', this.mouseDown.bind(this)) ;
     }
 
     private prePlaceInit() {

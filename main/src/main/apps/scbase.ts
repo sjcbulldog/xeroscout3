@@ -386,7 +386,7 @@ export abstract class SCBase {
 
 		let initData : IPCAppInit = {
 			type: this.typestr_,
-			splitter: value
+			splitter: value,
 		} ;
 
 		this.sendToRenderer('xero-app-init', initData) ;

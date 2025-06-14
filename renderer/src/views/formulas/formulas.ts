@@ -17,6 +17,8 @@ export class XeroFormulasView extends XeroView {
     private seen_match_fields_ : boolean = false ;
     private seen_team_fields_ : boolean = false ;
 
+    private editing_ : number = -1 ;
+
     public constructor(app: XeroApp, args: any[]) {
         super(app, 'xero-formula-view') ;
         this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;
@@ -55,17 +57,32 @@ export class XeroFormulasView extends XeroView {
                     layout: 'fitColumns',
                     columns: [
                         { title: '', field: 'del', formatter: this.formatDelCell.bind(this), width: 30},
-                        { title: 'Name', field: 'name', editor: 'input' },
-                        { title: 'Formula', field: 'formula', editor: 'input' },
-                        { title: 'Description', field: 'desc', editor: 'input' },
+                        { title: 'Name', field: 'name'},
+                        { title: 'Formula', field: 'formula'},
+                        { title: 'Description', field: 'desc'},
                     ]
                 }) ;
 
                 this.table_.on('tableBuilt', this.addNewFormulaRow.bind(this)) ;
+                this.table_.on('cellDblClick', this.onCellDblClick.bind(this)) ;
             }
             else {
                 this.table_.setData(this.formulas_) ;
                 this.addNewFormulaRow() ;
+            }
+        }
+    }
+
+    private onCellDblClick(e: UIEvent, cell: CellComponent) {
+        let data = cell.getData() ;
+        if (data.name !== undefined) {
+            this.editing_ = this.formulas_.findIndex((f) => f.name === data.name) ;
+            if (this.editing_ !== -1) {
+                this.dialog_ = new NewFormulaDialog(this.formulas_, this.match_fields_, this.team_fields_, 
+                                    this.formulas_[this.editing_].name, this.formulas_[this.editing_].formula,
+                                    this.formulas_[this.editing_].desc) ;
+                this.dialog_.on('closed', this.addNewFormulaClosed.bind(this)) ;
+                this.dialog_.showCentered(this.elem) ;
             }
         }
     }
@@ -100,10 +117,28 @@ export class XeroFormulasView extends XeroView {
             let desc = d.desc ;
             let expr = d.expr ;
 
-            this.request('update-formula', [name, desc, expr]) ;
-            this.request('get-formulas') ;
-        }
+            if (this.editing_ !== -1) {
+                if (name !== this.formulas_[this.editing_].name) {
+                    this.request('rename-formula', this.formulas_[this.editing_].name) ;
+                    this.formulas_[this.editing_].name = name ;
+                }
 
+                this.formulas_[this.editing_].desc = desc ;
+                this.formulas_[this.editing_].formula = expr ;
+
+            }
+            else {
+                this.formulas_.push({
+                    name: name,
+                    desc: desc,
+                    formula: expr
+                }) ;
+            }
+            this.request('update-formula', [name, desc, expr]) ;
+            this.request('get-formulas') ;            
+        }
+        this.dialog_ = undefined ;
+        this.editing_ = -1 ;
     }
 
     private addNewFormula(e: MouseEvent) {
@@ -123,7 +158,8 @@ export class XeroFormulasView extends XeroView {
     }
 
     private deleteFormula(cell: CellComponent, e: MouseEvent) {
-        this.dialog_ = new XeroYesNo('Delete Formula', 'Are you sure you want to delete this formula?') ;
+        let data = cell.getData() ;
+        this.dialog_ = new XeroYesNo('Delete Formula', `Are you sure you want to delete the formula '${data.name}?`) ;
         this.dialog_.on('closed', this.deleteFormulaConfirmed.bind(this, cell)) ;
         this.dialog_.showCentered(this.elem) ;
     }

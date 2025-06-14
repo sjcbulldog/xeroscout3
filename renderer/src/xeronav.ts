@@ -4,6 +4,7 @@ import {  XeroWidget  } from "./widgets/xerowidget.js";
 
 export class XeroNav  extends XeroWidget {
     private navelems_ : HTMLElement[] = [] ;
+    private highlightedElem_ : HTMLElement | null = null ;
 
     public constructor() {
         super('div', 'xero-nav-list');
@@ -54,6 +55,13 @@ export class XeroNav  extends XeroWidget {
     }
 
     private onNavHighlight(data: any) {
+        for(let item of this.navelems_) {
+            item.classList.remove('xero-nav-highlight') ;
+            if (item.xerodata === data) {
+                item.classList.add('xero-nav-highlight') ;
+                this.highlightedElem_ = item ;
+            }
+        }
     }
 
     private navItemClicked(event: Event) {

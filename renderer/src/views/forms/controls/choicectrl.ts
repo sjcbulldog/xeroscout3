@@ -194,6 +194,7 @@ export class MultipleChoiceControl extends FormControl {
         this.ctrl.appendChild(this.choice_table_) ;
 
         this.updateFromItem(false, scale, xoff, yoff) ;
+        this.setData(DataValue.fromString(item.choices[0].value.toString())) ;
         parent.appendChild(this.ctrl) ;
     }
 

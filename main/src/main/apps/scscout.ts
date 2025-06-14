@@ -43,6 +43,7 @@ export class SCScout extends SCBase {
     private static readonly syncEventIPAddr: string = "sync-event-ipaddr" ;
     private static readonly resetTablet: string = "reset-tablet" ;
     private static readonly resizeWindow: string = "resize-window" ;
+    private static readonly showTeams: string = 'show-teams' ;
     private static readonly reverseImage: string = 'reverse' ;
 
     private info_ : SCScoutInfo = new SCScoutInfo() ;
@@ -55,7 +56,9 @@ export class SCScout extends SCBase {
     private next_cmd_? : string ;
     private reversed_ : boolean = false ;
     private reverseImage_: MenuItem | undefined ;
+    private show_teams_item_ : MenuItem | undefined ;
     private sync_client_? : SyncClient ;
+    private show_teams_ : boolean = false ;
 
     private ipaddr_: string = '' ;
     private port_ : number = 0 ;
@@ -69,6 +72,10 @@ export class SCScout extends SCBase {
         super(win, 'scout') ;
 
         this.checkLastEvent() ;
+
+        if (this.hasSetting(SCScout.showTeams)) {
+            this.show_teams_ = this.getSetting(SCScout.showTeams) ;
+        }
     }
 
     public get applicationType() : XeroAppType { 
@@ -139,7 +146,11 @@ export class SCScout extends SCBase {
 
         for(let t of this.info_.teamlist_!) {      
             if (t.tablet === this.info_.tablet_) {
-                ret.push({type: 'item', command: 'st-' + t.team, title: "Team: " + t.team, number: t.team}) ;
+                let title = "Team: " + t.team ;
+                if (this.show_teams_) {
+                    title += ' (' + t.name + ')' ;
+                }
+                ret.push({type: 'item', command: 'st-' + t.team, title: title, number: t.team}) ;
             }
         }
 
@@ -168,12 +179,14 @@ export class SCScout extends SCBase {
         ofinterest.sort((a, b) => { return this.sortCompFun(a, b) ;}) ;
 
         for(let t of ofinterest) {
-            let numstr: string = SCBase.stripKeyString(t.teamkey) ;
             let mtype:string = t.comp_level ;
             
-            let cmd: string = 'sm-' + t.comp_level + '-' + t.set_number + '-' + t.match_number + '-' + t.teamkey ;
+            let cmd: string = 'sm-' + t.comp_level + '-' + t.set_number + '-' + t.match_number + '-' + t.teamnumber ;
             let title: string ;
-            title = mtype.toUpperCase() + '-' + t.match_number + ' - ' + t.set_number + '-' + numstr ;
+            title = mtype.toUpperCase() + '-' + t.match_number + ' - ' + t.set_number + '-' + t.teamnumber ;
+            if (this.show_teams_) {
+                title += ' (' + t.teamname + ')' ;
+            }
             ret.push({type: 'item', command: cmd, title: title}) ;
         }
         return ret ;
@@ -238,6 +251,14 @@ export class SCScout extends SCBase {
         }
         else if (cmd === SCScout.resizeWindow) {
             this.sendToRenderer('resize-window') ;
+        }
+        else if (cmd === SCScout.showTeams) {
+            this.show_teams_ = !this.show_teams_ ;
+            if (this.show_teams_item_) {
+                this.show_teams_item_.checked = this.show_teams_ ;
+            }
+            this.setSetting(SCScout.showTeams, this.show_teams_) ;
+            this.sendNavData() ;
         }
         else if (cmd === SCScout.reverseImage) {
             this.reverseImage() ;
@@ -375,7 +396,7 @@ export class SCScout extends SCBase {
         let ret: string | undefined ;
         
         for(let m of this.info_.matchlist_!) {
-            let cmd: string = 'sm-' + m.comp_level + '-' + m.set_number + '-' + m.match_number + '-' + m.teamkey ;
+            let cmd: string = 'sm-' + m.comp_level + '-' + m.set_number + '-' + m.match_number + '-' + m.teamnumber ;
             if (cmd === match) {
                 ret = m.alliance ;
                 break ;
@@ -398,8 +419,6 @@ export class SCScout extends SCBase {
     }
 
     public provideResults(res: IPCNamedDataValue[]) {
-        console.log('provideResults:', JSON.stringify(res)) ;
-
         this.addResults(this.current_scout_!, this.filterResults(res)) ;
         this.writeEventFile() ;
         this.logger_.silly('provideResults:' + this.current_scout_, res) ;
@@ -690,7 +709,7 @@ export class SCScout extends SCBase {
         let ret : string[] = [] ;
 
         for(let m of this.info_.matchlist_!) {
-            let cmd: string = 'sm-' + m.comp_level + '-' + m.set_number + '-' + m.match_number + '-' + m.teamkey ;
+            let cmd: string = 'sm-' + m.comp_level + '-' + m.set_number + '-' + m.match_number + '-' + m.teamnumber ;
             if (this.info_.results_) {
                 let res: IPCScoutResult | undefined = this.getResults(cmd) ;
                 if (!res) {
@@ -908,6 +927,16 @@ export class SCScout extends SCBase {
             label: 'Resize Window',
             click: () => { this.executeCommand(SCScout.resizeWindow)}
         })) ;
+
+        this.show_teams_item_ = new MenuItem({
+            type: 'checkbox',
+            label: 'Show Teams',
+            click: () => { this.executeCommand(SCScout.showTeams)}
+        }) ;
+        if (this.show_teams_) {
+            this.show_teams_item_.checked = true ;
+        }
+        viewmenu.submenu?.append(this.show_teams_item_) ;
         ret.append(viewmenu) ;
 
         let helpmenu: MenuItem = new MenuItem( {

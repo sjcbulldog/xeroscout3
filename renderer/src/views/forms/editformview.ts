@@ -527,7 +527,10 @@ export class XeroEditFormView extends XeroView {
     }
 
     private updateErrors(tag: string, errors: string[]) {
-        this.findControlByTag(tag)?.setErrors(errors) ;
+        let ctrls = this.findControlByTag(tag) ;
+        for(let ctrl of ctrls) {
+            ctrl.setErrors(errors) ;
+        }
     }
 
     private resetErrors() {
@@ -1112,11 +1115,11 @@ export class XeroEditFormView extends XeroView {
                 return false ;
             }
 
-            if (bounds.x + dx + bounds.width + dw > form_bounds.width - 10 && (dx > 0 || dw > 0)) {
+            if (bounds.x + dx + bounds.width + dw > form_bounds.width - 16 && (dx > 0 || dw > 0)) {
                 return false ;
             }
             
-            if (bounds.y + dy + bounds.height + dh > form_bounds.height - 10 && (dy > 0 || dh > 0)) {
+            if (bounds.y + dy + bounds.height + dh > form_bounds.height - 16 && (dy > 0 || dh > 0)) {
                 return false; 
             }
         }
@@ -1451,7 +1454,8 @@ export class XeroEditFormView extends XeroView {
             }
 
             frmctrl.item.height = frmctrl.originalBounds.height + dh ;
-            frmctrl.positionUpdated() 
+            frmctrl.positionUpdated() ;
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].clipControl(frmctrl) ;
             
             this.dragToCursorStyle() ;
         }
@@ -2237,14 +2241,15 @@ export class XeroEditFormView extends XeroView {
         }
     }      
 
-    private findControlByTag(tag: string) : FormControl | undefined {
+    private findControlByTag(tag: string) : FormControl[] {
+        let ret : FormControl[] = [] ;
         for(let page of this.section_pages_) {
             for(let ctrl of page.controls) {
                 if (ctrl.item && ctrl.item.tag === tag) {
-                    return ctrl ;
+                    ret.push(ctrl) ;
                 }
             }
         }
-        return undefined ;
+        return ret ;
     }
 }

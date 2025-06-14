@@ -370,6 +370,7 @@
 }
 
 .xero-form-section-page-form {
+    position: relative;
     border: solid 2px black;
     padding: 0px ;
     margin: 0px ;

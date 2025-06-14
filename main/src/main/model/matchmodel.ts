@@ -250,11 +250,15 @@ export class MatchDataModel extends DataModel {
         const regex = /^sm-([a-z]+)-([0-9]+)-([0-9]+)-([a-zA-Z0-9]+)$/;
         let match = regex.exec(str) ;
         if (match) {
+            let team = match[4] ;
+            if (!team.startsWith('frc')) {
+                team = 'frc' + team ;
+            }
             ret = {
                 type: match[1],
                 set_number: +match[2],
                 match: +match[3],
-                teamkey: match[4]
+                teamkey: team
             } ;
         }
 

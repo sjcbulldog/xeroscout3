@@ -4,7 +4,7 @@ export class TabletDB {
     private static tablets_ : IPCTablet[] = [
         {
             name: 'surface',
-            size: { width: 1075, height: 1028 },
+            size: { width: 1089, height: 727 },
         },
         {
             name: 'dell',

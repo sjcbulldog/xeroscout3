@@ -21,20 +21,32 @@ export class XeroStatusBar extends XeroWidget {
         this.elem.appendChild(this.right_status_) ;
     }
 
-    public setLeftStatus(text: string) : void {
+    public getLeftStatus() : HTMLElement {
+        return this.left_status_ ;
+    }
+
+    public setLeftStatus(text: string | undefined) : void {
         if (text) {
             this.left_status_.innerHTML = text ;
         }
     }
 
-    public setMiddleStatus(text: string) : void {
+    public getMiddleStatus() : HTMLElement {
+        return this.middle_status_ ;
+    }
+
+    public setMiddleStatus(text: string | undefined) : void {
         if (text !== undefined) {
             this.middle_status_.innerHTML = text ;
         }
     }
 
-    public setRightStatus(text: string) : void {
-        if (text) {
+    public getRightStatus() : HTMLElement {
+        return this.right_status_ ;
+    }
+
+    public setRightStatus(text: string | undefined) : void {
+        if (text !== undefined) {
             this.right_status_.innerHTML = text ;
         }
     }

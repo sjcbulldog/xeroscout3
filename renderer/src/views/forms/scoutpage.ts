@@ -1,3 +1,4 @@
+import { XeroApp } from "../../apps/xeroapp.js";
 import { XeroSize } from "../../shared/xerogeom.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { FormControl } from "./controls/formctrl.js";
@@ -6,6 +7,7 @@ import { XeroEditFormView } from "./editformview.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
 
 export class XeroFormScoutSectionPage extends XeroWidget {
+    private app_ : XeroApp ;
     private data_ : XeroFormDataValues ;
     private controls_ : FormControl[] = [] ;
     private formdiv_ : HTMLDivElement ;
@@ -15,9 +17,10 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private reversed_ : boolean = false ;
     private color_: string = 'blue' ;
 
-    public constructor(data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean) {
+    public constructor(app: XeroApp, data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean) {
         super('div', 'xero-form-section-page') ;
 
+        this.app_ = app ;
         this.data_ = data ;
         this.size_ = formsize ;
         this.color_ = color ;
@@ -113,5 +116,10 @@ export class XeroFormScoutSectionPage extends XeroWidget {
                 this.doLayout() ;
             }
         }
+
+        let text = this.app_.statusBar.getLeftStatus().innerText ;
+        text = text.replace(/\([0-9]+ *x *[0-9]+\)/, '') ;
+        text += `(${this.formdiv_.clientWidth} x ${this.formdiv_.clientHeight})` ;
+        this.app_.statusBar.setLeftStatus(text) ;
     }
 }

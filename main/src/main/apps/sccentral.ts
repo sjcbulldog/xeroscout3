@@ -2,7 +2,7 @@ import Papa from "papaparse";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { SCBase, XeroAppType, XeroVersion } from "./scbase";
+import { SCBase, XeroAppType } from "./scbase";
 import { BlueAlliance } from "../extnet/ba";
 import { Project } from "../project/project";
 import { BrowserWindow, Data, dialog, Menu, MenuItem, protocol, shell } from "electron";
@@ -21,7 +21,7 @@ import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCForm, IPCScoutResult, IPCScoutResults, IPCImageResponse } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 
@@ -159,7 +159,35 @@ export class SCCentral extends SCBase {
 			});			
 		}
 		else {
-			this.setView('text', 'No Event Loaded') ;
+			let recents = this.getSetting(SCCentral.recentFilesSetting);
+			if (recents && Array.isArray(recents) && recents.length > 0) {
+				let fpath = path.join(recents[0], 'event.json');
+				if (fs.existsSync(fpath)) {
+					Project.openEvent(this.logger_, fpath, this.year_!)
+					.then((p) => {
+						this.addRecent(p.location);
+						this.project_ = p;
+						this.sendHintDB() ;
+						this.updateMenuState(true);
+						if (this.project_.info?.locked_) {
+							this.startSyncServer();
+						}
+						this.setView("info");
+						this.sendNavData();
+					})
+					.catch((err) => {
+						let errobj: Error = err as Error;
+						dialog.showErrorBox("Open Project Error", errobj.message);
+						this.setView('text', 'No Event Loaded') ;
+					});
+				}
+				else {
+					this.setView('text', 'No Event Loaded') ;
+				}
+			}
+			else {
+				this.setView('text', 'No Event Loaded') ;
+			}
 		}
 
 		let v = this.getVersion('application') ;
@@ -717,7 +745,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							r1
+							this.keyToTeamNumber(r1)
 						),
 						redst1: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
@@ -730,7 +758,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							r2
+							this.keyToTeamNumber(r2)
 						),
 						redst2: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
@@ -743,7 +771,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							r3
+							this.keyToTeamNumber(r3)
 						),
 						redst3: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
@@ -756,7 +784,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							b1
+							this.keyToTeamNumber(b1)
 						),
 						bluest1: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
@@ -769,7 +797,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							b2
+							this.keyToTeamNumber(b2)
 						),
 						bluest2: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
@@ -782,7 +810,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							b3
+							this.keyToTeamNumber(b3)
 						),
 						bluest3: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,

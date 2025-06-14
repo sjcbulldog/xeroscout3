@@ -162,7 +162,7 @@ export class XeroScoutFormView extends XeroView {
         if (this.form_info_?.form?.tablet.size) {
             sz = new XeroSize(this.form_info_!.form.tablet.size.width, this.form_info_!.form.tablet.size.height) ;
         }
-        let page = new XeroFormScoutSectionPage(this.data_!, sz, this.form_info_!.color || 'blue', this.form_info_!.reversed || false) ;
+        let page = new XeroFormScoutSectionPage(this.app, this.data_!, sz, this.form_info_!.color || 'blue', this.form_info_!.reversed || false) ;
         this.tabbed_ctrl_!.addPage(section.name, page.elem) ;
         this.section_pages_.push(page) ;
         this.updateControls(section, page) ;

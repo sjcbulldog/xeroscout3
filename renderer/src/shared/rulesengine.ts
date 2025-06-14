@@ -191,6 +191,7 @@ export class RulesEngine extends EventEmitter {
 
     private ruleThree() : void {
         let tags: string[] = [] ;
+        let dups: string[] = [] ;
         for(let page of this.form_.sections) {
             for(let ctrl of page.items) {
                 if (ctrl.type === 'image' || ctrl.type === 'label' || ctrl.type === 'box') {
@@ -198,14 +199,25 @@ export class RulesEngine extends EventEmitter {
                 }
 
                 if (tags.indexOf(ctrl.tag) !== -1) {
-                    this.addError(ctrl.tag, `${ctrl.tag} - duplicate tag found.  Each control must have a unique tag`) ;
+                    dups.push(ctrl.tag) ;
                 }
                 else {
                     tags.push(ctrl.tag) ;
                 }
             }
         }
-    }
+        for(let page of this.form_.sections) {
+            for(let ctrl of page.items) {
+                if (ctrl.type === 'image' || ctrl.type === 'label' || ctrl.type === 'box') {
+                    continue ;
+                }
+
+                if (dups.indexOf(ctrl.tag) !== -1) {
+                    this.addError(ctrl.tag, `${ctrl.tag} - tag must be unique.  Controls with duplicate tags are invalid.`) ;
+                }
+            }
+        }
+    }    
 
     private ruleFour() : void {
         for(let page of this.form_.sections) {

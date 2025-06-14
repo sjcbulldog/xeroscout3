@@ -28,6 +28,11 @@ body {
     cursor:pointer;
 }
 
+.xero-nav-highlight {
+    background: blue;
+    color: white;
+}
+
 .xero-nav-list-icon {
     width: calc(100% - 18px);
     padding: 6px 0px 6px 16px;
@@ -327,6 +332,15 @@ body {
     font-size: 24px;
     border: 1px solid black;
     margin-left: 10px;
+}
+
+.xero-popup-form-edit-dialog-error-message {
+    font: arial;
+    font-size: 24px;
+    color: red;
+    margin-left: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 .xero-popup-form-edit-dialog-checkbox {

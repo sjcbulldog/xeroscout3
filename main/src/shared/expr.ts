@@ -13,7 +13,8 @@ export class ExprNode {
     };
   }
 
-  public variables(vars: string[]): void {}
+  public variables(vars: string[]): void {    
+  }
 }
 
 export class ExprValue extends ExprNode {

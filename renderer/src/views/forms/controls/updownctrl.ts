@@ -187,6 +187,7 @@ export class UpDownControl extends FormControl {
         }
 
         this.updateFromItem(false, scale, xoff, yoff) ;
+        this.setData(DataValue.fromInteger(item.minvalue)) ;
         parent.appendChild(this.ctrl) ;
     }
 

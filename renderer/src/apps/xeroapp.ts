@@ -56,6 +56,7 @@ export class XeroApp extends XeroMainProcessInterface {
 
         this.registerCallback('xero-app-init', this.init.bind(this)) ;
         this.registerCallback('resize-window', this.resizeWinow.bind(this)) ;
+        this.registerCallback('tablet-title', this.setTabletTitle.bind(this)) ;
     }
 
     private init(init: IPCAppInit) {
@@ -82,6 +83,10 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('update-main-window-view', this.updateView.bind(this)) ;
         this.registerCallback('send-app-status', this.updateStatusBar.bind(this)) ;
         this.registerViews() ;
+    }
+
+    private setTabletTitle(title: string) {
+        document.title = title ;
     }
 
     private resizeWinow() {
@@ -118,11 +123,15 @@ export class XeroApp extends XeroMainProcessInterface {
         return this.message_overlay_ ;
     }
 
+    private processArg(arg: string | undefined) : string | undefined {
+        return arg ;
+    }
+
     private updateStatusBar(args: IPCSetStatus) {
         let logger = XeroLogger.getInstance() ;
-        this.status_!.statusBar().setLeftStatus(args.left) ;
-        this.status_!.statusBar().setMiddleStatus(args.middle) ;
-        this.status_!.statusBar().setRightStatus(args.right) ;
+        this.status_!.statusBar().setLeftStatus(this.processArg(args.left)) ;
+        this.status_!.statusBar().setMiddleStatus(this.processArg(args.middle)) ;
+        this.status_!.statusBar().setRightStatus(this.processArg(args.right)) ;
     }
 
     public updateView(args: IPCSetView) {

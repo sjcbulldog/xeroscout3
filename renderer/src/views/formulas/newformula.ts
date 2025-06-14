@@ -19,6 +19,8 @@ export class NewFormulaDialog extends XeroDialog {
     private expr_input_?: HTMLInputElement ;
     private expr_label_?: HTMLLabelElement ;
 
+    private err_msg_? : HTMLSpanElement ;
+
     private list_div_? : HTMLDivElement ;
 
     private match_fields_table_div_? : HTMLDivElement ;
@@ -35,12 +37,21 @@ export class NewFormulaDialog extends XeroDialog {
     private team_fields_ : IPCColumnDesc[] = [] ;
     private formulas_ : IPCFormula[] = [] ;
 
-    constructor(formulas: IPCFormula[], match_fields: IPCColumnDesc[], team_fields: IPCColumnDesc[]) {
+    private init_name_ : string = '' ;
+    private init_expr_ : string = '' ;
+    private init_desc_ : string = '' ;
+
+    constructor(formulas: IPCFormula[], match_fields: IPCColumnDesc[], team_fields: IPCColumnDesc[],
+                name: string = '', expr: string = '', desc: string = '') {
         super('New Formula') ;
 
         this.match_fields_ = match_fields ;
         this.team_fields_ = team_fields ;
         this.formulas_ = formulas ;
+
+        this.init_name_ = name ;
+        this.init_expr_ = expr ;
+        this.init_desc_ = desc ;
     }
 
     public get name() : string {
@@ -66,6 +77,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.name_input_ = document.createElement('input') ;
         this.name_input_.type = 'text' ;
         this.name_input_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.name_input_.value = this.init_name_ ;
 
         this.name_label_ = document.createElement('label') ;
         this.name_label_.className = 'xero-popup-form-edit-dialog-label' ;
@@ -76,6 +88,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.desc_input_ = document.createElement('input') ;
         this.desc_input_.type = 'text' ;
         this.desc_input_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.desc_input_.value = this.init_desc_ ;
 
         this.desc_label_ = document.createElement('label') ;
         this.desc_label_.className = 'xero-popup-form-edit-dialog-label' ;
@@ -87,6 +100,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.expr_input_.type = 'text' ;
         this.expr_input_.style.width = '600px' ;
         this.expr_input_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.expr_input_.value = this.init_expr_ ;
         this.expr_input_.addEventListener('input', () => this.onExprChanged()) ;
 
         this.expr_label_ = document.createElement('label') ;
@@ -94,6 +108,10 @@ export class NewFormulaDialog extends XeroDialog {
         this.expr_label_.innerText = 'Expression' ;
         this.expr_label_.appendChild(this.expr_input_) ;
         this.topdiv_.appendChild(this.expr_label_) ;
+
+        this.err_msg_ = document.createElement('span') ;
+        this.err_msg_.className = 'xero-popup-form-edit-dialog-error-message' ;
+        this.topdiv_.appendChild(this.err_msg_) ;
 
         this.list_div_ = document.createElement('div') ;
         this.list_div_.className = 'xero-popup-form-new-formula-list-div' ;
@@ -105,10 +123,10 @@ export class NewFormulaDialog extends XeroDialog {
         this.match_fields_table_ = new TabulatorFull(this.match_fields_table_div_, {
             data: this.match_fields_,
             columns: [
-                { title: 'Match', field: 'name' }
+                { title: 'Match', field: 'name' , width: 200}
             ],
-            layout: 'fitColumns',
-            maxHeight: '400px'
+            layout: 'fitData',
+            maxHeight: '400px',
         }) ;
 
         this.team_fields_table_div_ = document.createElement('div') ;
@@ -118,7 +136,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.team_fields_table_ = new TabulatorFull(this.team_fields_table_div_, {
             data: this.team_fields_,
             columns: [
-                { title: 'Team', field: 'name' }
+                { title: 'Team', field: 'name' , width: 200}
             ],
             layout: 'fitColumns',
             maxHeight: '400px'
@@ -131,7 +149,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.formula_table_ = new TabulatorFull(this.formula_table_div_, {
             data: this.formulas_,
             columns: [
-                { title: 'Formula', field: 'name' }
+                { title: 'Formula', field: 'name' , width: 200}
             ],
             layout: 'fitColumns',
             maxHeight: '400px'
@@ -144,7 +162,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.function_table_ = new TabulatorFull(this.function_table_div_, {
             data: Expr.availableFunctions(),
             columns: [
-                { title: 'Functions', field: 'name' }
+                { title: 'Functions', field: 'name' , width: 200}
             ],
             layout: 'fitColumns',
             maxHeight: '400px'
@@ -202,6 +220,7 @@ export class NewFormulaDialog extends XeroDialog {
         }
         
         if (this.name_ === '') {
+            this.err_msg_!.innerText = 'Please enter a name for the formula.' ;
             this.name_label_!.classList.add('xero-popup-form-edit-dialog-label-error') ;
             return false ;
         }
@@ -210,6 +229,7 @@ export class NewFormulaDialog extends XeroDialog {
         }
 
         if (this.desc_ === '') {
+            this.err_msg_!.innerText = 'Please enter a description for the formula.' ;
             this.desc_label_!.classList.add('xero-popup-form-edit-dialog-label-error') ;
             return false ;
         }
@@ -218,11 +238,18 @@ export class NewFormulaDialog extends XeroDialog {
         }
 
         if (this.expr_ === '') {
+            this.err_msg_!.innerText = 'Please enter an expression for the formula.' ;
             this.expr_label_!.classList.add('xero-popup-form-edit-dialog-label-error') ;
             return false ;
         }
         else {
             this.expr_label_!.classList.remove('xero-popup-form-edit-dialog-label-error') ;
+        }
+
+        let expr = Expr.parse(this.expr_)
+        if (expr.hasError()) {
+            this.err_msg_!.innerText = 'Invalid expression: ' + expr.getError()?.message ;
+            return false ;
         }
 
         return true ;

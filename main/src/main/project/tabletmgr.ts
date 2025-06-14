@@ -2,7 +2,8 @@ import winston from "winston";
 import { Manager } from "./manager";
 import { TeamManager } from "./teammgr";
 import { MatchManager } from "./matchmgr";
-
+import { SCBase } from "../apps/scbase";
+import { BATeam } from "../extnet/badata";
 
 export class Tablet {
     public name : string ;
@@ -17,10 +18,12 @@ export class Tablet {
 export class TeamTablet {
     public team: number ;
     public tablet: string ;
+    public name: string ;
 
-    constructor(team: number, tablet: string) {
+    constructor(team: number, tablet: string, name: string) {
         this.team = team ;
         this.tablet = tablet ;
+        this.name = name ;
     }
 }
 
@@ -28,16 +31,18 @@ export class MatchTablet {
     public comp_level: string ;
     public match_number: number ;
     public set_number: number ;
-    public teamkey: string ;
+    public teamnumber: number ;
+    public teamname: string ;
     public tablet: string ;
     public alliance: string ;
 
-    constructor(type: string, number: number, set: number, alliance: string, teamkey: string, tablet: string) {
+    constructor(type: string, number: number, set: number, alliance: string, teamnum: number, name: string, tablet: string) {
         this.comp_level = type ;
         this.match_number = number ;
         this.set_number = set ;
         this.alliance = alliance ;
-        this.teamkey = teamkey ;
+        this.teamnumber = teamnum ;
+        this.teamname = name ; 
         this.tablet = tablet ;
     }
 }
@@ -169,10 +174,10 @@ export class TabletManager extends Manager {
         return false ;
     }
 
-    public findTabletForMatch(complevel: string, setno: number, matchno: number, teamkey: string) : string {
+    public findTabletForMatch(complevel: string, setno: number, matchno: number, teamnum: number) : string {
         let ret = '' ;
         for(let ma of this.info_.matchassignements_) {
-            if (ma.comp_level === complevel && ma.set_number === setno && ma.match_number === matchno && ma.teamkey === teamkey) {
+            if (ma.comp_level === complevel && ma.set_number === setno && ma.match_number === matchno && ma.teamnumber === teamnum) {
                 ret = ma.tablet ;
                 break ;
             }
@@ -190,7 +195,7 @@ export class TabletManager extends Manager {
         let index = 0 ;
         this.info_.teamassignments_ = [] ;
         for(let t of this.team_mgr_.getTeams()) {
-            let assignment = new TeamTablet(t.team_number, teamtab[index].name) ;
+            let assignment = new TeamTablet(t.team_number, teamtab[index].name, t.nickname) ;
             this.info_.teamassignments_.push(assignment);
             index++ ;
             if (index >= teamtab.length) {
@@ -207,47 +212,61 @@ export class TabletManager extends Manager {
                 return false ;
             }
     
+            let team: BATeam | undefined ;
+            let tnumber ;
             let ma:MatchTablet ;
             let index = 0 ;
             this.info_.matchassignements_ = [] ;
     
             for(let m of this.match_mgr_.getMatches()) {
-                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'red', m.alliances.red.team_keys[0], matchtab[index].name) ;
+                tnumber = SCBase.keyToTeamNumber(m.alliances.red.team_keys[0]) ;
+                team = this.team_mgr_.findTeamByNumber(tnumber) ;
+                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'red', tnumber, team ? team.nickname : '', matchtab[index].name) ;
                 index++ ;
                 if (index >= matchtab.length) {
                     index = 0 ;
                 }
                 this.info_.matchassignements_.push(ma) ;
     
-                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'red', m.alliances.red.team_keys[1], matchtab[index].name) ;
+                tnumber = SCBase.keyToTeamNumber(m.alliances.red.team_keys[1]) ;
+                team = this.team_mgr_.findTeamByNumber(tnumber) ;
+                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'red', tnumber, team ? team.nickname : '', matchtab[index].name) ;
                 index++ ;
                 if (index >= matchtab.length) {
                     index = 0 ;
                 }       
                 this.info_.matchassignements_.push(ma) ;
     
-                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'red', m.alliances.red.team_keys[2], matchtab[index].name) ;
+                tnumber = SCBase.keyToTeamNumber(m.alliances.red.team_keys[2]) ;
+                team = this.team_mgr_.findTeamByNumber(tnumber) ;
+                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'red', tnumber, team ? team.nickname : '', matchtab[index].name) ;
                 index++ ;
                 if (index >= matchtab.length) {
                     index = 0 ;
                 }
                 this.info_.matchassignements_.push(ma) ;
     
-                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'blue', m.alliances.blue.team_keys[0], matchtab[index].name) ;
+                tnumber = SCBase.keyToTeamNumber(m.alliances.blue.team_keys[0]) ;
+                team = this.team_mgr_.findTeamByNumber(tnumber) ;
+                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'blue', tnumber, team ? team.nickname : '', matchtab[index].name) ;
                 index++ ;
                 if (index >= matchtab.length) {
                     index = 0 ;
                 }
                 this.info_.matchassignements_.push(ma) ;
-    
-                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'blue', m.alliances.blue.team_keys[1], matchtab[index].name) ;
+
+                tnumber = SCBase.keyToTeamNumber(m.alliances.blue.team_keys[1]) ;
+                team = this.team_mgr_.findTeamByNumber(tnumber) ;
+                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'blue', tnumber, team ? team.nickname : '', matchtab[index].name) ;
                 index++ ;
                 if (index >= matchtab.length) {
                     index = 0 ;
                 }            
                 this.info_.matchassignements_.push(ma) ;
-    
-                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'blue', m.alliances.blue.team_keys[2], matchtab[index].name) ;
+
+                tnumber = SCBase.keyToTeamNumber(m.alliances.blue.team_keys[2]) ;
+                team = this.team_mgr_.findTeamByNumber(tnumber) ;
+                ma = new MatchTablet(m.comp_level, m.match_number, m.set_number, 'blue', tnumber, team ? team.nickname : '', matchtab[index].name) ;
                 index++ ;
                 if (index >= matchtab.length) {
                     index = 0 ;

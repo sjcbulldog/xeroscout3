@@ -80,7 +80,7 @@ export class ImageControl extends FormControl {
      
                     }
                 }) ;
-            this.setPosition(scale, xoff, yoff) ;
+            this.setPosition(scale, xoff, yoff, 800) ;
         }
     }
 

@@ -12,27 +12,11 @@
       },
       "args": [
         ".",
-        "central",
-        "C:/users/butch/OneDrive/Documents/events/e1/event.json"
+        "central"
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
     },
-    {
-      "name": "Debug Central Renderer",
-      "type": "node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
-      },
-      "args": [
-        "."
-      ],
-      "outputCapture": "std",
-      "preLaunchTask": "build"
-    },    
     {
       "name": "Debug Scout",
       "type": "node",
@@ -45,7 +29,6 @@
       "args": [
         ".",
         "scout",
-
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
@@ -62,22 +45,6 @@
       "args": [
         ".",
         "coach"
-      ],
-      "outputCapture": "std",
-      "preLaunchTask": "build"
-    },
-    {
-      "name": "Debug Unit Tests",
-      "type": "node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
-      },
-      "args": [
-        ".",
-        "unittests"
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
