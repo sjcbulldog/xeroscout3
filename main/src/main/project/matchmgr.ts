@@ -35,6 +35,19 @@ export class MatchManager extends Manager {
         this.info_.matches_ = [] ;
     }
 
+    public findMatchByInfo(comp_level: string, set_number: number, match_number: number) : BAMatch | undefined {
+        let ret: BAMatch | undefined ;
+        if (this.info_.matches_) {
+            for(let one of this.info_.matches_) {
+                if (one.comp_level === comp_level && one.set_number === set_number && one.match_number === match_number) {
+                    ret = one ;
+                    break ;
+                }
+            }
+        }
+        return ret;
+    }
+
     public findMatchByKey(key: string) : BAMatch | undefined {
         let ret: BAMatch | undefined ;
 

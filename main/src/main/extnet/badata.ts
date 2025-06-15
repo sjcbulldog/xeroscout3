@@ -142,4 +142,6 @@ export interface BAMatch {
 }
 
 export interface BAAlliances {
+	name: string,
+	picks: [string, string, string],
 }

@@ -105,6 +105,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'set-hint-hidden',
 
         'get-playoff-status',
+        'set-alliance-teams',
+        'set-playoff-match-outcome',
       ];
       if (validChannels.includes(channel)) {
         if (data) {

@@ -71,6 +71,7 @@ export class Project {
         this.picklist_mgr_ = new PicklistMgr(this.logger_, this.writeEventFile.bind(this), this.info_.picklist_info_, this.team_mgr_, this.dataset_mgr_) ;
         this.tablet_mgr_ = new TabletManager(this.logger_, this.writeEventFile.bind(this), this.info_.tablet_info_, this.team_mgr_, this.match_mgr_) ;
         this.graph_mgr_ =  new GraphManager(this.logger_, this.writeEventFile.bind(this), this.info_.graph_info_, this.data_mgr_) ;
+        this.playoff_mgr_ = new PlayoffManager(this.logger_, this.writeEventFile.bind(this), this.info_.playoff_info_, this.match_mgr_) ;
 
         this.writeEventFile() ;
         this.logger_.info('Project initialized in directory \'' + this.location_ + '\'') ;
@@ -586,18 +587,6 @@ export class Project {
         return ret ;
     }
 
-    private countNull(data: any[]) : number {
-        let ret = 0 ;
-
-        for(let v of data) {
-            if (v === null) {
-                ret++ ;
-            }
-        }
-
-        return ret ;
-    }
-
     public loadRankingData(key: string, ba: BlueAlliance, callback?: (result: string) => void) : Promise<void> {
         let ret: Promise<void> = new Promise<void>(async (resolve, reject) => {
             try {
@@ -747,10 +736,43 @@ export class Project {
         return ret;
     }
 
+    private loadAllianceData(key: string, ba: BlueAlliance, callback?: (result: string) => void) : Promise<void> {
+        let ret: Promise<void> = new Promise<void>(async (resolve, reject) => {
+            try {
+                if (callback) {
+                    callback('Requesting alliance data from \'The Blue Alliance\' ... ') ;
+                }
+                let alliances = await ba.getAlliances(key) ;
+
+                if (Object.keys(alliances).length === 0) {
+                    if (callback) {
+                        callback('No alliance data received, try again later<br>') ;
+                    }
+                }
+                else {
+                    if (callback) {
+                        callback('received alliance data.<br>') ;
+                        callback('Inserting data into playoff manager ... ');
+                    }
+                    this.playoff_mgr_!.processAllianceData(alliances) ;
+                    if (callback) {
+                        callback('done.<br>') ;
+                    }
+                }
+                resolve() ;
+            }
+            catch(err) {
+                reject(err) ;
+            }
+        }) ;
+
+        return ret ;
+    }
+
     public loadExternalBAData(ba: BlueAlliance, frcev: BAEvent, callback?: (result: string) => void) : Promise<number> {
         let ret: Promise<number> = new Promise<number>(async (resolve, reject) => {
             try {
-                await this.loadMatchData(frcev.key, ba, true, callback) ;
+                await this.loadMatchData(frcev.key, ba, this.isLocked, callback) ;
                 await this.loadOprDprData(frcev.key, ba, callback) ;
                 await this.loadRankingData(frcev.key, ba, callback) ;
                 await this.loadAllianceData(frcev.key, ba, callback) ;

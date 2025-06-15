@@ -1,5 +1,5 @@
 import { ClientRequest, IncomingMessage, net } from 'electron';
-import { BAEvent, BAMatch, BAOprData, BARankings, BATeam } from './badata';
+import { BAAlliances, BAEvent, BAMatch, BAOprData, BARankings, BATeam } from './badata';
 import { NetBase } from './netbase';
 
 export class BlueAlliance extends NetBase {
@@ -45,8 +45,16 @@ export class BlueAlliance extends NetBase {
         return ret;
     }
 
-    public async getAlliances(evkey: string) : Promise<any> {
-        let ret: Promise<any> = new Promise<any>((resolve, reject) => {
+    public async getAlliances(evkey: string) : Promise<BAAlliances[]> {
+        let query = "/event/" + evkey + "/alliances" ;
+        let ret: Promise<BAAlliances[]> = new Promise<BAAlliances[]>((resolve, reject) => {
+            this.request(query)
+                .then((obj) => {
+                    resolve(obj) ;
+                })
+                .catch((err) => {
+                    reject(err) ;
+                });
         }) ;
 
         return ret;
@@ -105,10 +113,16 @@ export class BlueAlliance extends NetBase {
             this.request(query)
                 .then((obj) => {
                     let str = process.env.XEROSCOUTDEBUG ;
-                    if (str && str?.indexOf('noresults') != -1) {
+                    if (str && str?.indexOf('noresults') !== -1) {
                         for(let one of obj) {
                             one.score_breakdown = undefined ;
                         }
+                    }
+
+                    if (str && str!.indexOf('noplayoffs') !== -1) {
+                        obj = obj.filter((match: BAMatch) => {
+                            return match.comp_level !== 'f' && match.comp_level !== 'sf'  ;
+                        });
                     }
                     resolve(obj) ;
                 })

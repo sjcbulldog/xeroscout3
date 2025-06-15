@@ -874,6 +874,38 @@ export async function getPlayoffStatus(cmd: string, ...args: any[]) {
     }
 }
 
+export async function setAllianceTeams(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'object') {       
+            let obj = args[0] ;
+            if (obj.hasOwnProperty('alliance') && obj.hasOwnProperty('teams')) {
+                central.setAllianceTeams(obj.alliance as number, obj.teams as number[]) ;
+            }
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
+export async function setPlayoffMatchOutcome(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'object') {       
+            let obj = args[0] ;
+            if (obj.hasOwnProperty('winner') && obj.hasOwnProperty('loser') && obj.hasOwnProperty('match')) {
+                central.setPlayoffMatchOutcome(obj.match as number, obj.winner as number, obj.loser as number) ;
+            }
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
 export async function syncIPAddr(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});

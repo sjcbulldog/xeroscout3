@@ -17,7 +17,9 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          updateTeamDB,
          splitterChanged,
          syncIPAddr,
-         getPlayoffStatus} from "./main/ipchandlers" ;
+         getPlayoffStatus,
+         setAllianceTeams,
+         setPlayoffMatchOutcome} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -192,6 +194,8 @@ app.on("ready", () => {
     ipcMain.on('get-hint-db', (event, ...args) => { getHintDB('get-hint-db', ...args)}) ;
     ipcMain.on('set-hint-hidden', (event, ...args) => { setHintHidden('get-hint-db', ...args)}) ;
     ipcMain.on('get-playoff-status', (event, ...args) => { getPlayoffStatus('get-playoff-status', ...args)}) ;
+    ipcMain.on('set-alliance-teams', (event, ...args) => { setAllianceTeams('set-alliance-teams', ...args)}) ;
+    ipcMain.on('set-playoff-match-outcome', (event, ...args) => { setPlayoffMatchOutcome('set-playoff-match-outcome', ...args)}) ;
     createWindow() ;
 }) ;
 

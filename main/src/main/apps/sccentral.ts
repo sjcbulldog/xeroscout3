@@ -1431,6 +1431,15 @@ export class SCCentral extends SCBase {
 					width: dims,
 					height: dims					
 				});
+
+				treedata.push({
+					type: 'icon',
+					command: SCCentral.viewPlayoffs,
+					title: "Playoffs",
+					icon: this.getIconData('playoffs.png'),
+					width: dims,
+					height: dims	
+				});					
 			}
 
 			treedata.push({ type: "separator", title: "Analysis" });
@@ -1443,16 +1452,7 @@ export class SCCentral extends SCBase {
 					icon: this.getIconData('formula.png'),
 					width: dims,
 					height: dims	
-				});
-
-				treedata.push({
-					type: 'icon',
-					command: SCCentral.viewPlayoffs,
-					title: "Playoffs",
-					icon: this.getIconData('playoffs.png'),
-					width: dims,
-					height: dims	
-				});				
+				});			
 
 				treedata.push({
 					type: "icon",
@@ -2737,6 +2737,20 @@ export class SCCentral extends SCBase {
 	public sendPlayoffStatus() {
 		if (this.project_ && this.project_.isInitialized()) {
 			this.sendToRenderer('send-playoff-status', this.project_!.playoff_mgr_!.info) ;
+		}
+	}
+
+	public setAllianceTeams(alliance: number, teams: number[]) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.playoff_mgr_!.setAllianceTeams(alliance, teams) ;
+			this.sendPlayoffStatus() ;
+		}
+	}
+
+	public setPlayoffMatchOutcome(match: number, winner: number, loser: number) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.playoff_mgr_!.setPlayoffMatchOutcome(match, winner, loser) ;
+			this.sendPlayoffStatus() ;
 		}
 	}
 }
