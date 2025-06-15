@@ -861,6 +861,19 @@ export async function setHintHidden(cmd: string, ...args: any[]) {
     } 
 }
 
+export async function getPlayoffStatus(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 0) {       
+            central.sendPlayoffStatus() ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
 export async function syncIPAddr(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});

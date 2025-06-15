@@ -1,3 +1,4 @@
+import { IPCPlayoffStatus } from "../../shared/ipc";
 import { BAEvent, BAMatch, BATeam } from "../extnet/badata";
 import { DataModelInfo } from "../model/datamodel";
 import { DataInfo } from "./datamgr";
@@ -28,6 +29,10 @@ export class ProjectInfo {
     public form_info_ : FormInfo = new FormInfo() ;                     // The form information for the project
     public team_db_info_ : DataModelInfo = new DataModelInfo() ;        // The team database information for the project
     public match_db_info_ : DataModelInfo = new DataModelInfo() ;       // The match database information for the project
+    public playoff_info_ : IPCPlayoffStatus = {                         // The playoff information for the project
+        alliances: [ undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined ],
+        outcomes: { m1: undefined, m2: undefined, m3: undefined, m4: undefined, m5: undefined, m6: undefined, m7: undefined, m8: undefined, m9: undefined, m10: undefined, m11: undefined, m12: undefined, m13: undefined, m14: undefined, m15: undefined, m16: undefined }
+    } ;
 
     constructor() {
         this.locked_ = false ;

@@ -13,7 +13,7 @@ export class XeroMatchStatus extends XeroView {
         this.request('get-match-status', args) ;
     }
 
-    private mapMatchType(mtype: string) : number {
+    private static mapMatchType(mtype: string) : number {
         let ret= -1 ;
 
         if (mtype === 'f') {
@@ -29,13 +29,13 @@ export class XeroMatchStatus extends XeroView {
         return ret;
     }
 
-    private sortMatchFunc(a: any, b: any, arow: RowComponent, brow: RowComponent): number {
+    public static sortMatchFunc(a: any, b: any, arow: RowComponent, brow: RowComponent): number {
         let ret = 0;
         let adata = arow.getData();
         let bdata = brow.getData();
 
-        let atype = this.mapMatchType(adata.comp_level);
-        let btype = this.mapMatchType(bdata.comp_level);
+        let atype = XeroMatchStatus.mapMatchType(adata.comp_level);
+        let btype = XeroMatchStatus.mapMatchType(bdata.comp_level);
 
         if (atype < btype) {
             ret = -1;
@@ -44,17 +44,17 @@ export class XeroMatchStatus extends XeroView {
             ret = 1;
         }
         else {
-            if (adata.match_number < bdata.match_number) {
+            if (+adata.match_number < +bdata.match_number) {
                 ret = -1;
             }
-            else if (adata.match_number > bdata.match_number) {
+            else if (+adata.match_number > +bdata.match_number) {
                 ret = 1;
             }
             else {
-                if (adata.set_number < bdata.set_number) {
+                if (+adata.set_number < +bdata.set_number) {
                     ret = -1;
                 }
-                else if (adata.set_number > bdata.set_number) {
+                else if (+adata.set_number > +bdata.set_number) {
                     ret = 1;
                 }
                 else {
@@ -75,7 +75,7 @@ export class XeroMatchStatus extends XeroView {
             resizableColumnFit:true,
             initialSort: [{ column : 'comp_level', dir: 'asc' }],
             columns: [
-                { title: 'Type', field: 'comp_level' , sorter: this.sortMatchFunc.bind(this) },
+                { title: 'Type', field: 'comp_level' , sorter: XeroMatchStatus.sortMatchFunc },
                 { title: 'Match', field: 'match_number', headerSort: false},
                 { title: 'Set', field: 'set_number', headerSort: false},
                 { title: 'Played', field: 'played', formatter: 'tickCross', headerSort: false},

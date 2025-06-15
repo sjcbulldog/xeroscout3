@@ -21,7 +21,7 @@ import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 
@@ -91,6 +91,7 @@ export class SCCentral extends SCBase {
 	private static readonly viewMultiView: string = 'view-multi-view';
 	private static readonly viewSpider: string = 'view-spider' ;
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
+	private static readonly viewPlayoffs: string = 'view-playoffs' ;
 
 	private project_?: Project = undefined;
 	private ba_?: BlueAlliance = undefined;
@@ -1445,6 +1446,15 @@ export class SCCentral extends SCBase {
 				});
 
 				treedata.push({
+					type: 'icon',
+					command: SCCentral.viewPlayoffs,
+					title: "Playoffs",
+					icon: this.getIconData('playoffs.png'),
+					width: dims,
+					height: dims	
+				});				
+
+				treedata.push({
 					type: "icon",
 					command: SCCentral.viewDataSets,
 					title: "Data Sets",
@@ -1589,6 +1599,8 @@ export class SCCentral extends SCBase {
 			this.setView("teamgraph");
 		} else if (cmd === SCCentral.viewFormulas) {
 			this.setView("formulas") ;
+		} else if (cmd === SCCentral.viewPlayoffs) {
+			this.setView("playoffs") ;
 		} else if (cmd === SCCentral.viewMultiView) {
 			this.setView("multiview") ;
 		} else if (cmd === SCCentral.viewSpider) {
@@ -2719,6 +2731,12 @@ export class SCCentral extends SCBase {
 	public setHintHidden(id: string) {
 		if (this.project_ && this.project_.isInitialized()) {
 			this.project_!.setHintHidden(id) ;
+		}
+	}
+
+	public sendPlayoffStatus() {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.sendToRenderer('send-playoff-status', this.project_!.playoff_mgr_!.info) ;
 		}
 	}
 }

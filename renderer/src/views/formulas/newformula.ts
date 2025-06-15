@@ -214,6 +214,19 @@ export class NewFormulaDialog extends XeroDialog {
         super.okButton(event) ;
     }
 
+    private checkVariables(expr: Expr) : string [] {
+        let unknown: string[] = [] ;
+        let vars = expr.variables() ;
+        for(let v of vars) {
+            if (this.match_fields_.find((f) => f.name === v) === undefined &&
+                this.team_fields_.find((f) => f.name === v) === undefined &&
+                this.formulas_.find((f) => f.name === v) === undefined) {
+                unknown.push(v) ;
+            }
+        }
+        return unknown ;
+    }
+    
     public isOKToClose(ok: boolean): boolean {
         if (!ok) {
             return true ;
@@ -249,6 +262,12 @@ export class NewFormulaDialog extends XeroDialog {
         let expr = Expr.parse(this.expr_)
         if (expr.hasError()) {
             this.err_msg_!.innerText = 'Invalid expression: ' + expr.getError()?.message ;
+            return false ;
+        }
+
+        let unknown = this.checkVariables(expr) ;
+        if (unknown.length > 0) {
+            this.err_msg_!.innerText = 'Unknown variables: ' + unknown.join(', ') ;
             return false ;
         }
 

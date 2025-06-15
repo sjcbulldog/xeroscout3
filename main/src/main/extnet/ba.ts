@@ -45,6 +45,13 @@ export class BlueAlliance extends NetBase {
         return ret;
     }
 
+    public async getAlliances(evkey: string) : Promise<any> {
+        let ret: Promise<any> = new Promise<any>((resolve, reject) => {
+        }) ;
+
+        return ret;
+    }
+
     public async getEvents(year ?:number) : Promise<BAEvent[]> {
         if (!year) {
             year = this.year_ ;

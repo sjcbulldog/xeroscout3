@@ -1,16 +1,3 @@
-GitHub Issues
--------------
-
-Coach
------
-
-Design
--------
-Have the scouting tablet and the central tablet work via talking to a common
-web server via rest APIs.  For the stands mode, sync with a server running on the
-central machine.  Have a wifi mode where it runs on a server running in my office
-
-
 Attributions
 ------------
 <a href="https://www.flaticon.com/free-icons/info" title="info icons">Info icons created by Freepik - Flaticon</a>
@@ -30,3 +17,4 @@ Attributions
 <a href="https://www.flaticon.com/free-icons/content" title="content icons">Content icons created by Pixelmeetup - Flaticon</a>
 <a href="https://www.flaticon.com/free-icons/editing" title="editing icons">Editing icons created by Freepik - Flaticon</a>
 <a href="https://www.flaticon.com/free-icons/video-camera" title="video camera icons">Video camera icons created by smashingstocks - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/organization-chart" title="organization chart icons">Organization chart icons created by Freepik - Flaticon</a>

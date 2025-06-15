@@ -23,6 +23,7 @@ import { XeroSelectTablet } from "../views/selecttablet/selecttablet.js";
 import { XeroSyncIPAddrView } from "../views/syncipaddr/syncipaddr.js";
 import { ResizeBar } from "./resizebar.js";
 import { XeroFormulasView } from "../views/formulas/formulas.js";
+import { XeroPlayoffsView } from "../views/playoffs/playoffs.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -201,5 +202,6 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('select-tablet', XeroSelectTablet, ['scout']) ;
         this.registerView('sync-ipaddr', XeroSyncIPAddrView, ['scout']);
         this.registerView('formulas', XeroFormulasView, ['central']) ;
+        this.registerView('playoffs', XeroPlayoffsView, ['central']) ;
     }
 }

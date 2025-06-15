@@ -25,6 +25,7 @@ import { ManualMatchData, MatchManager } from './matchmgr';
 import { GraphManager } from './graphmgr';
 import { IPCHint, IPCScoutResults } from '../../shared/ipc';
 import { RulesEngine } from '../../shared/rulesengine';
+import { PlayoffManager } from './playoffmgr';
 
 export class Project {
     private static readonly keepLotsOfBackups = true ;
@@ -45,6 +46,7 @@ export class Project {
     public tablet_mgr_? : TabletManager ;
     public match_mgr_? : MatchManager ;
     public graph_mgr_? : GraphManager ;
+    public playoff_mgr_? : PlayoffManager ;
 
     constructor(logger: winston.Logger, dir: string, year: number) {
         this.location_ = dir ;
@@ -751,6 +753,7 @@ export class Project {
                 await this.loadMatchData(frcev.key, ba, true, callback) ;
                 await this.loadOprDprData(frcev.key, ba, callback) ;
                 await this.loadRankingData(frcev.key, ba, callback) ;
+                await this.loadAllianceData(frcev.key, ba, callback) ;
                 resolve(0) ;
             } 
             catch(err) {

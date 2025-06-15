@@ -218,3 +218,44 @@ export interface IPCFormula {
     desc: string,
     formula: string
 }
+
+export interface IPCAlliance {
+    teams: [number, number, number] ;
+}
+
+export interface IPCMatchOutcome {
+    winner: number ;
+    loser: number ;
+}
+
+export interface IPCPlayoffStatus {
+    alliances: [
+        IPCAlliance | undefined,        // 1
+        IPCAlliance | undefined,        // 2
+        IPCAlliance | undefined,        // 3
+        IPCAlliance | undefined,        // 4
+        IPCAlliance | undefined,        // 5
+        IPCAlliance | undefined,        // 6
+        IPCAlliance | undefined,        // 7
+        IPCAlliance | undefined,        // 8
+    ] ;
+
+    outcomes: {
+        m1: IPCMatchOutcome | undefined ;
+        m2: IPCMatchOutcome | undefined ;
+        m3: IPCMatchOutcome | undefined ;
+        m4: IPCMatchOutcome | undefined ;
+        m5: IPCMatchOutcome | undefined ;
+        m6: IPCMatchOutcome | undefined ;
+        m7: IPCMatchOutcome | undefined ;
+        m8: IPCMatchOutcome | undefined ;
+        m9: IPCMatchOutcome | undefined ;   
+        m10: IPCMatchOutcome | undefined ;
+        m11: IPCMatchOutcome | undefined ;
+        m12: IPCMatchOutcome | undefined ;
+        m13: IPCMatchOutcome | undefined ;
+        m14: IPCMatchOutcome | undefined ;
+        m15: IPCMatchOutcome | undefined ;
+        m16: IPCMatchOutcome | undefined ;
+    }
+}

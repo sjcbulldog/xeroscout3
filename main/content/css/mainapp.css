@@ -473,3 +473,11 @@ xero-status-overlay-close-visible {
     margin-bottom: auto ;
     cursor: pointer ;
 }
+
+.xero-playoffs-canvas {
+}
+
+.xero-playoffs-view {
+    width: 100%;
+    height: 100%;
+}

@@ -103,6 +103,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 
         'get-hint-db',
         'set-hint-hidden',
+
+        'get-playoff-status',
       ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -172,7 +174,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-picklist-notes',
         'send-single-team-data',
         'send-single-team-fields',
-        'send-hint-db'
+        'send-hint-db',
+        'send-playoff-status',
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));
