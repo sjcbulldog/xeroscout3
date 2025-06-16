@@ -1,21 +1,29 @@
 import { XeroDialog } from "../../widgets/xerodialog.js";
 
 export class AllianceDialog extends XeroDialog {
-    private captian_?: HTMLSelectElement ;
+    private captain_?: HTMLSelectElement ;
     private first_pick_ ?: HTMLSelectElement ;
     private second_pick_ ?: HTMLSelectElement ;
-    private teams_ : [number, number, number] = [0, 0, 0] ;
+    private teams_ : [number | undefined, number  | undefined, number | undefined] = [0, 0, 0] ;
     private available_teams_ : number[] ;
     private readonly which_: number ;
 
-    public constructor(teams: number[], which: number) {
+    public constructor(teams: number[], which: number, a: [number | undefined, number | undefined, number | undefined] | undefined) {
         super('Alliance # ' + which) ;
-        this.teams_ = [0, 0, 0] ;
         this.which_ = which ;
         this.available_teams_ = teams ;
+
+        if (a && Array.isArray(a) && a.length === 3) {
+            this.teams_[0] = a[0] ;
+            this.teams_[1] = a[1] ;
+            this.teams_[2] = a[2] ;
+        }
+        else {
+            this.teams_ = [undefined, undefined, undefined] ;
+        }
     }
 
-    public get teams() : [number, number, number] {
+    public get teams() : [number | undefined, number | undefined, number | undefined] {
         return this.teams_ ;
     }
 
@@ -24,6 +32,11 @@ export class AllianceDialog extends XeroDialog {
     }
 
     private createOptions(select: HTMLSelectElement) {
+        const option = document.createElement('option') ;
+        option.value = '' ;
+        option.innerText = 'None' ;
+        select.appendChild(option) ;
+        
         for (let i = 0; i < this.available_teams_.length; i++) {
             const option = document.createElement('option') ;
             option.value = this.available_teams_[i].toString() ;
@@ -38,21 +51,31 @@ export class AllianceDialog extends XeroDialog {
         let div = document.createElement('div') ;
         div.className = 'xero-popup-form-edit-dialog-rowdiv' ;
 
-        this.captian_ = document.createElement('select') ;
-        this.captian_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.createOptions(this.captian_) ;
-        this.captian_.value = this.teams_[0].toString() ;
+        this.captain_ = document.createElement('select') ;
+        this.captain_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.createOptions(this.captain_) ;
+        if (this.teams_[0]) {
+            this.captain_.value = this.teams_[0].toString() ;
+        }
+        else {
+            this.captain_.value = '' ;
+        }
 
         label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;
         label.innerText = 'Captian' ;
-        label.appendChild(this.captian_) ;
+        label.appendChild(this.captain_) ;
         div.appendChild(label) ;
 
         this.first_pick_ = document.createElement('select') ;
         this.first_pick_.className = 'xero-popup-form-edit-dialog-input' ;
         this.createOptions(this.first_pick_) ;
-        this.first_pick_.value = this.teams_[1].toString() ;
+        if (this.teams_[1]) {
+            this.first_pick_.value = this.teams_[1].toString() ;
+        }
+        else {
+            this.first_pick_.value = '' ;
+        }
 
         label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;
@@ -64,7 +87,12 @@ export class AllianceDialog extends XeroDialog {
         this.second_pick_ = document.createElement('select') ;
         this.second_pick_.className = 'xero-popup-form-edit-dialog-input' ;
         this.createOptions(this.second_pick_) ;
-        this.second_pick_.value = this.teams_[2].toString() ;
+        if (this.teams_[2]) {
+            this.second_pick_.value = this.teams_[2].toString() ;
+        }
+        else {
+            this.second_pick_.value = '' ;
+        }
 
         label = document.createElement('label') ;
         label.className = 'xero-popup-form-edit-dialog-label' ;
@@ -77,29 +105,33 @@ export class AllianceDialog extends XeroDialog {
     }
 
     onInit() {
-        if (this.captian_) {
-            this.captian_.focus() ;
+        if (this.captain_) {
+            this.captain_.focus() ;
         }
-    }
-
-    public isOKToClose(ok: boolean): boolean {
-        if (!ok) {
-            return true ;
-        }
-
-        if (this.captian_?.value.length === 0 || this.first_pick_?.value.length === 0 || this.second_pick_?.value.length === 0) {
-            alert('You must enter a value for all three team numbers') ;
-            return false ;
-        }
-
-        return true ;
     }
 
     okButton(event: Event) {
-        if (this.captian_ && this.first_pick_ && this.second_pick_) {
-            this.teams_[0] = parseInt(this.captian_.value, 10) ;
-            this.teams_[1] = parseInt(this.first_pick_.value, 10) ;
-            this.teams_[2] = parseInt(this.second_pick_.value, 10) ;
+        if (this.captain_ && this.first_pick_ && this.second_pick_) {
+            if (this.captain_.value.length > 0) {
+                this.teams_[0] = parseInt(this.captain_.value, 10) ;
+            }
+            else {
+                this.teams_[0] = undefined ;
+            }
+
+            if (this.first_pick_.value.length > 0) {
+                this.teams_[1] = parseInt(this.first_pick_.value, 10) ;
+            }
+            else {
+                this.teams_[1] = undefined;
+            }
+
+            if (this.second_pick_.value.length > 0) {
+                this.teams_[2] = parseInt(this.second_pick_.value, 10) ;
+            }
+            else {
+                this.teams_[2] = undefined ;
+            }
         }
 
         super.okButton(event) ;

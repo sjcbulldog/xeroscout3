@@ -8,6 +8,7 @@ import { AllianceDialog } from "./alliancedialog.js";
 export class XeroPlayoffsView extends XeroView {
 
     // Alliance constants
+    private static readonly kTopMargin = 10 ;
     private static readonly kLeftMargin = 400 ;
     private static readonly kColumnWidth = 140 ;
     private static readonly kRowHeight = 40 ;
@@ -21,7 +22,7 @@ export class XeroPlayoffsView extends XeroView {
     private static readonly kMarkerTextPadding = 40 ;
     private static readonly kMarkerMatchTextPadding = 5 ;
     private static readonly kInterMarkerSpacing = 50 ;
-    private static readonly kResultsTopMargin = 500 ;
+    private static readonly kResultsTopMargin = 450 ;
 
     private allianceDialog_ : AllianceDialog | null = null ;
     private winner_menu_ : XeroPopupMenu | null = null ;
@@ -121,6 +122,25 @@ export class XeroPlayoffsView extends XeroView {
         return ret;
     }    
 
+    private areAlliancesValid() {
+        if (!this.playoffStatus_) {
+            return false;
+        }
+
+        for(let i = 0 ; i < 8 ; i++) {
+            let a = this.playoffStatus_.alliances[i] ;
+            if (!a || !a.teams) {
+                return false ;
+            }
+
+            if (!a.teams[0] || !a.teams[1] || !a.teams[2]) {
+                return false ;
+            }
+        }
+
+        return true ;
+    }
+
     private closeAllianceDialog(changed: boolean) {
         if (!changed) {
             this.allianceDialog_ = null ;
@@ -166,6 +186,11 @@ export class XeroPlayoffsView extends XeroView {
             return ;
         }
 
+        if (!this.areAlliancesValid()) {
+            alert('The alliances are not all valid, cannot set match winners') ;
+            return ;
+        }
+
         let bounds = this.canvas_.getBoundingClientRect() ;
         let x = e.clientX - bounds.left ;
         let y = e.clientY - bounds.top ;
@@ -195,7 +220,7 @@ export class XeroPlayoffsView extends XeroView {
     }
     
     private dblClick(e: MouseEvent) {
-        if (this.allianceDialog_ || this.winner_menu_) {
+        if (this.allianceDialog_ || this.winner_menu_ || !this.playoffStatus_) {
             return ;
         }
 
@@ -203,10 +228,17 @@ export class XeroPlayoffsView extends XeroView {
         let x = e.clientX - bounds.left ;
         let y = e.clientY - bounds.top ;
 
-        if (x >= XeroPlayoffsView.kLeftMargin && x <= (XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 4) && y >= 50 && y <= (50 + XeroPlayoffsView.kRowHeight * 9)) {
-            let row = Math.floor((y - 50) / XeroPlayoffsView.kRowHeight);
+        if (x >= XeroPlayoffsView.kLeftMargin && x <= (XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 4) && 
+            y >= XeroPlayoffsView.kTopMargin && y <= (XeroPlayoffsView.kTopMargin + XeroPlayoffsView.kRowHeight * 9)) {
+            let row = Math.floor((y - XeroPlayoffsView.kTopMargin) / XeroPlayoffsView.kRowHeight);
             
-            this.allianceDialog_ = new AllianceDialog(this.teams_, row) ;
+            let a = this.playoffStatus_.alliances[row] ;
+            if (a && a.teams && Array.isArray(a.teams) && a.teams.length === 3) {
+                this.allianceDialog_ = new AllianceDialog(this.teams_, row, a.teams) ;
+            }
+            else {
+                this.allianceDialog_ = new AllianceDialog(this.teams_, row, undefined) ;
+            }
             this.allianceDialog_.on('closed', this.closeAllianceDialog.bind(this)) ;
             this.allianceDialog_.showCentered(this.elem) ;
         }
@@ -284,6 +316,17 @@ export class XeroPlayoffsView extends XeroView {
         this.context_!.fillText(`M${match}`, pt.x + XeroPlayoffsView.kMarkerMatchTextPadding, pt.y + XeroPlayoffsView.kMarkerHeight / 2.0) ;        
     }
 
+    private teamToString(team: string | undefined| number) : string {
+        if (team) {
+            if (typeof team === 'number') {
+                return team.toString() ;
+            }
+            return team ;
+        }
+
+        return 'TBD' ;
+    }
+
     private drawLongMarker(pt: XeroPoint, match: number, ralliance: string, rteams: [string, string, string], balliance: string, bteams: [string, string, string], winner: number = -1) {
         let rect: XeroRect = new XeroRect(pt.x, pt.y, XeroPlayoffsView.kLongMarkerWidth, XeroPlayoffsView.kMarkerHeight) ;
         this.registerMarkerBounds(match, rect) ;
@@ -304,7 +347,6 @@ export class XeroPlayoffsView extends XeroView {
         this.context_!.strokeStyle = 'black' ;
         this.context_!.stroke() ;
 
-
         this.context_!.textAlign = 'left' ;
         this.context_!.textBaseline = 'bottom' ;
         this.context_!.fillStyle = 'red' ;
@@ -319,10 +361,8 @@ export class XeroPlayoffsView extends XeroView {
         }
         this.context_!.fillText(`${tag} ${ralliance}${post}`, pt.x + XeroPlayoffsView.kMarkerTextPadding, pt.y + XeroPlayoffsView.kMarkerHeight / 2.0) ;
 
-        if (rteams[0] !== '' && rteams[1] !== '' && rteams[2] !== '') {
-            this.context_!.textAlign = 'right' ;
-            this.context_!.fillText(`${rteams[0]}, ${rteams[1]}, ${rteams[2]}`, pt.x + XeroPlayoffsView.kLongMarkerWidth - 5, pt.y + XeroPlayoffsView.kMarkerHeight / 2.0) ;
-        }
+        this.context_!.textAlign = 'right' ;
+        this.context_!.fillText(`${this.teamToString(rteams[0])}, ${this.teamToString(rteams[1])}, ${this.teamToString(rteams[2])}`, pt.x + XeroPlayoffsView.kLongMarkerWidth - 5, pt.y + XeroPlayoffsView.kMarkerHeight / 2.0) ;
 
         tag = 'Alliance' ;
         if (balliance.startsWith('W') || balliance.startsWith('L')) {
@@ -338,9 +378,7 @@ export class XeroPlayoffsView extends XeroView {
         this.context_!.fillText(`${tag} ${balliance}${post}`, pt.x + XeroPlayoffsView.kMarkerTextPadding, pt.y + XeroPlayoffsView.kMarkerHeight) ;
         this.context_!.textAlign = 'right' ;
 
-        if (bteams[0] !== '' && bteams[1] !== '' && bteams[2] !== '') {
-            this.context_!.fillText(`${bteams[0]}, ${bteams[1]}, ${bteams[2]}`, pt.x + XeroPlayoffsView.kLongMarkerWidth - 5, pt.y + XeroPlayoffsView.kMarkerHeight) ;
-        }
+        this.context_!.fillText(`${this.teamToString(bteams[0])}, ${this.teamToString(bteams[1])}, ${this.teamToString(bteams[2])}`, pt.x + XeroPlayoffsView.kLongMarkerWidth - 5, pt.y + XeroPlayoffsView.kMarkerHeight) ;
 
         this.context_!.textAlign = 'left' ;
         this.context_!.fillStyle = 'black' ;
@@ -397,11 +435,11 @@ export class XeroPlayoffsView extends XeroView {
         }
 
         let teams = this.playoffStatus_!.alliances[alliance - 1]!.teams ;
-        return [teams[0].toString(), teams[1].toString(), teams[2].toString()] ;
+        return [this.teamToString(teams[0]), this.teamToString(teams[1]), this.teamToString(teams[2])] ;
     }
 
     private drawRounds() {
-        this.context_!.font = '24px Georgia ' ;
+        this.context_!.font = '24px Arial ' ;
         this.context_!.fillText('Round 1', XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin - 50) ;
         this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin - 50) ;
 
@@ -438,18 +476,20 @@ export class XeroPlayoffsView extends XeroView {
             return ;
         }
 
-        this.context_!.font = '24px Georgia' ;
+        this.context_!.font = '24px Arial' ;
         this.context_!.textAlign = 'left' ;
         this.context_!.textBaseline = 'top' ;
         this.context_!.fillStyle = 'black' ;
 
-        this.context_!.fillText('Playoff Alliances', (XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 5) / 2, 55) ;
+        this.context_!.fillText('Playoff Alliances', (XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 5) / 2, 
+                                                    XeroPlayoffsView.kTopMargin + 5) ;
         this.context_!.strokeStyle = 'black' ;
-        this.context_!.strokeRect(XeroPlayoffsView.kLeftMargin, 50, XeroPlayoffsView.kColumnWidth * 4, XeroPlayoffsView.kRowHeight * 9) ;
+        this.context_!.strokeRect(XeroPlayoffsView.kLeftMargin, XeroPlayoffsView.kTopMargin, XeroPlayoffsView.kColumnWidth * 4, XeroPlayoffsView.kRowHeight * 9) ;
 
+        let tag: string ;
         for(let i = 0 ; i < 8 ; i++) {
             let x = XeroPlayoffsView.kLeftMargin ;
-            let y = XeroPlayoffsView.kRowHeight * (i + 1) + 50 ;
+            let y = XeroPlayoffsView.kRowHeight * (i + 1) + XeroPlayoffsView.kTopMargin ;
 
             let alliance = this.playoffStatus_.alliances[i] ;
             if (!alliance) {
@@ -460,15 +500,21 @@ export class XeroPlayoffsView extends XeroView {
             }
             else {
                 this.context_!.fillText(`  Alliance ${i + 1}:`, x, y) ;
-                this.context_!.fillText(`${alliance.teams[0]}`, x + XeroPlayoffsView.kColumnWidth, y) ;
-                this.context_!.fillText(`${alliance.teams[1]}`, x + XeroPlayoffsView.kColumnWidth * 2, y) ;
-                this.context_!.fillText(`${alliance.teams[2]}`, x + XeroPlayoffsView.kColumnWidth * 3, y) ;
+                tag = alliance.teams[0] ? alliance.teams[0].toString() : 'TBD' ;
+                this.context_!.fillText(`${tag}`, x + XeroPlayoffsView.kColumnWidth, y) ;
+
+                tag = alliance.teams[1] ? alliance.teams[1].toString() : 'TBD' ;
+                this.context_!.fillText(`${tag}`, x + XeroPlayoffsView.kColumnWidth * 2, y) ;
+
+                tag = alliance.teams[2] ? alliance.teams[2].toString() : 'TBD' ;                
+                this.context_!.fillText(`${tag}`, x + XeroPlayoffsView.kColumnWidth * 3, y) ;
             }
         }
 
-        this.context_!.font = '12px Georgia' ;
+        this.context_!.font = '12px Arial' ;
         this.context_!.textAlign = 'center'
-        this.context_!.fillText('Double click on an alliance to edit', XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 2, XeroPlayoffsView.kRowHeight * 9 + 38) ;
+        this.context_!.fillText('Double click on an alliance to edit', XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 2, 
+                                                                        XeroPlayoffsView.kRowHeight * 9 + XeroPlayoffsView.kTopMargin - 14) ;
     }
 
     private getMatchWinner(match: number) : number {
@@ -522,7 +568,7 @@ export class XeroPlayoffsView extends XeroView {
 
         this.drawRounds() ;
 
-        this.context_!.font = '12px Georgia' ;
+        this.context_!.font = '12px Arial' ;
         this.context_!.textAlign = 'center' ;
         this.context_!.fillText('Right click on a match to set the winner', XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin + 375) ;
     }
