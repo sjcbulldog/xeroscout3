@@ -232,7 +232,7 @@ export class XeroPlayoffsView extends XeroView {
             y >= XeroPlayoffsView.kTopMargin && y <= (XeroPlayoffsView.kTopMargin + XeroPlayoffsView.kRowHeight * 9)) {
             let row = Math.floor((y - XeroPlayoffsView.kTopMargin) / XeroPlayoffsView.kRowHeight);
             
-            let a = this.playoffStatus_.alliances[row] ;
+            let a = this.playoffStatus_.alliances[row - 1] ;
             if (a && a.teams && Array.isArray(a.teams) && a.teams.length === 3) {
                 this.allianceDialog_ = new AllianceDialog(this.teams_, row, a.teams) ;
             }
