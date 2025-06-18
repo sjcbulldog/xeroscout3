@@ -113,16 +113,13 @@ export class BlueAlliance extends NetBase {
             this.request(query)
                 .then((obj) => {
                     let str = process.env.XEROSCOUTDEBUG ;
-                    if (str && str?.indexOf('noresults') !== -1) {
+                    if (str) {
                         for(let one of obj) {
                             one.score_breakdown = undefined ;
                         }
-                    }
-
-                    if (str && str!.indexOf('noplayoffs') !== -1) {
                         obj = obj.filter((match: BAMatch) => {
                             return match.comp_level !== 'f' && match.comp_level !== 'sf'  ;
-                        });
+                        });                        
                     }
                     resolve(obj) ;
                 })

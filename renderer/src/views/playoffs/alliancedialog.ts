@@ -17,6 +17,19 @@ export class AllianceDialog extends XeroDialog {
             this.teams_[0] = a[0] ;
             this.teams_[1] = a[1] ;
             this.teams_[2] = a[2] ;
+
+            if (a[0]) {
+                this.available_teams_.push(a[0]) ;
+            }
+            if (a[1]) {
+                this.available_teams_.push(a[1]) ;
+            }
+            if (a[2]) {
+                this.available_teams_.push(a[2]) ;
+            }
+            this.available_teams_ = this.available_teams_.sort((a, b) => {
+                return a - b ;
+            }) ;
         }
         else {
             this.teams_ = [undefined, undefined, undefined] ;

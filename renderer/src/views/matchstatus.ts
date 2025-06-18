@@ -90,7 +90,7 @@ export class XeroMatchStatus extends XeroView {
 
                 { title: 'Blue 3', field: 'blue3'},
                 { title: 'Blue Tablet 3', field: 'bluetab3'},
-                { title: 'Blue 3 Status', field: 'bludst3', formatter: this.cellFormatter.bind(this)},
+                { title: 'Blue 3 Status', field: 'bluest3', formatter: this.cellFormatter.bind(this)},
 
                 { title: 'Red 1', field: 'red1'},
                 { title: 'Red Tablet 1', field: 'redtab1'},

@@ -19,6 +19,10 @@ export class PlayoffManager extends Manager {
         return this.playoffData_ ;
     }
 
+    public hasPlayoffStatus() : boolean {
+        return this.areAlliancesSet() ;
+    }
+
     public processAllianceData(alliances: BAAlliances[]) : void {
         if (!alliances || !Array.isArray(alliances) || alliances.length !== 8) {
             return ;
@@ -53,6 +57,32 @@ export class PlayoffManager extends Manager {
             loser: loser,
         } ;
         this.write() ;
+    }
+
+    private areAlliancesSet() : boolean {
+        if (!this.info.alliances.length) {
+            return false ;
+        }
+
+        if (!this.info.alliances) {
+            return false ;
+        }
+
+        if (!Array.isArray(this.info.alliances) || this.info.alliances.length !== 8) {
+            return false ;
+        }
+
+        for(let a of this.info.alliances) {
+            if (!a || !Array.isArray(a.teams) || a.teams.length !== 3) {
+                return false ;
+            }
+
+            if (!a.teams[0] || !a.teams[1] || !a.teams[2]) {
+                return false ;
+            }
+        }
+
+        return true ;
     }
 
     private findAllianceByTeam(team: number) : number {

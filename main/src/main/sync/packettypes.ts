@@ -21,5 +21,9 @@ export enum PacketType {
     ProvideMatchResults = 0x011,
     RequestTeamResults = 0x012,
     ProvideTeamResults = 0x013,
-    Goodbye = 0x14
+    RequestPlayoffAssignments = 0x14,
+    ProvidePlayoffAssignments = 0x15,
+    RequestPlayoffStatus = 0x16,
+    ProvidePlayoffStatus = 0x17,    
+    Goodbye = 0x18
 } ;

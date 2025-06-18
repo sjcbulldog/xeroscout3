@@ -2159,6 +2159,22 @@ export class SCCentral extends SCBase {
 					"No team list has been generated for a locked event"
 				);
 			}
+		} else if (p.type_ === PacketType.RequestPlayoffAssignments) {
+			if (this.project_?.tablet_mgr_?.hasPlayoffAssignments()) {
+				let str = JSON.stringify(this.project_?.tablet_mgr_?.getPlayoffAssignments());
+				resp = new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));
+			} else {
+				let str = JSON.stringify(null) ;
+				resp = new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));				
+			}
+		} else if (p.type_ === PacketType.RequestPlayoffStatus) {
+			if (this.project_?.playoff_mgr_?.hasPlayoffStatus()) {
+				let str = JSON.stringify(this.project_?.playoff_mgr_?.info) ;
+				resp = new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
+			} else {
+				let str = JSON.stringify(null) ;
+				resp = new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
+			}
 		} else if (p.type_ === PacketType.RequestMatchList) {
 			if (this.project_?.tablet_mgr_?.hasMatchAssignments()) {
 				let str = JSON.stringify(this.project_?.tablet_mgr_?.getMatchAssignments());

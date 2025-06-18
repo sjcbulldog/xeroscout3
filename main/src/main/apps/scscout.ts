@@ -6,16 +6,11 @@ import { SyncClient } from "../sync/syncclient";
 import { TCPClient } from "../sync/tcpclient";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
-import { MatchTablet, TeamTablet } from "../project/tabletmgr";
-import { IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
+import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr";
+import { kMatchAlliances } from '../../shared/playoffs';
+import { IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 
 const mdns = require('mdns-js') ; 
-
-export class MatchInfo {
-    public type_? : string ;
-    public set_? : number ;
-    public number_? : number ;
-} ;
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -27,6 +22,8 @@ export class SCScoutInfo {
     public teamlist_? : TeamTablet[] ;
     public matchlist_? : MatchTablet[] ;
     public results_ : IPCScoutResult[] ;
+    public playoff_assignments_? : PlayoffAssignment[] ;
+    public playoff_status_? : IPCPlayoffStatus ;
 
     constructor() {
         this.results_ = [] ;
@@ -67,6 +64,8 @@ export class SCScout extends SCBase {
 
     private match_results_received_ : boolean = false ;
     private team_results_received_ : boolean = false ;
+    private playoff_assignment_received_ : boolean = false ;
+    private playoff_status_received_ : boolean = false ;
 
     public constructor(win: BrowserWindow, args: string[]) {
         super(win, 'scout') ;
@@ -306,6 +305,8 @@ export class SCScout extends SCBase {
         this.info_.matchform_ = undefined ;
         this.info_.teamlist_ = undefined ;
         this.info_.matchlist_ = undefined ;
+        this.info_.playoff_assignments_ = undefined ;
+        this.info_.playoff_status_ = undefined ;
 
         this.sendToRenderer('tablet-title', 'NOT ASSIGNED') ;
 
@@ -525,6 +526,11 @@ export class SCScout extends SCBase {
     }
 
     private syncClient(conn: SyncClient) {
+        this.match_results_received_ = false ;
+        this.team_results_received_ = false ;
+        this.playoff_assignment_received_ = false ;
+        this.playoff_status_received_ = false ;
+
         this.conn_ = conn ;
         conn.connect()
             .then(async ()=> {
@@ -545,7 +551,6 @@ export class SCScout extends SCBase {
 
                 let p: PacketObj = new PacketObj(PacketType.Hello, data) ;
                 await this.conn_!.send(p) ;
-
 
                 this.conn_!.on('error', (err: Error) => {
                     let msg: string = "" ;
@@ -638,6 +643,28 @@ export class SCScout extends SCBase {
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
+        else if (p.type_ === PacketType.ProvidePlayoffAssignments) {
+            let obj = JSON.parse(p.payloadAsString()) ;
+            if (obj !== null) {
+                this.info_.playoff_assignments_ = obj ;
+                this.writeEventFile() ;
+                this.checkPlayoffMatchGeneration();
+            }
+
+            this.playoff_assignment_received_ = true ;
+            this.getMissingData() ;
+        }
+        else if (p.type_ === PacketType.ProvidePlayoffStatus) {
+            let obj = JSON.parse(p.payloadAsString()) ;
+            if (obj !== null) {
+                this.info_.playoff_status_ = obj ;
+                this.writeEventFile() ;
+                this.checkPlayoffMatchGeneration();                
+            }
+
+            this.playoff_status_received_ = true ;
+            this.getMissingData() ;
+        }        
         else if (p.type_ === PacketType.ProvideMatchList) {
             this.info_.matchlist_ = JSON.parse(p.payloadAsString()) ;
             this.writeEventFile() ;
@@ -804,8 +831,17 @@ export class SCScout extends SCBase {
             this.conn_?.send(new PacketObj(PacketType.RequestImages, Buffer.from(JSON.stringify(this.needImages())))) ;
             ret = true ;            
         }
-        
+        else if (!this.info_.playoff_assignments_ && !this.playoff_assignment_received_) {
+            this.conn_?.send(new PacketObj(PacketType.RequestPlayoffAssignments)) ;
+            ret = true ;              
+        }
+        else if (!this.playoff_status_received_) {
+            this.conn_?.send(new PacketObj(PacketType.RequestPlayoffStatus)) ;
+            ret = true ;              
+        }
+
         if (!ret) {
+            this.checkPlayoffMatchGeneration() ;
             this.sendNavData() ;
             this.setViewString() ;
             this.sendScoutingData() ;
@@ -1017,5 +1053,109 @@ export class SCScout extends SCBase {
             }
         });
         return ret;
-    } 
+    }
+
+    private target2Alliance(target: string) : number | undefined {
+        let ret: string = target ;
+
+        if (target.startsWith('a')) {
+            ret = target.substring(1) ;
+        } else if (target.startsWith('l') || target.startsWith('w')) {
+            let match = +target.substring(1) ;
+            if (this.info_.playoff_status_ && this.info_.playoff_status_.outcomes) {
+                let outcome = this.info_.playoff_status_.outcomes["m" + match.toString() as keyof IPCPlayoffStatus['outcomes']] ;
+                if (outcome) {
+                    if (target.startsWith('l')) {
+                        ret = outcome.loser.toString() ;
+                    } else if (target.startsWith('w')) {
+                        ret = outcome.winner.toString() ;
+                    }
+                }
+            }
+        }
+
+        if (/^a-zA-Z.*/.test(ret)) {
+            return undefined ;
+        } ;
+
+        return +ret ;
+    }
+
+    private findPlayoffMatchAssignment(match: number) : PlayoffAssignment | undefined {
+        for(let a of this.info_.playoff_assignments_!) {
+            if (a.match === match && a.tablet === this.info_.tablet_) {
+                return a ;
+            }
+        }
+
+        return undefined ;
+    }
+
+    private findMatchInList(match: number) : MatchTablet | undefined {
+        for(let m of this.info_.matchlist_!) {
+            if (m.comp_level === 'sf' && m.set_number === match && m.match_number === 1 && m.tablet === this.info_.tablet_) {
+                return m ;
+            }
+
+            if (m.comp_level === 'f' && m.set_number === 1 && m.match_number === match - 13 && m.tablet === this.info_.tablet_) {
+                return m ;
+            }
+        }
+
+        return undefined ;
+    }
+
+    private findTeam(alliance: number, target: number) : number | undefined {
+        if (this.info_.playoff_status_ && this.info_.playoff_status_.alliances) {
+            if (Array.isArray(this.info_.playoff_status_.alliances) && this.info_.playoff_status_.alliances.length > alliance - 1) {
+                let allianceData = this.info_.playoff_status_.alliances[alliance - 1] ;
+                if (allianceData && Array.isArray(allianceData.teams) && allianceData.teams.length > target) {
+                    return allianceData.teams[target] ;
+                }
+            }
+        }
+
+        return undefined ;
+    }
+
+    private createMatchFromAlliance(match: number, ralliance: number, balliance: number) {
+        let a: PlayoffAssignment | undefined = this.findPlayoffMatchAssignment(match) ;
+        if (!a) {
+            // No assignment for this match, nothing to do.
+            return ;
+        }
+
+        if (this.findMatchInList(match)) {
+            // It's already in the list, no need to create it.
+            return ;
+        }
+
+        let team = this.findTeam(a.alliance === 'red' ? ralliance : balliance, a.which) ;
+        if (!team) {
+            return ;
+        }
+
+        let mtype = (match < 14) ? 'sf' : 'f' ;
+        let setno = (match < 14) ? match  : 1 ;
+        let matchno = (match < 14) ? 1 : match - 13 ;
+        let ma = new MatchTablet(mtype, matchno, setno, a.alliance, team, '?', this.info_.tablet_!) ;
+        this.info_.matchlist_!.push(ma) ;
+
+        this.writeEventFile() ;
+    }
+
+    private checkPlayoffMatchGeneration() {
+        for(let m = 1 ; m <= 16 ; m++) {
+            let match = kMatchAlliances[m-1] ;
+            let ralliance = this.target2Alliance(match[0]) ;
+            let balliance = this.target2Alliance(match[1]) ;
+
+            if (ralliance && balliance) {
+                this.createMatchFromAlliance(m, ralliance, balliance) ;
+            }
+        }
+
+        this.sendNavData() ;
+        this.setViewString() ;
+    }    
 }
