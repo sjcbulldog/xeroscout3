@@ -7,7 +7,7 @@ import { FormulaManager } from "./formulamgr";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { MatchSet } from "./datasetmgr";
 import { DataValue } from '../../shared/datavalue' ;
-import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults } from "../../shared/ipc";
+import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
 
@@ -21,6 +21,9 @@ export class DataInfo {
 
     public match_results_ : IPCScoutResult[] = [] ;           // The list of match results that have been processed
     public team_results_ : IPCScoutResult[] = [] ;            // The list of team results that have been processed
+
+    public match_formulas_ : IPCCheckDBViewFormula[] = [] ;
+    public team_formulas_ : IPCCheckDBViewFormula[] = [] ;
 } ;
 
 export class DataManager extends Manager {
@@ -679,5 +682,15 @@ export class DataManager extends Manager {
         }
 
         return total / count ;
+    }
+
+    public setTeamFormatFormulas(f: IPCCheckDBViewFormula[]) {
+        this.info_.team_formulas_ = f ;
+        this.write() ;
+    }
+
+    public setMatchFormatFormulas(f: IPCCheckDBViewFormula[]) {
+        this.info_.match_formulas_ = f ;
+        this.write() ;
     }
 }

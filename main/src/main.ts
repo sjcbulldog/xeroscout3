@@ -19,7 +19,11 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          syncIPAddr,
          getPlayoffStatus,
          setAllianceTeams,
-         setPlayoffMatchOutcome} from "./main/ipchandlers" ;
+         setPlayoffMatchOutcome,
+         getMatchFormatFormulas,
+         getTeamFormatFormulas,
+         setMatchFormatFormulas,
+         setTeamFormatFormulas} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -196,6 +200,10 @@ app.on("ready", () => {
     ipcMain.on('get-playoff-status', (event, ...args) => { getPlayoffStatus('get-playoff-status', ...args)}) ;
     ipcMain.on('set-alliance-teams', (event, ...args) => { setAllianceTeams('set-alliance-teams', ...args)}) ;
     ipcMain.on('set-playoff-match-outcome', (event, ...args) => { setPlayoffMatchOutcome('set-playoff-match-outcome', ...args)}) ;
+    ipcMain.on('get-match-format-formulas', (event, ...args) => { getMatchFormatFormulas('get-match-format-formulas', ...args)}) ;
+    ipcMain.on('get-team-format-formulas', (event, ...args) => { getTeamFormatFormulas('get-team-format-formulas', ...args)}) ;    
+    ipcMain.on('set-match-format-formulas', (event, ...args) => { setMatchFormatFormulas('set-match-format-formulas', ...args)}) ;
+    ipcMain.on('set-team-format-formulas', (event, ...args) => { setTeamFormatFormulas('set-team-format-formulas', ...args)}) ;       
     createWindow() ;
 }) ;
 

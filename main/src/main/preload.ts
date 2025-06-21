@@ -107,6 +107,10 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'get-playoff-status',
         'set-alliance-teams',
         'set-playoff-match-outcome',
+        'get-match-format-formulas',
+        'get-team-format-formulas',
+        'set-match-format-formulas',
+        'set-team-format-formulas',        
       ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -178,6 +182,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-single-team-fields',
         'send-hint-db',
         'send-playoff-status',
+        'send-match-format-formulas',
+        'send-team-format-formulas'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));

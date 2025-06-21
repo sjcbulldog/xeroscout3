@@ -1078,7 +1078,7 @@ export class XeroEditFormView extends XeroView {
 
         this.unselectCurrent(frmctrl) ;
         this.edit_dialog_ = frmctrl.createEditDialog() ;
-        this.edit_dialog_.showCentered(this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].form) ;
+        this.edit_dialog_.showCentered(this.elem) ;
         this.edit_dialog_.on('closed', this.dialogClosed.bind(this, frmctrl, olditem)) ;
     }
 

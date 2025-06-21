@@ -1,6 +1,6 @@
 import { CellComponent, ColumnDefinition, RowComponent, TabulatorFull } from "tabulator-tables";
 import { XeroApp  } from "../../apps/xeroapp.js";
-import { IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../shared/ipc.js";
+import { IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCFormula, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../shared/ipc.js";
 import { XeroView  } from "../xeroview.js";
 import { XeroPopupMenu, XeroPopupMenuItem } from "../../widgets/xeropopupmenu.js";
 import { XeroPoint } from "../../shared/xerogeom.js";
@@ -10,7 +10,17 @@ import { DBViewFormulaDialog } from "./dbformdialog.js";
 import { DataValue } from "../../shared/datavalue.js";
 import { XeroMatchStatus } from "../matchstatus.js";
 
+interface MatchRowCollection {
+    rows: RowComponent[] ;
+    comp_level: string ;
+    set_number: number ;
+    match_number: number ;
+    alliance: string ;
+    team_keys: string[] ;
+}
+
 export class DatabaseView extends XeroView {
+    private data_ : any[] = [] ;
     private col_cfgs_? : IPCProjColumnsConfig ;
     private col_descs_? : IPCColumnDesc[] ;
     private keycol_? : string[] ;
@@ -23,6 +33,8 @@ export class DatabaseView extends XeroView {
     private context_menu_ : XeroPopupMenu ;
     private dirty_ : boolean ;
     private reverting_ : boolean ;
+    private format_formulas_ : IPCCheckDBViewFormula[] = [] ;
+    private formulas_ : IPCFormula[] = [] ;
 
     protected constructor(app: XeroApp, clname: string, type: string) {
         super(app, clname);
@@ -31,14 +43,18 @@ export class DatabaseView extends XeroView {
         this.dirty_ = false ;
         this.reverting_ = false ;       
 
+        this.registerCallback('send-' + type + '-format-formulas', this.receiveFormulas.bind(this)) ;        
         this.registerCallback('send-' + type + '-db', this.receiveData.bind(this));
+        this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;         
+        this.request('get-' + type + '-format-formulas') ;        
         this.request('get-' + type + '-db') ;
+        this.request('get-formulas') ;
 
         let items : XeroPopupMenuItem[] = [
             new XeroPopupMenuItem('Save Changes', this.saveChanges.bind(this)),
             new XeroPopupMenuItem('Revert Changes', this.revertChanges.bind(this)),
             new XeroPopupMenuItem('Show/Hide/Freeze Columns', this.hideColumns.bind(this)),
-            // new XeroPopupMenuItem('Valid Data Formulas', this.validDataFormulas.bind(this)),
+            new XeroPopupMenuItem('Valid Data Formulas', this.validDataFormulas.bind(this)),
         ] ;
 
         this.context_menu_ = new XeroPopupMenu('Menu', items) ;
@@ -52,6 +68,10 @@ export class DatabaseView extends XeroView {
         return !this.dirty_ ;
     }
 
+    private receivedFormulas(data: IPCFormula[]) {
+        this.formulas_ = data ;
+    }
+
     private createColumnDescs() : ColumnDefinition[] {
         let cols: ColumnDefinition[] = [] ;
 
@@ -59,6 +79,7 @@ export class DatabaseView extends XeroView {
             let colcfg = this.col_cfgs_!.columns[i] ;
             let desc = this.col_descs_![i] ;
             let col_desc: ColumnDefinition = {
+                formatter: this.cellFormatter.bind(this),
                 title: colcfg.name,
                 field: colcfg.name,
                 frozen: false,
@@ -119,6 +140,13 @@ export class DatabaseView extends XeroView {
         return cols ;
     }
 
+    private cellFormatter(cell: CellComponent, formatterParams: any) : string {
+        let value = cell.getValue() ;
+        cell.getElement().style.backgroundColor = 'black' ;
+        cell.getElement().style.color = 'white' ;
+        return value ;
+    }
+
     private convertData(data: any[]) {
         let ret : any[] = [] ;
         for(let one of data) {
@@ -137,20 +165,28 @@ export class DatabaseView extends XeroView {
         return ret;
     }
 
+    private receiveFormulas(forms: IPCCheckDBViewFormula[]) {
+        if (forms && Array.isArray(forms) && forms.length > 0) {
+            this.format_formulas_ = forms ;
+        }
+        else {
+            this.format_formulas_ = [] ;
+        }
+    }
+
     private receiveData(data: IPCDatabaseData) {
         this.reset() ;
-
         this.table_div_ = document.createElement('div') ;
         this.table_div_.className = 'xero-db-view-table-div' ;
         this.elem.appendChild(this.table_div_) ;
-                
+
         this.col_cfgs_ = data.column_configurations ;
         this.col_descs_ = data.column_definitions ;
         this.keycol_ = data.keycols ;
-        let cdata = this.convertData(data.data) ;
+        this.data_ = this.convertData(data.data) ;
         let coldefs = this.createColumnDescs() ;
         this.table_ = new TabulatorFull(this.table_div_!, {
-            data: cdata,
+            data: this.data_,
             columns: coldefs,
             layout:"fitData",
             resizableColumnFit:true,
@@ -321,6 +357,7 @@ export class DatabaseView extends XeroView {
     private tableReady() {
         this.hideHiddenColumns() ;
         this.freezeColumns() ;
+        this.updateFormatData() ;
     }
 
     private saveChanges() {
@@ -398,8 +435,82 @@ export class DatabaseView extends XeroView {
     }
 
     private hideColumns() {
+        if (this.dialog_) {
+            return ;
+        }
+
         this.dialog_ = new ShowHideColumnsDialog(this.col_cfgs_!) ;
         this.dialog_.on('closed', this.hideColumnsDialogClosed.bind(this)) ;
         this.dialog_.showRelative(this.table_div_!, 100, 100) ;
+    }
+
+    private findMatchRows() : Map<string, MatchRowCollection> {
+        let ret = new Map<string, MatchRowCollection>() ;
+
+        for(let row of this.table_!.getRows()) {
+            let data = row.getData() ;
+            let comp_level = data['comp_level'] ;
+            let set_number = data['set_number'] ;
+            let match_number = data['match_number'] ;
+            let alliance = data['alliance'] ;
+            let keystr = `${comp_level}-${set_number}-${match_number}-${alliance}` ;
+
+            let m : MatchRowCollection | undefined = ret.get(keystr) ;
+            if (!m) {
+                m = {
+                    rows: [],
+                    comp_level: comp_level,
+                    set_number: set_number,
+                    match_number: match_number,
+                    alliance: alliance,
+                    team_keys: []
+                }
+
+                ret.set(keystr, m) ;
+            }
+
+            m.rows.push(row) ;
+            m.team_keys.push(data['team_key']) ;
+        }
+        return ret ;
+    }
+
+    private updateFormatData() {
+        let mrows = this.findMatchRows() ;
+        for(let mrow of mrows.values()) {
+            //
+            // We evaluate the formulas in the context of this match row.  A match row is
+            // multiple rows from the database that are all part of the same match and alliance.
+            //
+            for(let formula of this.format_formulas_) {
+            }
+        }
+    }
+    
+    private formatFormulasClosed(changed: boolean) {
+        if (changed) {
+            let d: DBViewFormulaDialog = this.dialog_ as DBViewFormulaDialog ;
+            this.format_formulas_ = d.formatFormulas ;
+            this.request('set-' + this.type_ + '-format-formulas', this.format_formulas_) ;
+
+            this.updateFormatData() ;
+        }
+
+        this.dialog_ = undefined ;        
+    }
+
+    private validDataFormulas() {
+        if (this.dialog_) {
+            return ;
+        }
+
+        if (this.formulas_.length === 0) {
+            alert('There are no formulas defined.  You must define at least one formula before you can use this feature.') ;
+            return ;
+        }
+
+        this.dialog_ = new DBViewFormulaDialog(this.format_formulas_, this.formulas_, this.col_descs_!); 
+        this.dialog_.on('closed', this.formatFormulasClosed.bind(this)) ;
+        this.dialog_.showCentered(this.table_div_!) ;
     }
 }

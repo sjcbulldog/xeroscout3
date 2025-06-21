@@ -21,7 +21,7 @@ import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 
@@ -1600,7 +1600,7 @@ export class SCCentral extends SCBase {
 		} else if (cmd === SCCentral.viewFormulas) {
 			this.setView("formulas") ;
 		} else if (cmd === SCCentral.viewPlayoffs) {
-			this.setView("playoffs") ;
+			this.setView("playoffs", null) ;
 		} else if (cmd === SCCentral.viewMultiView) {
 			this.setView("multiview") ;
 		} else if (cmd === SCCentral.viewSpider) {
@@ -2769,4 +2769,28 @@ export class SCCentral extends SCBase {
 			this.sendPlayoffStatus() ;
 		}
 	}
+
+	public sendMatchFormatFormulas() {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.sendToRenderer('send-match-format-formulas', this.project_.info!.data_info_.match_formulas_) ;			
+		}
+	}
+
+	public sendTeamFormatFormulas() {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.sendToRenderer('send-team-format-formulas', this.project_.info!.data_info_.team_formulas_) ;			
+		}
+	}	
+
+	public setTeamFormatFormulas(formulas: IPCCheckDBViewFormula[]) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_.data_mgr_!.setTeamFormatFormulas(formulas)
+		}
+	}	
+	
+	public setMatchFormatFormulas(formulas: IPCCheckDBViewFormula[]) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_.data_mgr_!.setMatchFormatFormulas(formulas)
+		}
+	}		
 }

@@ -8,7 +8,7 @@ import { TeamNickNameNumber } from "./project/teammgr";
 import { TabletData } from "./project/tabletmgr";
 import { GraphConfig } from "./project/graphmgr";
 import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
-import { IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
@@ -890,6 +890,58 @@ export async function setAllianceTeams(cmd: string, ...args: any[]) {
     }
 }
 
+export async function getMatchFormatFormulas(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 0) {   
+            central.sendMatchFormatFormulas() ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }    
+}
+
+export async function getTeamFormatFormulas(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 0) {   
+            central.sendTeamFormatFormulas() ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }    
+}
+
+export async function setTeamFormatFormulas(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1) {   
+            central.setTeamFormatFormulas(args[0] as IPCCheckDBViewFormula[]) ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }    
+}
+
+export async function setMatchFormatFormulas(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1) {   
+            central.setMatchFormatFormulas(args[0] as IPCCheckDBViewFormula[]) ;
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }    
+}
+
 export async function setPlayoffMatchOutcome(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Central) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
@@ -903,6 +955,19 @@ export async function setPlayoffMatchOutcome(cmd: string, ...args: any[]) {
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
+    }
+    else if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let scout : SCScout = scappbase as SCScout ;
+        if (args.length === 1 && typeof args[0] === 'object') {       
+            let obj = args[0] ;
+            if (obj.hasOwnProperty('winner') && obj.hasOwnProperty('loser') && obj.hasOwnProperty('match')) {
+                scout.setPlayoffMatchOutcome(obj.match as number, obj.winner as number, obj.loser as number) ;
+            }
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }        
     }
 }
 

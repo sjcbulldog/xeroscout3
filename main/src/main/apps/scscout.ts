@@ -34,6 +34,7 @@ export class SCScout extends SCBase {
     private static readonly last_event_setting = "lastevent" ;
     private static readonly SYNC_IPADDR = 'SYNC_IPADDR' ;
 
+    private static readonly viewPlayoffs: string = 'view-playoffs' ;
     private static readonly syncEventLocal: string = "sync-event-local" ;
     private static readonly syncEventRemote: string = "sync-event-remote" ;
     private static readonly syncEventWiFi: string = "sync-event-wifi" ;
@@ -166,6 +167,29 @@ export class SCScout extends SCBase {
         return ret ;
     }
 
+    private areAlliancesValid() : boolean {
+        if (!this.info_.playoff_status_ || !this.info_.playoff_status_.alliances) {
+            return false;
+        }
+
+        let alliances = this.info_.playoff_status_.alliances ;
+        if (!Array.isArray(alliances) || alliances.length !== 8) {
+            return false;
+        }
+
+        for(let all of alliances) {
+            if (!all || !all.teams || !Array.isArray(all.teams) || all.teams.length !== 3) {
+                return false ;
+            }
+
+            if (!all.teams[0] || !all.teams[1] || !all.teams[2]) {
+                return false ;
+            }
+        }
+
+        return true ;
+    }
+
     private populateNavMatches() : any[] {
         let ret : any[] = [] ;
 
@@ -176,6 +200,15 @@ export class SCScout extends SCBase {
             }
         }
         ofinterest.sort((a, b) => { return this.sortCompFun(a, b) ;}) ;
+
+
+        if (this.areAlliancesValid()) {
+            ret.push({
+                type: 'item',
+                command: SCScout.viewPlayoffs,
+                title: 'View Playoffs'
+            }) ;
+        }
 
         for(let t of ofinterest) {
             let mtype:string = t.comp_level ;
@@ -261,6 +294,9 @@ export class SCScout extends SCBase {
         }
         else if (cmd === SCScout.reverseImage) {
             this.reverseImage() ;
+        }
+        else if (cmd === SCScout.viewPlayoffs) {
+            this.setView('playoffs', this.info_.playoff_status_)
         }
         else if (cmd.startsWith('st-')) {
             this.scoutTeam(cmd) ;
@@ -1157,5 +1193,19 @@ export class SCScout extends SCBase {
 
         this.sendNavData() ;
         this.setViewString() ;
-    }    
+    }   
+
+    public setPlayoffMatchOutcome(match: number, winner: number, loser: number) : void {
+        if (this.info_.playoff_status_) {
+            let str = `m${match}` as keyof typeof this.info_.playoff_status_.outcomes ;
+            this.info_.playoff_status_.outcomes[str] = {
+                winner: winner,
+                loser: loser,
+            } ;
+            this.checkPlayoffMatchGeneration() ;
+            this.setView('playoffs', this.info_.playoff_status_)            
+            this.writeEventFile() ;
+            this.sendNavData() ;
+        }
+    }
 }

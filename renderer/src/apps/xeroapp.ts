@@ -202,6 +202,6 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('select-tablet', XeroSelectTablet, ['scout']) ;
         this.registerView('sync-ipaddr', XeroSyncIPAddrView, ['scout']);
         this.registerView('formulas', XeroFormulasView, ['central']) ;
-        this.registerView('playoffs', XeroPlayoffsView, ['central']) ;
+        this.registerView('playoffs', XeroPlayoffsView, ['central', 'scout']) ;
     }
 }

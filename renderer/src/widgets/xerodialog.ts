@@ -13,6 +13,7 @@ export abstract class XeroDialog extends EventEmitter {
     private starty_ : number = 0 ;
     private startleft_ : number = 0 ;
     private starttop_ : number = 0 ;
+    private process_enter_key_ : boolean = true ;
     private mouse_move_handler_ : (event: MouseEvent) => void ;
     private mouse_up_handler_ : (event: MouseEvent) => void ;
     private key_down_handler_ : (event: KeyboardEvent) => void ;
@@ -29,6 +30,10 @@ export abstract class XeroDialog extends EventEmitter {
         this.mouse_move_handler_ = this.mouseMove.bind(this) ;
         this.mouse_up_handler_ = this.mouseUp.bind(this) ;
         this.key_down_handler_ = this.keyDown.bind(this) ;
+    }
+
+    public disableEnterKeyProcessing() {
+        this.process_enter_key_ = false ;
     }
 
     public get popup() : HTMLDivElement | undefined {
@@ -149,7 +154,7 @@ export abstract class XeroDialog extends EventEmitter {
         if (event.key === 'Escape') {
             this.cancelButton(event) ;
         }
-        else if (event.key === 'Enter') {
+        else if (event.key === 'Enter' && this.process_enter_key_) {
             this.okButton(event) ;
         }
     }

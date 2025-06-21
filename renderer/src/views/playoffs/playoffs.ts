@@ -25,9 +25,6 @@ export class XeroPlayoffsView extends XeroView {
     private static readonly kInterMarkerSpacing = 50 ;
     private static readonly kResultsTopMargin = 450 ;
 
-    private allianceDialog_ : AllianceDialog | null = null ;
-    private winner_menu_ : XeroPopupMenu | null = null ;
-
     private static readonly kMatchPositions : XeroPoint[] = [
         new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin), // Position for match 1
         new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 50), // Position for match 2
@@ -54,14 +51,17 @@ export class XeroPlayoffsView extends XeroView {
         new XeroPoint(XeroPlayoffsView.calcXSpacing(6), XeroPlayoffsView.kResultsTopMargin + 125), // Position for match 16
     ];
 
+    private allianceDialog_ : AllianceDialog | null = null ;
+    private winner_menu_ : XeroPopupMenu | null = null ;
     private canvas_ : HTMLCanvasElement ;
     private context_ : CanvasRenderingContext2D | null = null;
     private playoffStatus_ : IPCPlayoffStatus | null = null;
     private teams_ : any[] = [] ;
     private observer_ : ResizeObserver ;
     private marker_bounds_ : (XeroRect | undefined)[] = [] ;
+    private scouting_ : boolean = false ;
 
-    constructor(app: XeroApp) {
+    constructor(app: XeroApp, status: IPCPlayoffStatus | null = null) {
         super(app, 'xero-playoffs-view') ;
 
         this.marker_bounds_.fill(undefined, 0, 15) ;
@@ -72,21 +72,26 @@ export class XeroPlayoffsView extends XeroView {
         this.canvas_.width = this.elem.clientWidth
         this.canvas_.height = this.elem.clientHeight;
 
-        this.canvas_.addEventListener('dblclick', this.dblClick.bind(this)) ;
-        this.canvas_.addEventListener('contextmenu', this.selectWinner.bind(this)) ;
-        
         this.elem.appendChild(this.canvas_);
-
         this.context_ = this.canvas_.getContext('2d');
-
-        this.registerCallback('send-playoff-status', this.receivePlayoffStatus.bind(this));
-        this.registerCallback('send-team-list', this.receiveTeamList.bind(this)) ;
-
-        this.request('get-team-list') ;
-        this.request('get-playoff-status') ;
-
         this.observer_ = new ResizeObserver(this.resized.bind(this)) ;
         this.observer_.observe(this.elem) ;
+
+        if (status) {
+            // This is a scouting tablet
+            this.playoffStatus_ = status ;
+            this.renderPlayoffStatus() ;            
+            this.scouting_ = true ;
+        }
+        else {
+            this.canvas_.addEventListener('dblclick', this.dblClick.bind(this)) ;   
+            this.registerCallback('send-playoff-status', this.receivePlayoffStatus.bind(this));
+            this.registerCallback('send-team-list', this.receiveTeamList.bind(this)) ;
+            this.request('get-team-list') ;
+            this.request('get-playoff-status') ;                    
+        }
+
+        this.canvas_.addEventListener('contextmenu', this.selectWinner.bind(this))         
     }
 
     private static calcXSpacing(round: number) : number {
@@ -511,10 +516,12 @@ export class XeroPlayoffsView extends XeroView {
             }
         }
 
-        this.context_!.font = '12px Arial' ;
-        this.context_!.textAlign = 'center'
-        this.context_!.fillText('Double click on an alliance to edit', XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 2, 
-                                                                        XeroPlayoffsView.kRowHeight * 9 + XeroPlayoffsView.kTopMargin - 14) ;
+        if (!this.scouting_) {
+            this.context_!.font = '12px Arial' ;
+            this.context_!.textAlign = 'center'
+            this.context_!.fillText('Double click on an alliance to edit', XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 2, 
+                                                                            XeroPlayoffsView.kRowHeight * 9 + XeroPlayoffsView.kTopMargin - 14) ;
+        }
     }
 
     private getMatchWinner(match: number) : number {

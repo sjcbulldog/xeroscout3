@@ -179,14 +179,22 @@ export class MatchDataModel extends DataModel {
         dr.addfield('b1', DataValue.fromString(obj.alliances.blue.team_keys[0])) ;
         dr.addfield('b2', DataValue.fromString(obj.alliances.blue.team_keys[1])) ;
         dr.addfield('b3', DataValue.fromString(obj.alliances.blue.team_keys[2])) ;
+        dr.addfield('alliance', DataValue.fromString(alliance)) ;
 
         if (results) {
             if (obj.alliances.red.score) {
                 dr.addfield('ba_redscore', DataValue.fromInteger(obj.alliances.red.score)) ;
+                if (alliance === 'red') {
+                    dr.addfield('ba_score', DataValue.fromInteger(obj.alliances.red.score)) ;
+                }
             }
+            
 
             if (obj.alliances.blue.score) {
                 dr.addfield('ba_bluescore', DataValue.fromInteger(obj.alliances.blue.score)) ;
+                if (alliance === 'blue') {
+                    dr.addfield('ba_score', DataValue.fromInteger(obj.alliances.blue.score)) ;
+                }
             }
 
             if (obj.winning_alliance) {
