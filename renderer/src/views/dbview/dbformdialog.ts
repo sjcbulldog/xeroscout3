@@ -1,6 +1,7 @@
 import { CellComponent, EmptyCallback, TabulatorFull } from "tabulator-tables";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 import { IPCCheckDBViewFormula, IPCColumnDesc, IPCFormula, IPCProjColumnsConfig, IPCProjectColumnCfg } from "../../shared/ipc.js";
+import { FontData } from "../forms/dialogs/editformctrldialog.js";
 
 export class DBViewFormulaDialog extends XeroDialog {
     private table_? : TabulatorFull ;
@@ -18,6 +19,19 @@ export class DBViewFormulaDialog extends XeroDialog {
 
     public get formatFormulas() : IPCCheckDBViewFormula[] {
         return this.format_entries_ ;
+    }
+
+    private getFontFamilies() : Promise<string[]> {
+        return new Promise((resolve, reject) => {
+            window.queryLocalFonts!()
+            .then((fonts: FontData[]) => {
+                let set = new Set<string>(fonts.map((font) => font.family));
+                resolve([...set]) ;
+            })
+            .catch((error: Error) => {
+                resolve([]); // Return an empty array on error
+            });
+        });
     }
 
     async populateDialog(pdiv: HTMLDivElement) {
@@ -43,6 +57,22 @@ export class DBViewFormulaDialog extends XeroDialog {
                     { title: 'Message', field: 'message', width: 300, editable: this.canEditCell.bind(this), editor: 'input' },
                     { title: 'Background', field: 'background', width: 100, editable: this.canEditCell.bind(this), editor: 'input' },
                     { title: 'Color', field: 'color', width: 100, editable: this.canEditCell.bind(this), editor: 'input' },
+                    { title: 'Font Family', field: 'fontFamily', width: 150, editable: this.canEditCell.bind(this), editor: 'list',
+                        editorParams: {
+                            values: await this.getFontFamilies(),
+                        }
+                        },  
+                    { title: 'Font Size', field: 'fontSize', width: 100, editable: this.canEditCell.bind(this), editor: 'number' },
+                    { title: 'Font Style', field: 'fontStyle', width: 100, editable: this.canEditCell.bind(this), editor: 'list',
+                        editorParams: {
+                            values: ['normal', 'italic', 'oblique'],
+                        }
+                    },
+                    { title: 'Font Weight', field: 'fontWeight', width: 100, editable: this.canEditCell.bind(this), editor: 'list', 
+                        editorParams: {
+                            values: ['normal', 'bold', 'bolder', 'lighter', '100', '200', '300', '400', '500', '600', '700', '800', '900'],
+                        }
+                    },
                     { title: 'Formatting', field: 'formatting', formatter: this.formatFormattingCell.bind(this), editable: false},
                 ],
                 layout: 'fitColumns',
@@ -118,7 +148,10 @@ export class DBViewFormulaDialog extends XeroDialog {
         elem.innerHTML = this.isLastRow(cell) ? '' : 'Formatting' ;
         elem.style.backgroundColor = data.background ;
         elem.style.color = data.color ;
-
+        elem.style.fontFamily = data.fontFamily ;
+        elem.style.fontSize = data.fontSize + 'px' ;
+        elem.style.fontStyle = data.fontStyle ;
+        elem.style.fontWeight = data.fontWeight ;
         return elem ;
     }
 
@@ -138,6 +171,10 @@ export class DBViewFormulaDialog extends XeroDialog {
                     background: data.background || '#000000',
                     color: data.color || '#ffffff',
                     column: data.column,
+                    fontFamily: data.fontFamily || 'Arial',
+                    fontSize: data.fontSize || 12,
+                    fontStyle: data.fontStyle || 'normal',
+                    fontWeight: data.fontWeight || 'normal',
                 };
                 formulas.push(formula) ;
             }

@@ -212,6 +212,10 @@ export interface IPCCheckDBViewFormula {
     message: string ;                         // The message to display in the window if the formula is true
     background: string ;                      // The background color to use if the formula is true
     color: string ;                           // The text color to use if the formula is true
+    fontFamily: string ;                      // The font family to use if the formula is true
+    fontSize: number ;                        // The font size to use if the formula is true
+    fontStyle: string ;                       // The font style to use if the formula is true
+    fontWeight: string ;                      // The font weight to use if the formula is true
 }
 
 export interface IPCFormula {

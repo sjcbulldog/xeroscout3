@@ -140,10 +140,17 @@ export class DatabaseView extends XeroView {
         return cols ;
     }
 
+    private getFormat(cell: CellComponent) : IPCCheckDBViewFormula | undefined {
+        return undefined ;
+    }    
+
     private cellFormatter(cell: CellComponent, formatterParams: any) : string {
         let value = cell.getValue() ;
-        cell.getElement().style.backgroundColor = 'black' ;
-        cell.getElement().style.color = 'white' ;
+        let fmt = this.getFormat(cell) ;
+        if (fmt) {
+            cell.getElement().style.backgroundColor = fmt.background ;
+            cell.getElement().style.color = fmt.color ;
+        }
         return value ;
     }
 
