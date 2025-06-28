@@ -752,7 +752,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							r1
+							this.keyToTeamNumber(r1)
 						),
 						red2: this.keyToTeamNumber(r2),
 						redtab2: this.project_!.tablet_mgr_!.findTabletForMatch(
@@ -765,7 +765,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							r2
+							this.keyToTeamNumber(r2)
 						),
 						red3: this.keyToTeamNumber(r3),
 						redtab3: this.project_!.tablet_mgr_!.findTabletForMatch(
@@ -778,7 +778,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							r3
+							this.keyToTeamNumber(r3)
 						),
 						blue1: this.keyToTeamNumber(b1),
 						bluetab1: this.project_!.tablet_mgr_!.findTabletForMatch(
@@ -791,7 +791,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							b1
+							this.keyToTeamNumber(b1)
 						),
 						blue2: this.keyToTeamNumber(b2),
 						bluetab2: this.project_!.tablet_mgr_!.findTabletForMatch(
@@ -804,7 +804,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							b2
+							this.keyToTeamNumber(b2)
 						),
 						blue3: this.keyToTeamNumber(b3),
 						bluetab3: this.project_!.tablet_mgr_!.findTabletForMatch(
@@ -817,7 +817,7 @@ export class SCCentral extends SCBase {
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							b3
+							this.keyToTeamNumber(b3)
 						),
 					};
 					ret.push(obj);

@@ -1,4 +1,4 @@
-import { CellComponent, EmptyCallback, TabulatorFull } from "tabulator-tables";
+import { CellComponent, EmptyCallback, RowComponent, TabulatorFull } from "tabulator-tables";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 import { IPCCheckDBViewFormula, IPCColumnDesc, IPCFormula, IPCProjColumnsConfig, IPCProjectColumnCfg } from "../../shared/ipc.js";
 import { FontData } from "../forms/dialogs/editformctrldialog.js";
@@ -8,13 +8,23 @@ export class DBViewFormulaDialog extends XeroDialog {
     private format_entries_ : IPCCheckDBViewFormula[] ;
     private formulas_ : IPCFormula[] = [] ;
     private columns_ : IPCColumnDesc[] = [] ;
+    private types_ : string[] = ['alliance', 'robot'] ;
 
-    constructor(forms: IPCCheckDBViewFormula[], formulas: IPCFormula[], columns: IPCColumnDesc[]) {
+    constructor(type: string, forms: IPCCheckDBViewFormula[], formulas: IPCFormula[], columns: IPCColumnDesc[]) {
         super('Edit Database Check Formulas') ;
         this.format_entries_ = forms ;
         this.formulas_ = formulas ;
         this.columns_ = columns ;
         this.disableEnterKeyProcessing() ;
+
+        let lastrow : any = {
+            lastrow: true,
+        } ;
+        this.format_entries_.push(lastrow) ;
+
+        if (type === 'team') {
+            this.types_ = ['robot'] ;
+        }
     }
 
     public get formatFormulas() : IPCCheckDBViewFormula[] {
@@ -42,33 +52,48 @@ export class DBViewFormulaDialog extends XeroDialog {
             {
                 editTriggerEvent: 'dblclick',
                 data: this.format_entries_,
+                movableRows: true,
+                rowHeader: {
+                    headerSort: false,
+                    resizable: false,
+                    minWidth: 30,
+                    width: 30,
+                    rowHandle: true,
+                    formatter: 'handle'
+                },
                 columns: [
                     { title: '', field: 'del', formatter: this.formatDelCell.bind(this), width: 30},
-                    { title: 'Column', field: 'column', width: 200, editable: this.canEditCell.bind(this), editor: 'list', 
+                    { title: 'Type', field: 'type', width: 100, editable: this.canEditCell.bind(this), editor: 'list',
+                        editorParams: {
+                            values: this.types_
+                        }
+                    },
+                    { title: 'Column', field: 'columns', width: 100, editable: this.canEditCell.bind(this), editor: 'list', 
                       editorParams: {
                         values: this.columns_.map((c) => c.name),
+                        multiselect: true
                       }
                     },
-                    { title: 'Formula', field: 'formula', width: 300, editable: this.canEditCell.bind(this), editor: 'list', 
+                    { title: 'Formula', field: 'formula', width: 100, editable: this.canEditCell.bind(this), editor: 'list', 
                       editorParams: {
                         values: this.formulas_.map((f) => f.name),
                       }
                     },
-                    { title: 'Message', field: 'message', width: 300, editable: this.canEditCell.bind(this), editor: 'input' },
-                    { title: 'Background', field: 'background', width: 100, editable: this.canEditCell.bind(this), editor: 'input' },
-                    { title: 'Color', field: 'color', width: 100, editable: this.canEditCell.bind(this), editor: 'input' },
-                    { title: 'Font Family', field: 'fontFamily', width: 150, editable: this.canEditCell.bind(this), editor: 'list',
+                    { title: 'Message', field: 'message', width: 100, editable: this.canEditCell.bind(this), editor: 'input' },
+                    { title: 'Background', field: 'background', width: 80, editable: this.canEditCell.bind(this), editor: 'input' },
+                    { title: 'Color', field: 'color', width: 80, editable: this.canEditCell.bind(this), editor: 'input' },
+                    { title: 'Font Family', field: 'fontFamily', width: 120, editable: this.canEditCell.bind(this), editor: 'list',
                         editorParams: {
                             values: await this.getFontFamilies(),
                         }
                         },  
-                    { title: 'Font Size', field: 'fontSize', width: 100, editable: this.canEditCell.bind(this), editor: 'number' },
-                    { title: 'Font Style', field: 'fontStyle', width: 100, editable: this.canEditCell.bind(this), editor: 'list',
+                    { title: 'Font Size', field: 'fontSize', width: 120, editable: this.canEditCell.bind(this), editor: 'number' },
+                    { title: 'Font Style', field: 'fontStyle', width: 120, editable: this.canEditCell.bind(this), editor: 'list',
                         editorParams: {
                             values: ['normal', 'italic', 'oblique'],
                         }
                     },
-                    { title: 'Font Weight', field: 'fontWeight', width: 100, editable: this.canEditCell.bind(this), editor: 'list', 
+                    { title: 'Font Weight', field: 'fontWeight', width: 120, editable: this.canEditCell.bind(this), editor: 'list', 
                         editorParams: {
                             values: ['normal', 'bold', 'bolder', 'lighter', '100', '200', '300', '400', '500', '600', '700', '800', '900'],
                         }
@@ -80,12 +105,41 @@ export class DBViewFormulaDialog extends XeroDialog {
 
         this.table_.on('tableBuilt', this.tableBuilt.bind(this)) ;
         this.table_.on('cellEdited', this.cellEdited.bind(this)) ;
+        this.table_.on('rowMoved', this.rowMoved.bind(this)) ;
         pdiv.appendChild(div) ;
+
+        let span = document.createElement('span') ;
+        span.className = 'xero-dialog-note' ;
+        span.innerHTML = 'Double-click on a cell to edit it. Click on the + button to add a new database check formula.' ;
+        pdiv.appendChild(span) ;
+    }
+
+    private fixLastRow() {
+        let rows = this.table_!.getRows() ;
+        let index = rows.length - 1 ;        
+        for(let i = 0; i < rows.length; i++) {
+            if (rows[i].getData().lastrow === true) {
+                console.log ('Fixing last row') ;
+                console.log('  deleting row', i) ;
+                this.table_!.deleteRow(rows[i]) ;
+                this.table_!.addRow({ lastrow : true }, false) ;
+                break ;
+            }
+        }
+    }
+
+    private rowMoved(row: RowComponent) {
+        // If the last row  is not really the last row, move it to the end
+        let rows = this.table_!.getRows() ;
+        let index = rows.length - 1 ;
+        let last = rows[index] ;
+        if (last.getData().lastrow !== true) {
+            this.fixLastRow() ;
+        }
     }
 
     private canEditCell(cell: CellComponent) : boolean {
         // Allow editing only if the cell is not in the last row
-        console.log('canEditCell', cell.getField(), this.isLastRow(cell)) ;
         return !this.isLastRow(cell) ;
     }
 
@@ -97,8 +151,8 @@ export class DBViewFormulaDialog extends XeroDialog {
         }
     }
 
-    private isLastRow(cell: CellComponent) : boolean {
-        let row = cell.getRow() ;
+    private isLastRow(obj: CellComponent) : boolean {
+        let row = obj.getRow() ;
         if (row.getNextRow() === false) {
             return true ;
         }
@@ -117,20 +171,41 @@ export class DBViewFormulaDialog extends XeroDialog {
         else {
             ret = document.createElement('button') ;
             ret.addEventListener('click', this.delFormat.bind(this, cell)) ;
-            ret.innerHTML = '<b>-</b>' ;
+            ret.innerHTML = '<b>-</b>' ;               
         }
 
         return ret;
     }
 
     private addFormat(e: MouseEvent) {
-        let entry = {
+        let entry : IPCCheckDBViewFormula = {
             formula: this.formulas_[0].name,
+            type: this.types_[0],
             message: 'New Database Check Formula',
             background: '#000000',
             color: '#ffffff',
+            fontFamily: 'Arial',
+            fontSize: 12,
+            fontStyle: 'normal',
+            fontWeight: 'normal',
+            columns: [],
         }
-        this.table_!.addRow(entry, true) ;
+        let row = this.findLastRow() ;
+        if (row) {
+            this.table_!.addRow(entry, true, row) ;
+        }
+        else {
+            this.table_!.addRow(entry, true) ;
+        }
+    }
+
+    private findLastRow() : RowComponent | null {
+        for(let row of this.table_!.getRows()) {
+            if (row.getNextRow() === false) {
+                return row ;
+            }
+        }
+        return null ;
     }
 
     private delFormat(cell: CellComponent, e: MouseEvent) {
@@ -138,14 +213,13 @@ export class DBViewFormulaDialog extends XeroDialog {
     }    
 
     private tableBuilt() {
-        this.table_!.addRow({
-        })
     }
     
     private formatFormattingCell(cell: CellComponent, formatterParams: {}, onRendered: EmptyCallback) : HTMLSpanElement {
+        let last = this.isLastRow(cell) ;
         let data = cell.getData() as IPCCheckDBViewFormula ;
         let elem = document.createElement('span') ;
-        elem.innerHTML = this.isLastRow(cell) ? '' : 'Formatting' ;
+        elem.innerHTML = last ? '' : 'Formatting' ;
         elem.style.backgroundColor = data.background ;
         elem.style.color = data.color ;
         elem.style.fontFamily = data.fontFamily ;
@@ -163,14 +237,16 @@ export class DBViewFormulaDialog extends XeroDialog {
                 break ;
             }
 
-            let data = row.getData() as IPCCheckDBViewFormula ;
-            if (data.formula && data.formula.length > 0 && data.message && data.message.length > 0) {
+            let d = row.getData() as any ; 
+            let data = d as IPCCheckDBViewFormula ;
+            if (!d.lastrow || d.lastrow === false) {
                 let formula: IPCCheckDBViewFormula = {
                     formula: data.formula,
+                    type: data.type,
                     message: data.message,
                     background: data.background || '#000000',
                     color: data.color || '#ffffff',
-                    column: data.column,
+                    columns: data.columns || [],
                     fontFamily: data.fontFamily || 'Arial',
                     fontSize: data.fontSize || 12,
                     fontStyle: data.fontStyle || 'normal',

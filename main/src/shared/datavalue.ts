@@ -2,6 +2,23 @@ import { IPCDataValueType, IPCTypedDataValue } from "./ipc.js";
 
 export class DataValue {
 
+    public static convertFromString(type: IPCDataValueType, str: string): IPCTypedDataValue {
+        switch (type) {
+            case 'string':
+                return DataValue.fromString(str);
+            case 'integer':
+                return DataValue.fromInteger(parseInt(str, 10));
+            case 'real':
+                return DataValue.fromReal(parseFloat(str));
+            case 'boolean':
+                return DataValue.fromBoolean(str.toLowerCase() === 'true' || str === '1');
+            case 'null':
+                return DataValue.fromNull();
+            default:
+                throw new Error(`Unsupported type: ${type}`);
+        }
+    }
+
     public static fromString(value: string): IPCTypedDataValue {
         return {
             type: 'string',
@@ -202,5 +219,20 @@ export class DataValue {
         }
 
         return ret;
+    }
+
+    public static isTruthy(a: IPCTypedDataValue) : boolean {
+        let ret = false ;
+        if (a.type === 'boolean' && a.value === true) {
+            ret = true ;
+        } else if (a.type === 'integer') {
+            ret = DataValue.toInteger(a) !== 0;
+        } else if (a.type === 'real') {
+            ret =  DataValue.toReal(a) !== 0;
+        } else if (a.type === 'string') {
+            let str = DataValue.toString(a).trim() ;
+            ret = str === 'true' || str === 'yes' || str === '1' || str === 't' ;
+        }
+        return ret ;
     }
 }

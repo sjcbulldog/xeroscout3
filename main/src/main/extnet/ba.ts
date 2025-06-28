@@ -46,8 +46,13 @@ export class BlueAlliance extends NetBase {
     }
 
     public async getAlliances(evkey: string) : Promise<BAAlliances[]> {
+        let str = process.env.XEROSCOUTDEBUG ;
         let query = "/event/" + evkey + "/alliances" ;
         let ret: Promise<BAAlliances[]> = new Promise<BAAlliances[]>((resolve, reject) => {
+            if (str?.indexOf('noplayoffs') !== -1) {
+                resolve([]) ;
+                return ;
+            }
             this.request(query)
                 .then((obj) => {
                     resolve(obj) ;
@@ -109,17 +114,43 @@ export class BlueAlliance extends NetBase {
 
     public async getMatches(evkey: string) : Promise<BAMatch[]> {
         let ret: Promise<BAMatch[]> = new Promise<BAMatch[]>((resolve, reject) => {
+            let str = process.env.XEROSCOUTDEBUG ;
+
+            //
+            // If the string 'nomatches' is in the environment variable, return an empty array.  This is used to simulate
+            // the pre-match scenario, where the teams are known but the matches schedule is not available yet.
+            //
+            if (str?.indexOf('nomatches') !== -1) {
+                resolve([]) ;
+                return ;
+            }
+
             let query = "/event/" + evkey + "/matches" ;
             this.request(query)
                 .then((obj) => {
-                    let str = process.env.XEROSCOUTDEBUG ;
+
                     if (str) {
-                        for(let one of obj) {
-                            one.score_breakdown = undefined ;
+                        //
+                        // If the string 'noplayoffs' is in the environment variable, filter out playoff matches.  To simulate the
+                        // pre-playoff scenario, have the XEROSCOUTDEBUG environment variable contain the word noplayoffs.
+                        //
+                        if (str?.indexOf('noplayoffs') !== -1) {
+                            obj = obj.filter((match: BAMatch) => {
+                                return match.comp_level !== 'f' && match.comp_level !== 'sf'  ;
+                            });                        
                         }
-                        obj = obj.filter((match: BAMatch) => {
-                            return match.comp_level !== 'f' && match.comp_level !== 'sf'  ;
-                        });                        
+
+                        //
+                        // If the string 'noscores' is not in the environment variable add in the score breakdowns.  To simulate the
+                        // pre-match scenario, have the XEROSCOUTDEBUG environment variable contain the word noscores.  Note if the word
+                        // noplayoffs is also in the environment variable, it will filter out the playoff matches and therefore any scores
+                        // assocaited with playoff matches.
+                        //
+                        if (str?.indexOf('noscores') !== -1) {
+                            for(let one of obj) {
+                                one.score_breakdown = undefined ;
+                            }                            
+                        }
                     }
                     resolve(obj) ;
                 })

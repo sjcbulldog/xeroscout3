@@ -264,7 +264,7 @@ export class DataManager extends Manager {
         return this.matchdb_.processBAData(matches, results) ;
     }
 
-    public hasMatchScoutingResult(type: string, set: number, match: number, team: string) : string {
+    public hasMatchScoutingResult(type: string, set: number, match: number, team: number) : string {
         let str: string = 'sm-' + type + '-' + set + '-' + match + '-' + team ;
         return this.info_.scouted_match_.includes(str) ? 'Y' : 'N' ;
     }
@@ -613,75 +613,6 @@ export class DataManager extends Manager {
         }) ;
         
         return data ;
-    }
-
-    private getDataType(field: string, data: any[]) : string {
-        let ret: string = typeof (data[0][field]) ;
-        let allnull = true ;
-
-        for(let d of data) {
-            if (d[field] === null) {
-                continue ;
-            }
-            allnull = false ;
-            if (typeof d[field] !== ret) {
-                return 'string' ;
-            }
-        }
-
-        if (allnull) {
-            ret = 'null' ;
-        }
-
-        return ret;
-    }
-
-    private processStringData(data: any[], field: string) : string {
-        let vmap = new Map() ;
-        for(let v of data) {
-            if (v[field] !== null) {
-                let val = v[field] ;
-                if (!vmap.has(val)) {
-                    vmap.set(val, 0) ;
-                }
-
-                let current = vmap.get(val) ;
-                vmap.set(val, current + 1) ;
-            }
-        }
-
-        let total = 0 ;
-        for(let v of vmap.values()) {
-            total += v ;
-        }
-
-        let ret = '' ;
-        for(let v of vmap.keys()) {
-            let pcnt = Math.round(vmap.get(v) / total * 10000) / 100 ;
-            if (ret.length > 0) {
-                ret += '\n' ;
-            }
-            ret += v + ' ' + pcnt + '%' ;
-        }
-
-        return ret ;
-    }
-
-    private processNumberData(data: any[], field: string) : number {
-        let total = 0.0 ;
-        let count = 0 ;
-        for(let v of data) {
-            if (v[field] !== null){
-                total += v[field] ;
-                count++ ;
-            }
-        }
-
-        if (count === 0) {
-            return NaN ;
-        }
-
-        return total / count ;
     }
 
     public setTeamFormatFormulas(f: IPCCheckDBViewFormula[]) {

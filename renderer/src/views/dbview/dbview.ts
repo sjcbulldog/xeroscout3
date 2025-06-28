@@ -9,6 +9,7 @@ import { XeroDialog } from "../../widgets/xerodialog.js";
 import { DBViewFormulaDialog } from "./dbformdialog.js";
 import { DataValue } from "../../shared/datavalue.js";
 import { XeroMatchStatus } from "../matchstatus.js";
+import { Expr } from "../../shared/expr.js";
 
 interface MatchRowCollection {
     rows: RowComponent[] ;
@@ -35,6 +36,8 @@ export class DatabaseView extends XeroView {
     private reverting_ : boolean ;
     private format_formulas_ : IPCCheckDBViewFormula[] = [] ;
     private formulas_ : IPCFormula[] = [] ;
+    private formats_ : Map<number, Map<string, IPCCheckDBViewFormula>> = new Map<number, Map<string, IPCCheckDBViewFormula>>() ;
+    private messages_ : string[] = [] ;
 
     protected constructor(app: XeroApp, clname: string, type: string) {
         super(app, clname);
@@ -141,6 +144,16 @@ export class DatabaseView extends XeroView {
     }
 
     private getFormat(cell: CellComponent) : IPCCheckDBViewFormula | undefined {
+        let rows = this.table_!.getRows() ;
+        let pos = rows.indexOf(cell.getRow()) ;
+        if (pos < 0) {
+            return ;
+        }
+        let rowformats = this.formats_.get(pos) ;
+        if (rowformats) {
+            let colname = cell.getField() ;
+            return rowformats.get(colname) ;
+        }  
         return undefined ;
     }    
 
@@ -148,8 +161,12 @@ export class DatabaseView extends XeroView {
         let value = cell.getValue() ;
         let fmt = this.getFormat(cell) ;
         if (fmt) {
-            cell.getElement().style.backgroundColor = fmt.background ;
-            cell.getElement().style.color = fmt.color ;
+            let elem = cell.getElement() ;
+            elem.style.backgroundColor = fmt.background ;
+            elem.style.color = fmt.color ;
+            elem.style.fontWeight = fmt.fontWeight ;
+            elem.style.fontStyle = fmt.fontStyle ;
+            elem.style.fontFamily = fmt.fontFamily ;
         }
         return value ;
     }
@@ -365,6 +382,13 @@ export class DatabaseView extends XeroView {
         this.hideHiddenColumns() ;
         this.freezeColumns() ;
         this.updateFormatData() ;
+        this.updateCellFormats() ;
+    }
+
+    private updateCellFormats() {
+        for(let row of this.table_!.getRows()) {
+            row.reformat() ;
+        }
     }
 
     private saveChanges() {
@@ -482,14 +506,166 @@ export class DatabaseView extends XeroView {
         return ret ;
     }
 
-    private updateFormatData() {
+    private setFormat(row: RowComponent, column: string, formula: IPCCheckDBViewFormula) {
+        let rows = this.table_!.getRows() ;
+        let pos = rows.indexOf(row) ;
+        if (pos < 0) {
+            return ;
+        }
+        let rowformats = this.formats_.get(pos) ;
+        if (!rowformats) {
+            rowformats = new Map<string, IPCCheckDBViewFormula>() ;
+            this.formats_.set(pos, rowformats) ;
+        }
+        rowformats.set(column, formula) ;
+    }
+
+    private findFormulaByName(name: string) : string | undefined {
+        for(let formula of this.formulas_) {
+            if (formula.name === name) {
+                return formula.formula ;
+            }
+        }
+        return undefined ;
+    }
+
+    private evalOneField(mrow: MatchRowCollection, field: string) : IPCTypedDataValue | undefined {
+        let ret: IPCTypedDataValue | undefined = undefined ;
+
+        let cfg = this.getColumnDesc(field) ;
+        if (!cfg) {
+            this.logMessage('Column not found: ' + field) ;
+            return undefined ;
+        }
+
+        if (cfg.source === 'form') {
+            if (cfg.type !== 'integer' && cfg.type !== 'real') {
+                this.logMessage('Unsupported type for field: ' + field) ;
+                return undefined ;
+            }
+
+            let sum = 0.0 ;
+            for(let row of mrow.rows) {
+                let value = row.getData()[field] ;
+                let v = parseFloat(value) ;
+                if (isNaN(v)) {
+                    this.logMessage('Invalid value for field: ' + field + ' - ' + value) ;
+                    return undefined ;
+                }
+                sum += v ;
+            }
+            if (cfg.type === 'integer') {
+                ret = DataValue.fromInteger(Math.round(sum)) ;
+            }
+            else {
+                ret = DataValue.fromReal(sum) ;
+            }
+        }
+        else if (cfg.source === 'bluealliance') {
+            //
+            // We expect the field to be the same across all rows for this alliance in the match
+            //
+            if (mrow.rows.length > 0) {
+                ret = DataValue.convertFromString(cfg.type, mrow.rows[0].getData()[field]) ;
+            }
+        }
+
+        return ret ;
+    }
+
+    private evalFormulaAlliance(formula: IPCCheckDBViewFormula) {
+        let f = this.findFormulaByName(formula.formula) ;
+        if (!f) {
+            this.logMessage('Formula not found: ' + formula.formula) ;
+            return ;
+        }
+
+        let expr = Expr.parse(f) ;
+        if (expr.hasError()) {
+            this.logMessage('Error parsing formula: ' + formula.formula + ' - ' + expr.getErrorMessage()) ;
+            return ;
+        }
+
+        let vars = expr.variables() ;
         let mrows = this.findMatchRows() ;
         for(let mrow of mrows.values()) {
-            //
-            // We evaluate the formulas in the context of this match row.  A match row is
-            // multiple rows from the database that are all part of the same match and alliance.
-            //
-            for(let formula of this.format_formulas_) {
+            let varvalues : Map<string, IPCTypedDataValue> = new Map<string, IPCTypedDataValue>() ;
+
+            for(let varname of vars) {
+                let v = this.evalOneField(mrow, varname) ;
+                if (v) {
+                    varvalues.set(varname, v) ;
+                }
+            }
+
+            let result = expr.evaluate(varvalues) ;
+            if (result instanceof Error) {
+                this.logMessage('Error evaluating formula: ' + formula.formula + ' - ' + result.message) ;
+                continue ;
+            }
+
+            if (DataValue.isTruthy(result)) {
+                for(let row of mrow.rows) {
+                    for(let col of formula.columns) {
+                        this.setFormat(row, col, formula) ;
+                        this.logMessage(`Row ${row.getIndex()}: ${formula.message}`) ;
+                    }
+                }
+            }
+        }        
+    }
+
+    private evalFormulaRobot(formula: IPCCheckDBViewFormula) {
+        let f = this.findFormulaByName(formula.formula) ;
+        if (!f) {
+            this.logMessage('Formula not found: ' + formula.formula) ;
+            return ;
+        }
+
+        let expr = Expr.parse(f) ;
+        if (expr.hasError()) {
+            this.logMessage('Error parsing formula: ' + formula.formula + ' - ' + expr.getErrorMessage()) ;
+            return ;
+        }
+
+        let vars = expr.variables() ;
+        for(let row of this.table_!.getRows()) {
+            let varvalues : Map<string, IPCTypedDataValue> = new Map<string, IPCTypedDataValue>() ;
+            let data = row.getData() ;
+            for(let varname of vars) {
+                let cfg = this.getColumnDesc(varname) ;
+                if (!cfg) {
+                    this.logMessage('Column not found: ' + varname) ;
+                    continue ;
+                }
+                let value = data[varname] ;
+                varvalues.set(varname, DataValue.convertFromString(cfg.type, value)) ;
+            }
+
+            let result = expr.evaluate(varvalues) ;
+            if (result instanceof Error) {
+                continue ;
+            }
+
+            if (DataValue.isTruthy(result)) {
+                for(let col of formula.columns) {
+                    this.setFormat(row, col, formula) ;
+                }
+                this.logMessage(`Row ${row.getIndex()}: ${formula.message}`) ;
+            }
+        }
+    }
+
+    private updateFormatData() {
+        this.messages_ = [] ;
+        this.formats_.clear() ;
+
+        for(let formula of this.format_formulas_) {
+            if (formula.type === 'alliance') {
+                this.evalFormulaAlliance(formula) ;
+            }
+            else if (formula.type === 'robot') {
+                this.evalFormulaRobot(formula) ;
             }
         }
     }
@@ -501,6 +677,7 @@ export class DatabaseView extends XeroView {
             this.request('set-' + this.type_ + '-format-formulas', this.format_formulas_) ;
 
             this.updateFormatData() ;
+            this.updateCellFormats() ;
         }
 
         this.dialog_ = undefined ;        
@@ -516,8 +693,12 @@ export class DatabaseView extends XeroView {
             return ;
         }
 
-        this.dialog_ = new DBViewFormulaDialog(this.format_formulas_, this.formulas_, this.col_descs_!); 
+        this.dialog_ = new DBViewFormulaDialog(this.type_, this.format_formulas_, this.formulas_, this.col_descs_!); 
         this.dialog_.on('closed', this.formatFormulasClosed.bind(this)) ;
         this.dialog_.showCentered(this.table_div_!) ;
+    }
+
+    private logMessage(msg: string) {
+        this.messages_.push(msg) ;
     }
 }

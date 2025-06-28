@@ -207,8 +207,9 @@ export interface IPCImageResponse {
 }
 
 export interface IPCCheckDBViewFormula {
-    column: string ;                          // The column that displays the formatting if the formula is true
+    columns: string[] ;                        // The column that displays the formatting if the formula is true
     formula: string ;                         // The formula to evaluate        
+    type: string ;
     message: string ;                         // The message to display in the window if the formula is true
     background: string ;                      // The background color to use if the formula is true
     color: string ;                           // The text color to use if the formula is true
