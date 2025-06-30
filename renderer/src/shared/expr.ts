@@ -5,16 +5,10 @@ export interface IPCFunctionDef {
 	name: string ;
 }
 
-export class ExprNode {
-	public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
-		return {
-			type: "error",
-			value: new Error("Not implemented"),
-		};
-	}
-
-	public variables(vars: string[]): void {    
-	}
+export abstract class ExprNode {
+	abstract getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue  ;
+	abstract variables(vars: string[]): void ;
+	abstract toString() : string ;
 }
 
 export class ExprValue extends ExprNode {
@@ -27,6 +21,13 @@ export class ExprValue extends ExprNode {
 
 	public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
 		return this.value_;
+	}
+
+	public variables(vars: string[]): void {
+	}
+
+	public toString(): string {
+		return DataValue.toDisplayString(this.value_) ;
 	}
 }
 
@@ -53,6 +54,10 @@ export class ExprVariable extends ExprNode {
 			type: "error",
 			value: new Error(`reference to undefined variable ${this.name_}`),
 		};
+	}
+
+	public toString(): string {
+		return this.name_;
 	}
 }
 
@@ -94,6 +99,10 @@ export class ExprFunction extends ExprNode {
 		this.name_ = name;
 		this.func_ = fun;
 		this.args_ = args;
+	}
+
+	public toString(): string {
+		return `(${this.name_}${this.args_ ? ", " + this.args_.map(arg => arg.toString()).join(", ") : ""})`;
 	}
 
 	public variables(vars: string[]): void {
@@ -142,6 +151,16 @@ export class ExprOperator extends ExprNode {
 		this.which_ = which;
 	}
 
+	public toString(): string {
+		if (!this.args_ || this.args_.length === 0) {
+			return this.which_;
+		}
+		else if (this.args_.length === 1) {	
+			return `(${this.which_} ${this.args_[0].toString()})`;
+		}
+		return `(${this.args_.map(arg => arg.toString()).join(` ${this.which_} `)})`;
+	}
+
 	public variables(vars: string[]): void {
 		if (this.args_) {
 			for (let arg of this.args_) {
@@ -156,31 +175,40 @@ export class ExprOperator extends ExprNode {
 
 	public operatorPrecedence(): number {
 		switch (this.which_) {
-			case "+":
-			case "-":
+			case "^":
 				return 1;
+
+			case "!":
+				return 2;				
+
 			case "*":
 			case "/":
 			case "%":
-				return 2;
-			case "^":
 				return 3;
-			case "==":
-			case "!=":
+
+			case "+":
+			case "-":
 				return 4;
+
 			case "<":
 			case "<=":
 			case ">":
 			case ">=":
-				return 5;
-			case "&&":
 				return 6;
-			case "||":
+
+			case "==":
+			case "!=":
 				return 7;
-			case "!":
-				return 8;
+
+			case "&&":
+				return 11;
+
+			case "||":
+				return 12;
+
+			default:
+				throw new Error('Invalid operator: ' + this.which_);
 		}
-		return 0;
 	}
 
 	public getValue(varvalues: Map<string, IPCTypedDataValue>): IPCTypedDataValue {
@@ -480,22 +508,22 @@ export class ExprOperator extends ExprNode {
 			value: new Error("operatorn + invalid argument types"),
 		};
 
-		if (
-			DataValue.isString(a) &&
-			DataValue.isString(b)
-		) {
+		if (DataValue.isString(a) && DataValue.isString(b)) {
 			ret = {
 				type: "boolean",
 				value: a.value === b.value,
 			};
-		} else if (
-			DataValue.isNumber(a) &&
-			DataValue.isNumber(b)
-		) {
+		} else if (DataValue.isNumber(a) &&	DataValue.isNumber(b)) {
 			ret = {
 				type: "boolean",
 				value: a.value === b.value,
 			};
+		}
+		else if (DataValue.isBoolean(a) && DataValue.isBoolean(b)) {
+			ret = {
+				type: "boolean",
+				value: a.value === b.value,
+			};	
 		}
 
 		return ret;
@@ -507,22 +535,22 @@ export class ExprOperator extends ExprNode {
 			value: new Error("operatorn + invalid argument types"),
 		};
 
-		if (
-			DataValue.isString(a) &&
-			DataValue.isString(b)
-		) {
+		if (DataValue.isString(a) && DataValue.isString(b)) {
 			ret = {
 				type: "boolean",
 				value: a.value !== b.value,
 			};
-		} else if (
-			DataValue.isNumber(a) &&
-			DataValue.isNumber(b)
-		) {
+		} else if (DataValue.isNumber(a) &&	DataValue.isNumber(b)) {
 			ret = {
 				type: "boolean",
 				value: a.value !== b.value,
 			};
+		}
+		else if (DataValue.isBoolean(a) && DataValue.isBoolean(b)) {
+			ret = {
+				type: "boolean",
+				value: a.value !== b.value,
+			};	
 		}
 
 		return ret;
@@ -699,6 +727,10 @@ class ExprArray extends ExprNode {
 		this.args_ = args;
 	}
 
+	public toString(): string {
+		return `[${this.args_.map(arg => arg.toString()).join(", ")}]`;
+	}
+
 	public variables(vars: string[]): void {
 		if (this.args_) {
 			for (let arg of this.args_) {
@@ -757,6 +789,16 @@ export class Expr {
 			throw new Error("Function already registered");
 		}
 		Expr.functions_.set(name, new ExprFunctionDef(name, argcnt, func));
+	}
+
+	public toString(orig?: boolean) : string {
+		if (orig) {
+			return this.str_;
+		}
+		else if (this.hasError()) {
+			return `error: ${this.getErrorMessage()}`;
+		}
+		return this.expr_!.toString() ;
 	}
 
 	public hasError(): boolean {

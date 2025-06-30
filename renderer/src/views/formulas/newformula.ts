@@ -126,7 +126,7 @@ export class NewFormulaDialog extends XeroDialog {
                 { title: 'Match', field: 'name' , width: 200}
             ],
             layout: 'fitData',
-            maxHeight: '400px',
+            maxHeight: '300px',
         }) ;
 
         this.team_fields_table_div_ = document.createElement('div') ;
@@ -139,7 +139,7 @@ export class NewFormulaDialog extends XeroDialog {
                 { title: 'Team', field: 'name' , width: 200}
             ],
             layout: 'fitColumns',
-            maxHeight: '400px'
+            maxHeight: '300px'
         }) ;        
 
         this.formula_table_div_ = document.createElement('div') ;
@@ -152,7 +152,7 @@ export class NewFormulaDialog extends XeroDialog {
                 { title: 'Formula', field: 'name' , width: 200}
             ],
             layout: 'fitColumns',
-            maxHeight: '400px'
+            maxHeight: '300px'
         }) ;
         
         this.function_table_div_ = document.createElement('div') ;
@@ -165,7 +165,7 @@ export class NewFormulaDialog extends XeroDialog {
                 { title: 'Functions', field: 'name' , width: 200}
             ],
             layout: 'fitColumns',
-            maxHeight: '400px'
+            maxHeight: '300px'
         }) ;
 
         div.appendChild(this.list_div_) ;

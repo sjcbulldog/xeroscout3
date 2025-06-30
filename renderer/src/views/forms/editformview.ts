@@ -105,6 +105,7 @@ export class XeroEditFormView extends XeroView {
     private blurbind_? : (e: FocusEvent) => void ;
 
     private ignore_resize_ : boolean = false ;
+    private show_mouse_movement_ : boolean = false ;
 
     constructor(app: XeroApp, type: any) {
         super(app, 'xero-form-view') ;
@@ -1468,6 +1469,10 @@ export class XeroEditFormView extends XeroView {
     }   
 
     private mouseMove(event: MouseEvent) {
+        if (this.show_mouse_movement_) {
+            console.log(`Mouse Move: ${event.pageX}, ${event.pageY}`) ;
+        }
+
         if (this.tabbed_ctrl_ === undefined || this.tabbed_ctrl_!.selectedPageNumber === -1) {
             //
             // We are not setup yet, so we cannot do anything
@@ -1479,13 +1484,13 @@ export class XeroEditFormView extends XeroView {
         // of the form.
         //        
         this.cursor_ = this.pageToForm(event.pageX, event.pageY) ;   
+        console.log(`    Cursor: ${this.cursor_.x}, ${this.cursor_.y}`) ;
 
         if (this.edit_dialog_ || this.popup_menu_) {
             //
             // We are in a dialog or popup menu, so ignore the mouse move
             //
             return ;
-
         }
 
         if (this.tabbed_ctrl_?.selectedPageNumber === -1) {
@@ -1508,6 +1513,9 @@ export class XeroEditFormView extends XeroView {
         // Find any control under the cursor 
         //
         let ctrls = this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].findControlsByPosition(this.cursor_) ;
+        if (this.show_mouse_movement_) {
+            console.log(`    Controls under cursor: ${ctrls.length}`) ;
+        }
         this.displayMiddleBar() ;
 
         if (this.dragging_ === 'area-select') {

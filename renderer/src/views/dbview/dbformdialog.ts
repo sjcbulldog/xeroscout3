@@ -62,13 +62,13 @@ export class DBViewFormulaDialog extends XeroDialog {
                     formatter: 'handle'
                 },
                 columns: [
-                    { title: '', field: 'del', formatter: this.formatDelCell.bind(this), width: 30},
-                    { title: 'Type', field: 'type', width: 100, editable: this.canEditCell.bind(this), editor: 'list',
+                    { title: '', field: 'del', formatter: this.formatDelCell.bind(this), width: 25},
+                    { title: 'Type', field: 'type', width: 80, editable: this.canEditCell.bind(this), editor: 'list',
                         editorParams: {
                             values: this.types_
                         }
                     },
-                    { title: 'Column', field: 'columns', width: 100, editable: this.canEditCell.bind(this), editor: 'list', 
+                    { title: 'Column', field: 'columns', width: 80, editable: this.canEditCell.bind(this), editor: 'list', 
                       editorParams: {
                         values: this.columns_.map((c) => c.name),
                         multiselect: true
@@ -82,18 +82,18 @@ export class DBViewFormulaDialog extends XeroDialog {
                     { title: 'Message', field: 'message', width: 100, editable: this.canEditCell.bind(this), editor: 'input' },
                     { title: 'Background', field: 'background', width: 80, editable: this.canEditCell.bind(this), editor: 'input' },
                     { title: 'Color', field: 'color', width: 80, editable: this.canEditCell.bind(this), editor: 'input' },
-                    { title: 'Font Family', field: 'fontFamily', width: 120, editable: this.canEditCell.bind(this), editor: 'list',
+                    { title: 'Font Family', field: 'fontFamily', width: 110, editable: this.canEditCell.bind(this), editor: 'list',
                         editorParams: {
                             values: await this.getFontFamilies(),
                         }
                         },  
-                    { title: 'Font Size', field: 'fontSize', width: 120, editable: this.canEditCell.bind(this), editor: 'number' },
-                    { title: 'Font Style', field: 'fontStyle', width: 120, editable: this.canEditCell.bind(this), editor: 'list',
+                    { title: 'Font Size', field: 'fontSize', width: 110, editable: this.canEditCell.bind(this), editor: 'number' },
+                    { title: 'Font Style', field: 'fontStyle', width: 110, editable: this.canEditCell.bind(this), editor: 'list',
                         editorParams: {
                             values: ['normal', 'italic', 'oblique'],
                         }
                     },
-                    { title: 'Font Weight', field: 'fontWeight', width: 120, editable: this.canEditCell.bind(this), editor: 'list', 
+                    { title: 'Font Weight', field: 'fontWeight', width: 110, editable: this.canEditCell.bind(this), editor: 'list', 
                         editorParams: {
                             values: ['normal', 'bold', 'bolder', 'lighter', '100', '200', '300', '400', '500', '600', '700', '800', '900'],
                         }
