@@ -1,37 +1,11 @@
 import winston from "winston" ;
 import { Manager } from "./manager";
 import { DataManager } from "./datamgr";
-import { IPCTypedDataValue } from "../../shared/ipc";
+import { IPCDataSet, IPCMatchSet, IPCTypedDataValue } from "../../shared/ipc";
 
-//
-// MatchSet -
-//   This interface describes a set of matches that can be used for a data set.  It can be one of the following:
-//   - last: The last N matches (first is not used, last is the number of matches to use)
-//   - first: The first N matches (first is the number of matches to use, last is not used)
-//   - range: A range of matches (first is the first match to use, last is the last match to use)
-//   - all: All matches (first and last are not used)
-//
-export interface MatchSet {
-    kind: "last" | "first" | "range" | "all" ;
-    first: number ;                                 // If kind is first, this is the number of matches to use (use the first N matches)
-                                                    // If kind is last, this is not used
-                                                    // If kind is range, this is the first match to use (use between first and last matches)
 
-    last: number ;                                  // If kind is first, this is not used
-                                                    // If kind is last, this is the number of matches to use (use the last N matches)
-                                                    // If kind is range, this is the last match to use  (use between first and last matches)
-}
 
-//
-// DataSet -
-//   This interface describes a data set that can be used for any number of analysis views within the scouting program.
-//
-export interface DataSet {
-    name: string ;                                  // The name of the data set
-    teams: number[] ;                               // The list of teams in the data set
-    fields: string[] ;                              // Can be team fields, match fields, or formulas
-    matches: MatchSet ;                            // The set of matches to use for the data set
-}
+
 
 //
 // DataSetData -
@@ -39,7 +13,7 @@ export interface DataSet {
 //   It is used to store the data sets that are defined by the user.  The data sets are stored in the project file.
 //
 export class DataSetInfo {
-    public datasets_ : DataSet[] = [] ;                 // The list of data sets that can be used for the multi-team summary
+    public datasets_ : IPCDataSet[] = [] ;                 // The list of data sets that can be used for the multi-team summary
 }
 
 //
@@ -56,12 +30,12 @@ export class DataSetManager extends Manager {
         this.datamgr_ = datamgr ;
     }
 
-    public getDataSets() : DataSet[] {
+    public getDataSets() : IPCDataSet[] {
         return this.info_.datasets_ ;
     }   
 
-    public getDataSetByName(name: string) : DataSet | undefined {
-        let ret: DataSet | undefined = undefined ;
+    public getDataSetByName(name: string) : IPCDataSet | undefined {
+        let ret: IPCDataSet | undefined = undefined ;
         for(let ds of this.info_.datasets_) {
             if (ds.name === name) {
                 ret = ds ;
@@ -71,26 +45,16 @@ export class DataSetManager extends Manager {
         return ret ;
     }
 
-    public async getData(ds: DataSet, field: string, team: number) : Promise <IPCTypedDataValue> {
+    public async getData(ds: IPCDataSet, field: string, team: number) : Promise <IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
-            if (this.containsField(ds, field)) {
-                try {
-                    let data = await this.datamgr_.getData(ds.matches, field, team) ;
-                    resolve(data) ;
-                }
-                catch(err) {
-                    reject(err) ;
-                }
+            try {
+                let data = await this.datamgr_.getData(ds.matches, field, team) ;
+                resolve(data) ;
             }
-            else {
-                resolve(
-                    {
-                        type: "error",
-                        value: "field '" + field + "' not found in data set '" + ds.name + "'"
-                    }) ;
+            catch(err) {
+                reject(err) ;
             }
         }) ;
-
         return ret; 
     }
 
@@ -109,10 +73,6 @@ export class DataSetManager extends Manager {
                 for(let t of ds.teams) {          
                     let teamData: OneTeam = {} ;
                     teamData['team_number'] = t ;
-                    for(let f of ds.fields) {
-                        let result = await this.getData(ds, f, t) ;
-                        teamData[f] = result ;
-                    }
                     allteams.push(teamData) ;
                 }
                 resolve(allteams) ;
@@ -131,7 +91,7 @@ export class DataSetManager extends Manager {
         }
     }
 
-    public updateDataSet(ds: DataSet) : void {
+    public updateDataSet(ds: IPCDataSet) : void {
         let index = this.findDataSetIndex(ds.name) ;
         if (index === -1) {
             this.info_.datasets_.push(ds) ;
@@ -151,8 +111,8 @@ export class DataSetManager extends Manager {
         }
     }
     
-    public findDataSet(name: string) : DataSet | undefined {
-        let ret: DataSet | undefined = undefined ;
+    public findDataSet(name: string) : IPCDataSet | undefined {
+        let ret: IPCDataSet | undefined = undefined ;
 
         for(let ds of this.info_.datasets_) {
             if (ds.name === name) {
@@ -175,17 +135,4 @@ export class DataSetManager extends Manager {
 
         return ret;
     }
-
-    private containsField(ds: DataSet, field: string) : boolean {
-        let ret = false ;
-        for(let f of ds.fields) {
-            if (f === field) {
-                ret = true ;
-                break ;
-            }
-        }
-
-        return ret ;
-    }
-
 }

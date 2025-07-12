@@ -265,3 +265,32 @@ export interface IPCPlayoffStatus {
         m16: IPCMatchOutcome | undefined ;
     }
 }
+
+//
+// MatchSet -
+//   This interface describes a set of matches that can be used for a data set.  It can be one of the following:
+//   - last: The last N matches (first is not used, last is the number of matches to use)
+//   - first: The first N matches (first is the number of matches to use, last is not used)
+//   - range: A range of matches (first is the first match to use, last is the last match to use)
+//   - all: All matches (first and last are not used)
+//
+export interface IPCMatchSet {
+    kind: "last" | "first" | "range" | "all" ;
+    first: number ;                                 // If kind is first, this is the number of matches to use (use the first N matches)
+                                                    // If kind is last, this is not used
+                                                    // If kind is range, this is the first match to use (use between first and last matches)
+
+    last: number ;                                  // If kind is first, this is not used
+                                                    // If kind is last, this is the number of matches to use (use the last N matches)
+                                                    // If kind is range, this is the last match to use  (use between first and last matches)
+}
+
+//
+// DataSet -
+//   This interface describes a data set that can be used for any number of analysis views within the scouting program.
+//
+export interface IPCDataSet {
+    name: string ;                                  // The name of the data set
+    teams: number[] ;                               // The list of teams in the data set
+    matches: IPCMatchSet ;                            // The set of matches to use for the data set
+}

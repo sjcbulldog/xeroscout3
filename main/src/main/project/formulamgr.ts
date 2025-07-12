@@ -4,12 +4,12 @@ import { Expr } from "../../shared/expr";
 import { IPCFormula } from "../../shared/ipc" ;
 
 export class FormulaInfo {
-    public formulas_ : IPCFormula[] = [] ;                 // Formulas that can be used in the single team summary 
+    public formulas_ : IPCFormula[] = [] ;                 
 }
 
 export class FormulaManager extends Manager {
     private info_ : FormulaInfo ;
-    private expr_map_ : Map<string, Expr> = new Map() ; // Map of formula name to expression
+    private expr_map_ : Map<string, Expr> = new Map() ;                                 // Map of formula name to expression
 
     constructor(logger: winston.Logger, writer: () => void, info: FormulaInfo) {
         super(winston.createLogger(), writer) ;
@@ -18,6 +18,10 @@ export class FormulaManager extends Manager {
 
     public getFormulas() : IPCFormula[] {
         return this.info_.formulas_ ;
+    }
+
+    public get formulaNames() : string[] {
+        return this.info_.formulas_.map(f => f.name) ;
     }
 
     public hasFormula(name: string) : boolean {

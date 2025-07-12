@@ -476,9 +476,32 @@ xero-status-overlay-close-visible {
 }
 
 .xero-playoffs-canvas {
+    padding: 0px ;
 }
 
 .xero-playoffs-view {
     width: 100%;
     height: 100%;
+}
+
+.xero-dataset-editor-div {
+    padding: 2px ;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.xero-dataset-editor-list-item {
+    border: 1px solid black;
+    border-radius: 5px ;
+    width: 90%;
+    height: 100px ;
+    margin: 5px auto;
+    font-size: 24px;
+    text-align: center;
+    background-color: rgb(212, 212, 212);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    user-select: none;
 }

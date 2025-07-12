@@ -3,12 +3,11 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
 import { GraphDataRequest } from "./apps/sccentral";
-import { DataSet } from "./project/datasetmgr";
 import { TeamNickNameNumber } from "./project/teammgr";
 import { TabletData } from "./project/tabletmgr";
 import { GraphConfig } from "./project/graphmgr";
 import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
-import { IPCCheckDBViewFormula, IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
@@ -110,7 +109,7 @@ export async function updateDataSet(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1) {
-            central.updateDataSet(args[0] as DataSet) ;
+            central.updateDataSet(args[0] as IPCDataSet) ;
         } else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }        

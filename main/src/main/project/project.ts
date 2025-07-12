@@ -68,7 +68,7 @@ export class Project {
         this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.info_.team_db_info_, this.info_.match_db_info_, this.formula_mgr_) ;
         this.form_mgr_ = new FormManager(this.logger_, this.writeEventFile.bind(this), this.info_.form_info_, this.location_, this.data_mgr_) ;
         this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.data_mgr_) ;
-        this.picklist_mgr_ = new PicklistMgr(this.logger_, this.writeEventFile.bind(this), this.info_.picklist_info_, this.team_mgr_, this.dataset_mgr_) ;
+        this.picklist_mgr_ = new PicklistMgr(this.logger_, this.writeEventFile.bind(this), this.info_.picklist_info_, this.team_mgr_, this.dataset_mgr_, this.data_mgr_, this.formula_mgr_) ;
         this.tablet_mgr_ = new TabletManager(this.logger_, this.writeEventFile.bind(this), this.info_.tablet_info_, this.team_mgr_, this.match_mgr_) ;
         this.graph_mgr_ =  new GraphManager(this.logger_, this.writeEventFile.bind(this), this.info_.graph_info_, this.data_mgr_) ;
         this.playoff_mgr_ = new PlayoffManager(this.logger_, this.writeEventFile.bind(this), this.info_.playoff_info_, this.match_mgr_) ;

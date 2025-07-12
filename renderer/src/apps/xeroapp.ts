@@ -24,6 +24,7 @@ import { XeroSyncIPAddrView } from "../views/syncipaddr/syncipaddr.js";
 import { ResizeBar } from "./resizebar.js";
 import { XeroFormulasView } from "../views/formulas/formulas.js";
 import { XeroPlayoffsView } from "../views/playoffs/playoffs.js";
+import { DataSetEditor } from "../views/dataset/datasetedit.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -156,14 +157,15 @@ export class XeroApp extends XeroMainProcessInterface {
         }
         if (!this.viewmap_.has(args.view)) {
             logger.error(`view ${args.view} not registered`) ;
-        }
-        else {
-            let classObj = this.viewmap_.get(args.view) ;
-            this.current_view_ = new classObj(this, args.args) ;
-            this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;
+            args.args = [`View ${args.view} not a valid view`] ;
+            args.view = 'text' ; // Default to text view
 
-            this.current_view_!.onVisible() ;
         }
+
+        let classObj = this.viewmap_.get(args.view) ;
+        this.current_view_ = new classObj(this, args.args) ;
+        this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;
+        this.current_view_!.onVisible() ;
     }
 
     private closeCurrentView() : boolean {
@@ -171,7 +173,9 @@ export class XeroApp extends XeroMainProcessInterface {
         if (this.current_view_) {
             if (this.current_view_.isOkToClose) {
                 this.current_view_.close() ;
-                this.right_view_pane_!.elem.removeChild(this.current_view_!.elem) ;
+                if (this.right_view_pane_!.elem && this.right_view_pane_!.elem.contains(this.current_view_!.elem)) {
+                    this.right_view_pane_!.elem.removeChild(this.current_view_!.elem) ;
+                }
                 this.current_view_ = undefined ;
             }
             else {
@@ -203,5 +207,6 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('sync-ipaddr', XeroSyncIPAddrView, ['scout']);
         this.registerView('formulas', XeroFormulasView, ['central']) ;
         this.registerView('playoffs', XeroPlayoffsView, ['central', 'scout']) ;
+        this.registerView('datasets', DataSetEditor, ['central']) ;
     }
 }

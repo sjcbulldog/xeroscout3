@@ -5,9 +5,8 @@ import * as path from 'path' ;
 import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
-import { MatchSet } from "./datasetmgr";
 import { DataValue } from '../../shared/datavalue' ;
-import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula } from "../../shared/ipc";
+import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
 
@@ -131,7 +130,7 @@ export class DataManager extends Manager {
     // field.  For match fields, the data is processes over all matches to get
     // an average.
     //   
-    public getData(m: MatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
+    public getData(m: IPCMatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let found = false ;
 
@@ -376,7 +375,7 @@ export class DataManager extends Manager {
 
     // #endregion
 
-    private getMatchData(m: MatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
+    private getMatchData(m: IPCMatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let fields = field + ', comp_level, set_number, match_number' ;
             let teamkey = 'frc' + team ;
@@ -492,7 +491,7 @@ export class DataManager extends Manager {
         }
     }
     
-    private evalFormula(m: MatchSet, name: string, team: number) : Promise<IPCTypedDataValue> {
+    private evalFormula(m: IPCMatchSet, name: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let formula = this.formula_mgr_.findFormula(name) ;
             if (!formula) {
@@ -532,7 +531,7 @@ export class DataManager extends Manager {
         return ret ;
     }
 
-    private filterMatchData(m: MatchSet, data: any[]) : any[] {
+    private filterMatchData(m: IPCMatchSet, data: any[]) : any[] {
         let start = 0 ;
         let end = data.length - 1 ;
         let newdata : any[] = [] ;

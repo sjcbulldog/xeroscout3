@@ -19,6 +19,7 @@ import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
 import {  XeroFormScoutSectionPage } from "./scoutpage.js";
 import { TimerStatus } from "./timerstatus.js";
+import { ConfirmScoutDialog } from "./dialogs/confirmscoutdialog.js";
 
 export class XeroScoutFormView extends XeroView {
     static buttonClassUnselected = 'xero-form-tab-button-unselected' ;
@@ -32,6 +33,8 @@ export class XeroScoutFormView extends XeroView {
     private section_pages_ : XeroFormScoutSectionPage[] = [] ;
     private titlediv_? : HTMLElement ;
     private tabdiv_? : HTMLElement ;
+
+    private confirm_dialog_? : ConfirmScoutDialog ;
 
     private form_info_? : IPCFormScoutData
 
@@ -104,19 +107,22 @@ export class XeroScoutFormView extends XeroView {
         }
     }
 
-    private findControlByTag(tag: string) : FormControl | undefined {
-        for(let page of this.section_pages_) {
-            let control = page.getControlByTag(tag) ;
-            if (control) {
-                return control ;
-            }
-        }
-        return undefined ;
+    private scoutDataConfirmed(changed: boolean) {
+        this.request('provide-result', this.data_!.values) ;
     }
 
     private provideResults() {
+        // This extracts the results from the current section
         this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;
-        this.request('provide-result', this.data_!.values) ;
+
+        // if (this.confirm_dialog_) {
+        //     return ;
+        // }
+
+        // this.confirm_dialog_ = new ConfirmScoutDialog(this.type_) ;
+        // this.confirm_dialog_.on('closed', this.scoutDataConfirmed.bind(this)) ;
+        // this.confirm_dialog_.showCentered(this.elem.parentElement!) ;       
+        this.scoutDataConfirmed(true) ;   
     }
 
     private initForm(values: IPCNamedDataValue[]) : void {

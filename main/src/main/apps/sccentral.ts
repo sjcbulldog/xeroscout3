@@ -13,7 +13,6 @@ import { MatchDataModel } from "../model/matchmodel";
 import { BAEvent, BAMatch, BATeam } from "../extnet/badata";
 import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
-import { DataSet } from "../project/datasetmgr";
 import { TabletData } from "../project/tabletmgr";
 import { TeamNickNameNumber } from "../project/teammgr";
 import { ManualMatchData } from "../project/matchmgr";
@@ -21,11 +20,10 @@ import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
-
-const mdns = require('mdns-js') ;
+import { UDPBroadcast } from "../sync/udpbroadcast";
 
 export interface GraphDataRequest {
 	ds: string,
@@ -112,6 +110,7 @@ export class SCCentral extends SCBase {
 	private lastformview_? : string ;
 	private synctype_ : string = 'data' ;
 	private team_number_ : number =  1425 ;
+	private udp_broadcast_ : UDPBroadcast | undefined = undefined ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
@@ -233,8 +232,7 @@ export class SCCentral extends SCBase {
 		this.baloading_ = true;
 		this.ba_ = new BlueAlliance(this.year_);
 		this.bacount_++ ;
-		this.ba_
-			.init()
+		this.ba_.init()
 			.then((up) => {
 				if (!up) {
 					this.ba_ = undefined;
@@ -949,7 +947,7 @@ export class SCCentral extends SCBase {
 		this.sendDataSets() ;
 	}
 
-	public updateDataSet(ds: DataSet) : void {
+	public updateDataSet(ds: IPCDataSet) : void {
 		this.project_?.dataset_mgr_?.updateDataSet(ds) ;
 	}
 
@@ -2244,7 +2242,6 @@ export class SCCentral extends SCBase {
 	}
 
 	private startSyncServer() {
-
 		if (!this.tcpsyncserver_) {
 			this.tcpsyncserver_ = new TCPSyncServer(this.logger_);
 			this.tcpsyncserver_
@@ -2283,15 +2280,10 @@ export class SCCentral extends SCBase {
 			});
 		}
 
-		let port = this.tcpsyncserver_!.port ;
-		const adv = mdns.createAdvertisement(mdns.tcp('xeroscout'), port, 
-			{
-				name: "xeroscout-" + this.team_number_,
-				txt: {
-					txtvers: '1'
-				}
-			}) ;
-		adv.start() ;		
+		if (!this.udp_broadcast_) {
+			this.udp_broadcast_ = new UDPBroadcast(this.logger_, this.findPrimaryIPAddress(), this.team_number_, 5000) ;
+			this.udp_broadcast_.start() ;
+		}
 	}
 
 	public generateRandomData() {

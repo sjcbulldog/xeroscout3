@@ -10,8 +10,6 @@ import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr
 import { kMatchAlliances } from '../../shared/playoffs';
 import { IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 
-const mdns = require('mdns-js') ; 
-
 export class SCScoutInfo {
     public tablet_? : string ;
     public purpose_? : string ;
@@ -109,32 +107,8 @@ export class SCScout extends SCBase {
         this.sendToRenderer('send-nav-data', treedata);
     }
 
-    private mdnsUpdate(service: any) {
-        if (service.type[0].name === 'xeroscout') {
-            if (service.host.startsWith('xeroscout-' + this.team_number_)) {
-                this.ipaddr_ = service.addresses[0] ;
-                this.port_= service.port ;
-
-                let serverstr: string = `Server: ${this.ipaddr_}:${this.port_}` ;
-                this.sendToRenderer('send-app-status', { 
-                    left: undefined,
-                    middle: this.info_.evname_ ? this.info_.evname_ : 'No Event Loaded',
-                    right: serverstr
-                }) ;
-            }
-        }
-    }
-
     private ready() {
         this.setViewString() ;
-
-        const browser = mdns.createBrowser() ;
-        browser.on('ready', () => {
-            this.logger_.info('MDNS Browser ready') ;
-            browser.discover() ;
-        }) ;
-
-        browser.on('update', this.mdnsUpdate.bind(this)) ;
     }
 
     public windowCreated() {

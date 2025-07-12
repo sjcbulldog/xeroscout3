@@ -1827,10 +1827,6 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
-    private importImage() {
-        this.request('import-image') ;
-    }
-
     private menuClosed() {
         this.popup_menu_ = undefined ;
     }

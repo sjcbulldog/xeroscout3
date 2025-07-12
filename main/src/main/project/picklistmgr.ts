@@ -4,6 +4,8 @@ import fs from 'fs';
 import { DataSetManager } from './datasetmgr';
 import { TeamManager } from './teammgr';
 import { Manager } from './manager';
+import { DataManager } from "./datamgr";
+import { FormulaManager } from "./formulamgr";
 
 export interface ProjPicklistNotes
 {
@@ -43,12 +45,16 @@ export class PicklistMgr extends Manager {
     private info_ : PickListData ;
     private team_mgr_ : TeamManager ;
     private dset_mgr_ : DataSetManager ;
+    private data_mgr_ : DataManager ;
+    private formula_mgr_ : FormulaManager ; 
 
-    constructor(logger: winston.Logger, writer : () => void, info: PickListData, teams: TeamManager, dset: DataSetManager) {
+    constructor(logger: winston.Logger, writer : () => void, info: PickListData, teams: TeamManager, dset: DataSetManager, data: DataManager, formula: FormulaManager) {
         super(logger, writer) ;
         this.dset_mgr_ = dset ;
         this.team_mgr_ = teams ;
         this.info_ = info ;
+        this.data_mgr_ = data ;
+        this.formula_mgr_ = formula ;
     }
 
     public getPicklists() : PickList[] {
@@ -113,20 +119,13 @@ export class PicklistMgr extends Manager {
     public addPicklist(name: string, dataset: string) {
         let ds = this.dset_mgr_.findDataSet(dataset) ;
         if (ds) {
-            let cols: ProjPickListColConfig[] = [] ;
-            for(let col of ds.fields) {
-                let colcfg: ProjPickListColConfig = {
-                    name: col,
-                    width: 0
-                }
-                cols.push(colcfg) ;
-            }
+            let fields = [...this.data_mgr_.teamColumnNames, this.data_mgr_.matchColumnNames, this.formula_mgr_.formulaNames] ;
             let picklist = {
                 name: name,
                 dataset: dataset,
                 notes: [],
                 rank: ds.teams,
-                cols: cols
+                cols: []
             }
             this.info_.picklist_.push(picklist) ;
             this.info_.last_picklist_ = name ;
@@ -145,10 +144,6 @@ export class PicklistMgr extends Manager {
                 let ds = this.dset_mgr_.findDataSet(picklist.dataset) ;
                 if (ds) {
                     let cols = ['rank', 'teamnumber', 'nickname', 'picknotes'] ;
-                    for(let fname of ds.fields) {
-                        cols.push(fname) ;
-                    }
-                    
                     const csvStream = format({ headers: cols, }) ; 
                     const outputStream = fs.createWriteStream(filename);
                     csvStream.pipe(outputStream).on('end', () => { 
