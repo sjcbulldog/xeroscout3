@@ -61,14 +61,35 @@ export class DatabaseView extends XeroView {
         ] ;
 
         this.context_menu_ = new XeroPopupMenu('Menu', items) ;
+        this.context_menu_.on('menu-closed', this.contextMenuClosed.bind(this)) ;
         this.startupMessage('Loading ' + type + ' database...') ;
+    }
+
+    public close() {
+        if (this.table_) {
+            this.table_.destroy() ;
+        }
+
+        super.close() ;
     }
 
     public get isOkToClose() {
         if (this.dirty_) {
             alert('The data in this database view has been changed.  Use the context menu (right click) to either save this data or revert back to what was previously in the database') ;
+            return false ;
         }
-        return !this.dirty_ ;
+
+        if (this.dialog_) {
+            alert('You must close the dialog before you can close this view') ;
+            return false ;
+        }
+
+        if (this.popup_menu_) {
+            alert('You must close the popup menu before you can close this view') ;
+            return false ;
+        }   
+
+        return true ;
     }
 
     private receivedFormulas(data: IPCFormula[]) {
@@ -222,6 +243,10 @@ export class DatabaseView extends XeroView {
         this.table_.on('columnMoved', this.columnMoved.bind(this)) ;
         this.table_.on('columnResized', this.columnResized.bind(this)) ;
         this.table_.on('cellContext', this.contextMenu.bind(this)) ; 
+    }
+
+    private contextMenuClosed() {
+        this.popup_menu_ = undefined ; 
     }
 
     private contextMenu(e: UIEvent, cell: CellComponent) {
@@ -393,9 +418,8 @@ export class DatabaseView extends XeroView {
 
     private saveChanges() {
         if (this.changes_.length > 0) {
-
             //
-            // Revert the display of the cells that have been changed
+            // Revert the display of the cells that have been changed and are currently bolded
             //
             for(let change of this.changes_) {
                 let row = this.findRowFromSearch(change.search) ;
@@ -414,6 +438,7 @@ export class DatabaseView extends XeroView {
 
             this.dirty_ = false ;
             this.changes_ = [] ;
+            this.updateCellFormats() ;
         }
     }
 
@@ -454,6 +479,7 @@ export class DatabaseView extends XeroView {
         this.reverting_ = false ;
         this.dirty_ = false ;
         this.changes_ = [] ;
+        this.updateCellFormats() ;
     }
 
     private hideColumnsDialogClosed(changed: boolean) {
@@ -545,16 +571,22 @@ export class DatabaseView extends XeroView {
             }
 
             let sum = 0.0 ;
+            let nans = 0 ;
             for(let row of mrow.rows) {
                 let value = row.getData()[field] ;
                 let v = parseFloat(value) ;
                 if (isNaN(v)) {
-                    this.logMessage('Invalid value for field: ' + field + ' - ' + value) ;
-                    return undefined ;
+                    v = 0.0 ;
+                    nans++ ;
                 }
                 sum += v ;
             }
-            if (cfg.type === 'integer') {
+            if (nans === mrow.rows.length) {
+                // We have an empty value across all robots in the alliance.  This means
+                // this match has not been played yet, so we return a null value
+                return undefined ;
+            }
+            else if (cfg.type === 'integer') {
                 ret = DataValue.fromInteger(Math.round(sum)) ;
             }
             else {
@@ -591,24 +623,31 @@ export class DatabaseView extends XeroView {
         for(let mrow of mrows.values()) {
             let varvalues : Map<string, IPCTypedDataValue> = new Map<string, IPCTypedDataValue>() ;
 
+            let missing = false ;
             for(let varname of vars) {
                 let v = this.evalOneField(mrow, varname) ;
                 if (v) {
                     varvalues.set(varname, v) ;
                 }
+                else {
+                    // We are missing matches as they have not yet been played (or transferred from the scouting tablet)
+                    missing = true ;
+                }
             }
 
-            let result = expr.evaluate(varvalues) ;
-            if (result instanceof Error) {
-                this.logMessage('Error evaluating formula: ' + formula.formula + ' - ' + result.message) ;
-                continue ;
-            }
+            if (!missing) {
+                let result = expr.evaluate(varvalues) ;
+                if (result instanceof Error) {
+                    this.logMessage('Error evaluating formula: ' + formula.formula + ' - ' + result.message) ;
+                    continue ;
+                }
 
-            if (DataValue.isTruthy(result)) {
-                for(let row of mrow.rows) {
-                    for(let col of formula.columns) {
-                        this.setFormat(row, col, formula) ;
-                        this.logMessage(`Row ${row.getIndex()}: ${formula.message}`) ;
+                if (DataValue.isTruthy(result)) {
+                    for(let row of mrow.rows) {
+                        for(let col of formula.columns) {
+                            this.setFormat(row, col, formula) ;
+                            this.logMessage(`Row ${row.getIndex()}: ${formula.message}`) ;
+                        }
                     }
                 }
             }

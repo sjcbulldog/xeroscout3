@@ -1256,10 +1256,12 @@ export class SCCentral extends SCBase {
 			.then(() => {
 				this.appendStatusText("All data loaded");
 				this.sendToRenderer("set-status-close-button-visible", true);
+				this.project_!.writeEventFile() ;
 			})
 			.catch((err) => {
 				this.appendStatusText("<br><br>Error loading data - " + err.message);
 				this.sendToRenderer("set-status-close-button-visible", true);
+				this.project_!.writeEventFile() ;				
 			});
 		} else {
 			let html = "The event is not a blue alliance event";

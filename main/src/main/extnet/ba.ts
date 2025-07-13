@@ -49,7 +49,7 @@ export class BlueAlliance extends NetBase {
         let str = process.env.XEROSCOUTDEBUG ;
         let query = "/event/" + evkey + "/alliances" ;
         let ret: Promise<BAAlliances[]> = new Promise<BAAlliances[]>((resolve, reject) => {
-            if (str?.indexOf('noplayoffs') !== -1) {
+            if (str && str.indexOf('noplayoffs') !== -1) {
                 resolve([]) ;
                 return ;
             }
@@ -120,7 +120,7 @@ export class BlueAlliance extends NetBase {
             // If the string 'nomatches' is in the environment variable, return an empty array.  This is used to simulate
             // the pre-match scenario, where the teams are known but the matches schedule is not available yet.
             //
-            if (str?.indexOf('nomatches') !== -1) {
+            if (str && str.indexOf('nomatches') !== -1) {
                 resolve([]) ;
                 return ;
             }
@@ -134,7 +134,7 @@ export class BlueAlliance extends NetBase {
                         // If the string 'noplayoffs' is in the environment variable, filter out playoff matches.  To simulate the
                         // pre-playoff scenario, have the XEROSCOUTDEBUG environment variable contain the word noplayoffs.
                         //
-                        if (str?.indexOf('noplayoffs') !== -1) {
+                        if (str && str.indexOf('noplayoffs') !== -1) {
                             obj = obj.filter((match: BAMatch) => {
                                 return match.comp_level !== 'f' && match.comp_level !== 'sf'  ;
                             });                        
@@ -146,7 +146,7 @@ export class BlueAlliance extends NetBase {
                         // noplayoffs is also in the environment variable, it will filter out the playoff matches and therefore any scores
                         // assocaited with playoff matches.
                         //
-                        if (str?.indexOf('noscores') !== -1) {
+                        if (str && str.indexOf('noscores') !== -1) {
                             for(let one of obj) {
                                 one.score_breakdown = undefined ;
                             }                            

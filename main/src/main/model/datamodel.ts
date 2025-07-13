@@ -98,13 +98,7 @@ export abstract class DataModel extends EventEmitter {
     }
 
     private getColumnDesc(field: string) : IPCColumnDesc | undefined {
-        for(let col of this.info_.col_descs_) {
-            if (col.name === field) {
-                return col ;
-            }
-        }
-
-        return undefined ;
+        return this.info_.col_descs_.find((col) => col.name === field) ;
     }
 
     private convertToDataRecords(rows: any[]) : DataRecord[] {
@@ -157,17 +151,29 @@ export abstract class DataModel extends EventEmitter {
     }
 
     private createCommaList(values: string[]) {
-        let ret = '' ;
-        let first = true ;
-        for(let one of values) {
-            if (!first) {
-                ret += ', ' ;
-            }
-            first = false ;
-            ret += one ;
+        if (values.length === 0) {
+            return '' ;
         }
+        return values.join(', ') ;
+    }
 
-        return ret;
+    private getColumnNamesFromDB() : Promise<string[]> {
+        let ret = new Promise<string[]>((resolve, reject) => {
+            let ret: string[] = [] ;
+            this.db_?.each('PRAGMA table_info(' + this.table_name_ + ');', (err, row) => {
+                if (err) {
+                    this.logger_.error('Error getting column names from table \'' + this.table_name_ + '\'', err) ;
+                    reject(err) ;
+                }
+                else {
+                    let r: any = row as any ;
+                    ret.push(r.name) ;
+                }
+            }) ;
+
+            resolve(ret) ;
+        }) ;
+        return ret ;
     }
 
     public exportToCSV(filename: string, table: string) : Promise<void> {
@@ -680,12 +686,11 @@ export abstract class DataModel extends EventEmitter {
         return ret ;
     }
 
-    public createColumns(table: string, toadd:IPCColumnDesc[]) : Promise<void> {
+    public async createColumns(table: string, toadd:IPCColumnDesc[]) : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             let allpromises = [] ;
 
             for(let one of toadd) {
-                let ctype
                 let query: string = 'alter table ' + table + ' add column ' + one.name + ' ' + this.translateColumnType(one.type) + ';' ;
                 let pr = this.runQuery(query, undefined) ;
                 allpromises.push(pr) ;
@@ -699,7 +704,14 @@ export abstract class DataModel extends EventEmitter {
                     }
                     resolve();
                 })
-                .catch((err) => {
+                .catch(async (err) => {
+                    let dbcols = await this.getColumnNamesFromDB() ;
+                    for(let col of toadd) {
+                        if (dbcols.includes(col.name)) {
+                            this.info_.col_descs_.push(col) ;                            
+                            this.emit('column-added', col) ;
+                        }
+                    }
                     this.logger_.error('error creating columns in table \'' + table + '\'', err) ;
                     reject(err)
                 }) ;
