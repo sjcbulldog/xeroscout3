@@ -184,6 +184,7 @@ export interface IPCFormScoutData {
 
 export interface IPCScoutResult {
     item?: string ;
+    questionable?: boolean ;
     data: IPCNamedDataValue[] ;
 }
 
@@ -293,4 +294,40 @@ export interface IPCDataSet {
     name: string ;                                  // The name of the data set
     teams: number[] ;                               // The list of teams in the data set
     matches: IPCMatchSet ;                            // The set of matches to use for the data set
+}
+
+export interface IPCMatchStatus {
+    comp_level: string;
+    set_number: number;
+    match_number: number;
+    played: boolean;
+    red1: number;
+    redtab1: string;
+    redst1: string;
+    red1questionable: boolean;
+    red2: number;
+    redtab2: string;
+    redst2: string;
+    red2questionable: boolean;
+    red3: number;
+    redtab3: string;
+    redst3: string;
+    red3questionable: boolean;
+    blue1: number;
+    bluetab1: string;
+    bluest1: string;
+    blue1questionable: boolean;
+    blue2: number;
+    bluetab2: string;
+    bluest2: string;
+    blue2questionable: boolean;
+    blue3: number;
+    bluetab3: string;
+    bluest3: string;
+    blue3questionable: boolean;
+}
+
+export interface IPCTeamNickNameNumber {
+    number : number,
+    nickname: string
 }

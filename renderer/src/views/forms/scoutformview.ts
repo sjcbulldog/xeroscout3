@@ -1,23 +1,22 @@
-import {  XeroApp  } from "../../apps/xeroapp.js";
-import {  IPCFormScoutData, IPCNamedDataValue, IPCSection } from "../../shared/ipc.js";
-import {  XeroLogger } from "../../utils/xerologger.js";
-import {  XeroRect, XeroSize  } from "../../shared/xerogeom.js";
-import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
-import {  XeroView  } from "../xeroview.js";
-import {  BooleanControl  } from "./controls/booleanctrl.js";
-import {  BoxControl } from "./controls/boxctrl.js";
-import {  MultipleChoiceControl  } from "./controls/choicectrl.js";
-import { FormControl } from "./controls/formctrl.js";
+import { XeroApp  } from "../../apps/xeroapp.js";
+import { IPCFormScoutData, IPCNamedDataValue, IPCScoutResult, IPCSection } from "../../shared/ipc.js";
+import { XeroLogger } from "../../utils/xerologger.js";
+import { XeroRect, XeroSize  } from "../../shared/xerogeom.js";
+import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
+import { XeroView  } from "../xeroview.js";
+import { BooleanControl  } from "./controls/booleanctrl.js";
+import { BoxControl } from "./controls/boxctrl.js";
+import { MultipleChoiceControl  } from "./controls/choicectrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
-import {  LabelControl  } from "./controls/labelctrl.js";
-import {  SelectControl  } from "./controls/selectctrl.js";
-import {  TextAreaControl } from "./controls/textareactrl.js";
-import {  TextControl  } from "./controls/textctrl.js";
-import {  TimerControl  } from "./controls/timerctrl.js";
-import {  UpDownControl  } from "./controls/updownctrl.js";
+import { LabelControl  } from "./controls/labelctrl.js";
+import { SelectControl  } from "./controls/selectctrl.js";
+import { TextAreaControl } from "./controls/textareactrl.js";
+import { TextControl  } from "./controls/textctrl.js";
+import { TimerControl  } from "./controls/timerctrl.js";
+import { UpDownControl  } from "./controls/updownctrl.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
-import {  FormObject  } from "./formobj.js";
-import {  XeroFormScoutSectionPage } from "./scoutpage.js";
+import { FormObject  } from "./formobj.js";
+import { XeroFormScoutSectionPage } from "./scoutpage.js";
 import { TimerStatus } from "./timerstatus.js";
 import { ConfirmScoutDialog } from "./dialogs/confirmscoutdialog.js";
 
@@ -108,27 +107,38 @@ export class XeroScoutFormView extends XeroView {
     }
 
     private scoutDataConfirmed(changed: boolean) {
-        this.request('provide-result', this.data_!.values) ;
+        let res : IPCScoutResult = {
+            item: this.type_,
+            data: this.data_.values,
+            questionable: changed
+        }
+        this.request('provide-result', res) ;
     }
 
     private provideResults() {
         // This extracts the results from the current section
         this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;
 
-        // if (this.confirm_dialog_) {
-        //     return ;
-        // }
+        if (this.confirm_dialog_) {
+            return ;
+        }        
 
-        // this.confirm_dialog_ = new ConfirmScoutDialog(this.type_) ;
-        // this.confirm_dialog_.on('closed', this.scoutDataConfirmed.bind(this)) ;
-        // this.confirm_dialog_.showCentered(this.elem.parentElement!) ;       
-        this.scoutDataConfirmed(true) ;   
+        if (this.data_.dirty) {
+            this.confirm_dialog_ = new ConfirmScoutDialog(this.type_, this.data_!.values) ;
+            this.confirm_dialog_.on('closed', this.scoutDataConfirmed.bind(this)) ;
+            this.confirm_dialog_.showCentered(this.elem.parentElement!) ;       
+        }
+        else {
+            this.scoutDataConfirmed(false) ;
+        }
     }
 
     private initForm(values: IPCNamedDataValue[]) : void {
         for(let one of values) {
             this.data_.set(one.tag, one.value) ;
         }
+        this.data_.dirty = false ;
+
         let page = this.tabbed_ctrl_!.selectedPageNumber ;
         if (page >= 0 && page < this.section_pages_.length) {
             this.section_pages_[page].doLayout() ;

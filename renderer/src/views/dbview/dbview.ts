@@ -418,6 +418,8 @@ export class DatabaseView extends XeroView {
 
     private saveChanges() {
         if (this.changes_.length > 0) {
+            this.popup_menu_?.closeMenu() ;
+            this.table_?.alert("Saving changes...") ;
             //
             // Revert the display of the cells that have been changed and are currently bolded
             //
@@ -439,6 +441,7 @@ export class DatabaseView extends XeroView {
             this.dirty_ = false ;
             this.changes_ = [] ;
             this.updateCellFormats() ;
+            this.table_?.clearAlert() ;
         }
     }
 
@@ -464,6 +467,8 @@ export class DatabaseView extends XeroView {
     }
 
     private revertChanges() {
+        this.popup_menu_?.closeMenu() ;
+        this.table_?.alert("Reverting changes...") ;
         this.reverting_ = true ;
         for(let change of this.changes_) {
             let row = this.findRowFromSearch(change.search) ;
@@ -480,6 +485,7 @@ export class DatabaseView extends XeroView {
         this.dirty_ = false ;
         this.changes_ = [] ;
         this.updateCellFormats() ;
+        this.table_?.clearAlert() ;
     }
 
     private hideColumnsDialogClosed(changed: boolean) {
@@ -543,7 +549,12 @@ export class DatabaseView extends XeroView {
             rowformats = new Map<string, IPCCheckDBViewFormula>() ;
             this.formats_.set(pos, rowformats) ;
         }
-        rowformats.set(column, formula) ;
+        if (!rowformats.has(column)) {
+            //
+            // If it already has a format for this column, we do not overwrite it
+            //
+            rowformats.set(column, formula) ;
+        }
     }
 
     private findFormulaByName(name: string) : string | undefined {

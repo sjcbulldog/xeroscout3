@@ -30,7 +30,6 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'get-datasets',
         'rename-dataset',
         'update-dataset',
-        'create-dataset',
         'delete-dataset',
 
         'generate-random-data',

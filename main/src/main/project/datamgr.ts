@@ -268,6 +268,16 @@ export class DataManager extends Manager {
         return this.info_.scouted_match_.includes(str) ? 'Y' : 'N' ;
     }
 
+    public isMatchScoutingResultQuestionable(type: string, set: number, match: number, team: number) : boolean {
+        let str: string = 'sm-' + type + '-' + set + '-' + match + '-' + team ;
+        for(let res of this.info_.match_results_) {
+            if (res.item === str && res.questionable) {
+                return true ;
+            }
+        }
+        return false ;
+    }
+
     public get matchColumnDescriptors() : IPCColumnDesc[] {
         return this.matchdb_.colummnDescriptors ;
     }    

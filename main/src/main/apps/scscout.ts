@@ -66,6 +66,8 @@ export class SCScout extends SCBase {
     private playoff_assignment_received_ : boolean = false ;
     private playoff_status_received_ : boolean = false ;
 
+    private highlighted_item_? : string ;
+
     public constructor(win: BrowserWindow, args: string[]) {
         super(win, 'scout') ;
 
@@ -189,11 +191,22 @@ export class SCScout extends SCBase {
             
             let cmd: string = 'sm-' + t.comp_level + '-' + t.set_number + '-' + t.match_number + '-' + t.teamnumber ;
             let title: string ;
+            let color: string | undefined = undefined ;
             title = mtype.toUpperCase() + '-' + t.match_number + ' - ' + t.set_number + '-' + t.teamnumber ;
+            let result : IPCScoutResult | undefined = this.getResults(cmd) ;
+            if (result) {
+                if (result.questionable) {
+                    color = 'red' ;
+                }
+                else {
+                    color = 'chartreuse' ;
+                }
+            }
+
             if (this.show_teams_) {
                 title += ' (' + t.teamname + ')' ;
             }
-            ret.push({type: 'item', command: cmd, title: title}) ;
+            ret.push({type: 'item', command: cmd, title: title, color: color}) ;
         }
         return ret ;
     }
@@ -321,7 +334,7 @@ export class SCScout extends SCBase {
         this.sendToRenderer('tablet-title', 'NOT ASSIGNED') ;
 
         this.sendNavData() ;
-        this.setView('empty') ;
+        this.setView('text', 'No Event Loaded') ;
 
         this.image_mgr_.removeAllImages() ;
     }
@@ -349,16 +362,21 @@ export class SCScout extends SCBase {
                       message: 'You are about to scout a new team.  Do you want to continue?',
                     }) ;
                 if (ans === 1) {
-                    this.sendToRenderer('send-nav-highlight', undefined) ;
+                    this.highlightItem(this.highlighted_item_) ;
                     this.setViewString() ;
                     return ;
                 }
             }
 
-            this.sendToRenderer('send-nav-highlight', team) ;
+            this.highlightItem(team);
             this.current_scout_ = team;
             this.setView('form-scout', 'team') ;
         }
+    }
+
+    private highlightItem(item: string | undefined) {
+        this.sendToRenderer('send-nav-highlight', item) ;
+        this.highlighted_item_ = item ;
     }
 
     private scoutMatch(match: string, force: boolean = false) {
@@ -391,12 +409,12 @@ export class SCScout extends SCBase {
                           message: 'You are about to scout a new team.  Do you want to continue?',
                         }) ;
                     if (ans === 1) {
-                        this.sendToRenderer('send-nav-highlight', undefined) ;
+                        this.highlightItem(this.highlighted_item_) ;
                         this.setViewString() ;
                         return ;
                     }
                 }
-                this.sendToRenderer('send-nav-highlight', match) ;
+                this.highlightItem(match) ;
                 this.current_scout_ = match ;
                 this.setView('form-scout', 'match') ;
             }
@@ -429,10 +447,15 @@ export class SCScout extends SCBase {
         return ret ;
     }
 
-    public provideResults(res: IPCNamedDataValue[]) {
-        this.addResults(this.current_scout_!, this.filterResults(res)) ;
+    public provideResults(res: IPCScoutResult) {
+        if (res.questionable === undefined) {
+            res.questionable = true ;
+        }
+
+        this.addResults(this.current_scout_!, res.questionable!, this.filterResults(res.data)) ;
         this.writeEventFile() ;
         this.logger_.silly('provideResults:' + this.current_scout_, res) ;
+        this.sendNavData() ;
 
         if (this.want_cmd_) {
             this.current_scout_ = undefined ;
@@ -469,7 +492,6 @@ export class SCScout extends SCBase {
             this.sendToRenderer('send-form', ret);
             let data: IPCScoutResult | undefined = this.getResults(this.current_scout_!) ;
             if (data) {
-                console.log('send-initial-values: ' + JSON.stringify(data.data)) ;
                 this.sendToRenderer('send-initial-values', data.data) ;
             }
         }
@@ -522,10 +544,11 @@ export class SCScout extends SCBase {
         }
     }
     
-    private addResults(scout: string, result: IPCNamedDataValue[]) {
+    private addResults(scout: string, questionable: boolean, result: IPCNamedDataValue[]) {
         let resobj : IPCScoutResult = {
             item: scout,
-            data: result
+            data: result,
+            questionable: questionable
         } ;
 
         //
@@ -693,7 +716,7 @@ export class SCScout extends SCBase {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
                     if (!this.getResults(res.item)) {
-                        this.addResults(res.item, res.data) ;
+                        this.addResults(res.item, res.questionable, res.data) ;
                     }
                 }
             }
@@ -706,7 +729,7 @@ export class SCScout extends SCBase {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
                     if (!this.getResults(res.item)) {
-                        this.addResults(res.item, res.data) ;
+                        this.addResults(res.item, res.questionable, res.data) ;
                     }
                 }
             }
@@ -888,7 +911,7 @@ export class SCScout extends SCBase {
             this.setViewString() ;
         }
         else {
-            this.setView('empty') ;
+            this.setView('text', 'No Event Loaded') ;
         }
     }
 

@@ -12,37 +12,37 @@ export class XeroPlayoffsView extends XeroView {
     private static readonly kTopMargin = 10 ;
     private static readonly kLeftMargin = 400 ;
     private static readonly kColumnWidth = 140 ;
-    private static readonly kRowHeight = 40 ;
+    private static readonly kRowHeight = 25 ;
 
     // Playoff bracket constants
-    private static readonly kResultsLeftMargin = 100 ;
-    private static readonly kLongMarkerWidth = 280 ;
-    private static readonly kShortMarkerWidth = 150 ;
+    private static readonly kResultsLeftMargin = 10 ;
+    private static readonly kLongMarkerWidth = 270 ;
+    private static readonly kShortMarkerWidth = 120 ;
     private static readonly kMarkerHeight = 40 ;
     private static readonly kMarkerSlantWidth = 10 ;
     private static readonly kMarkerTextPadding = 40 ;
     private static readonly kMarkerMatchTextPadding = 5 ;
     private static readonly kInterMarkerSpacing = 50 ;
-    private static readonly kResultsTopMargin = 450 ;
+    private static readonly kResultsTopMargin = 300 ;
 
     private static readonly kMatchPositions : XeroPoint[] = [
         new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin), // Position for match 1
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 50), // Position for match 2
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 100), // Position for match 3
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 150), // Position for match 4
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 42), // Position for match 2
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 84), // Position for match 3
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin + 126), // Position for match 4
 
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 250), // Position for match 5
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 300), // Position for match 6
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 25), // Position for match 7
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 125), // Position for match 8
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 200), // Position for match 5
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 242), // Position for match 6
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 21), // Position for match 7
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin + 105), // Position for match 8
 
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin + 250), // Position for match 9
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin + 300), // Position for match 10
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin + 200), // Position for match 9
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin + 242), // Position for match 10
 
         new XeroPoint(XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin + 75), // Position for match 11
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin + 275), // Position for match 12
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin + 221), // Position for match 12
 
-        new XeroPoint(XeroPlayoffsView.calcXSpacing(5), XeroPlayoffsView.kResultsTopMargin + 275), // Position for match 13
+        new XeroPoint(XeroPlayoffsView.calcXSpacing(5), XeroPlayoffsView.kResultsTopMargin + 221), // Position for match 13
 
         new XeroPoint(XeroPlayoffsView.calcXSpacing(6), XeroPlayoffsView.kResultsTopMargin + 25), // Position for match 14
 
@@ -445,23 +445,23 @@ export class XeroPlayoffsView extends XeroView {
 
     private drawRounds() {
         this.context_!.font = '24px Arial ' ;
-        this.context_!.fillText('Round 1', XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin - 50) ;
-        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin - 50) ;
+        this.context_!.fillText('Round 1', XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin - 20) ;
+        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(1), XeroPlayoffsView.kResultsTopMargin - 20) ;
 
-        this.context_!.fillText('Round 2', XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin - 50) ;
-        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin - 50) ;
+        this.context_!.fillText('Round 2', XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin - 20) ;
+        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(2), XeroPlayoffsView.kResultsTopMargin - 20) ;
 
-        this.context_!.fillText('Round 3', XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin - 50) ;
-        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin - 50) ;
+        this.context_!.fillText('Round 3', XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin - 20) ;
+        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(3), XeroPlayoffsView.kResultsTopMargin - 20) ;
 
-        this.context_!.fillText('Round 4', XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin - 50) ;
-        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin - 50) ;
+        this.context_!.fillText('Round 4', XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin - 20) ;
+        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(4), XeroPlayoffsView.kResultsTopMargin - 20) ;
 
-        this.context_!.fillText('Round 5', XeroPlayoffsView.calcXSpacing(5), XeroPlayoffsView.kResultsTopMargin - 50) ;
-        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(5), XeroPlayoffsView.kResultsTopMargin - 50) ;
+        this.context_!.fillText('Round 5', XeroPlayoffsView.calcXSpacing(5), XeroPlayoffsView.kResultsTopMargin - 20) ;
+        this.context_!.fillText('_______', XeroPlayoffsView.calcXSpacing(5), XeroPlayoffsView.kResultsTopMargin - 20) ;
 
-        this.context_!.fillText('Finals', XeroPlayoffsView.calcXSpacing(6), XeroPlayoffsView.kResultsTopMargin - 50) ;
-        this.context_!.fillText('_____', XeroPlayoffsView.calcXSpacing(6), XeroPlayoffsView.kResultsTopMargin - 50) ;
+        this.context_!.fillText('Finals', XeroPlayoffsView.calcXSpacing(6), XeroPlayoffsView.kResultsTopMargin - 20) ;
+        this.context_!.fillText('_____', XeroPlayoffsView.calcXSpacing(6), XeroPlayoffsView.kResultsTopMargin - 20) ;
     }
 
     private renderPlayoffStatus() : void {
@@ -481,7 +481,7 @@ export class XeroPlayoffsView extends XeroView {
             return ;
         }
 
-        this.context_!.font = '24px Arial' ;
+        this.context_!.font = '18px Arial' ;
         this.context_!.textAlign = 'left' ;
         this.context_!.textBaseline = 'top' ;
         this.context_!.fillStyle = 'black' ;
@@ -520,7 +520,7 @@ export class XeroPlayoffsView extends XeroView {
             this.context_!.font = '12px Arial' ;
             this.context_!.textAlign = 'center'
             this.context_!.fillText('Double click on an alliance to edit', XeroPlayoffsView.kLeftMargin + XeroPlayoffsView.kColumnWidth * 2, 
-                                                                            XeroPlayoffsView.kRowHeight * 9 + XeroPlayoffsView.kTopMargin - 14) ;
+                                                                            XeroPlayoffsView.kRowHeight * 9 + XeroPlayoffsView.kTopMargin + 2) ;
         }
     }
 

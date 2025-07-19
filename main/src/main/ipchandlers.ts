@@ -3,11 +3,10 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
 import { GraphDataRequest } from "./apps/sccentral";
-import { TeamNickNameNumber } from "./project/teammgr";
 import { TabletData } from "./project/tabletmgr";
 import { GraphConfig } from "./project/graphmgr";
 import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCNamedDataValue, IPCProjColumnsConfig, IPCScoutResult, IPCTeamNickNameNumber } from "../shared/ipc";
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
@@ -208,7 +207,7 @@ export async function setTeamData(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
-            central.setTeamData(args[0] as TeamNickNameNumber[]) ;
+            central.setTeamData(args[0] as IPCTeamNickNameNumber[]) ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});            
@@ -567,7 +566,7 @@ export async function provideResult(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scout : SCScout = scappbase as SCScout ;
         if (args.length === 1 && typeof args[0] === 'object') {
-            scout.provideResults(args[0] as IPCNamedDataValue[]) ;
+            scout.provideResults(args[0] as IPCScoutResult) ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});             

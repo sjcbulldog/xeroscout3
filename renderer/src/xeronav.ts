@@ -27,6 +27,9 @@ export class XeroNav  extends XeroWidget {
             if (item.type === 'item') {
                 navItem.textContent = item.title ;
                 navItem.className = 'xero-nav-list-item' ;
+                if (item.color) {
+                    navItem.style.color = item.color ;
+                }
                 this.navelems_.push(navItem) ;
 
                 navItem.addEventListener('click', this.navItemClicked.bind(this)) ;

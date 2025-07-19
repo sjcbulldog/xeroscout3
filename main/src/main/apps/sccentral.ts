@@ -14,13 +14,12 @@ import { BAEvent, BAMatch, BATeam } from "../extnet/badata";
 import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
-import { TeamNickNameNumber } from "../project/teammgr";
 import { ManualMatchData } from "../project/matchmgr";
 import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -142,15 +141,7 @@ export class SCCentral extends SCBase {
 		if (index < process.argv.length - 1) {
 			Project.openEvent(this.logger_, process.argv[index + 1], this.year_!)
 			.then((p) => {
-				this.addRecent(p.location);
-				this.project_ = p;
-				this.sendHintDB() ;
-				this.updateMenuState(true);
-				if (this.project_.info?.locked_) {
-					this.startSyncServer();
-				}
-				this.setView("info");
-				this.sendNavData();
+				this.afterCreateOrLoadProject(p) ;
 			})
 			.catch((err) => {
 				let errobj: Error = err as Error;
@@ -165,15 +156,7 @@ export class SCCentral extends SCBase {
 				if (fs.existsSync(fpath)) {
 					Project.openEvent(this.logger_, fpath, this.year_!)
 					.then((p) => {
-						this.addRecent(p.location);
-						this.project_ = p;
-						this.sendHintDB() ;
-						this.updateMenuState(true);
-						if (this.project_.info?.locked_) {
-							this.startSyncServer();
-						}
-						this.setView("info");
-						this.sendNavData();
+						this.afterCreateOrLoadProject(p) ;
 					})
 					.catch((err) => {
 						let errobj: Error = err as Error;
@@ -188,6 +171,8 @@ export class SCCentral extends SCBase {
 			else {
 				this.setView('text', 'No Event Loaded') ;
 			}
+
+			this.setTitle(undefined);
 		}
 
 		let v = this.getVersion('application') ;
@@ -196,6 +181,23 @@ export class SCCentral extends SCBase {
 			middle: undefined,
 			right: 'Connecting To Blue Alliance...',
 		}) ;
+	}
+
+	public setTitle(filename: string | undefined) {
+		this.win_.title = 'Xero Central ' + this.versionToString(this.getVersion('application')) + ' - ' + (filename ? filename : 'No Event Loaded');
+	}
+
+	private afterCreateOrLoadProject(p : Project) {
+		this.addRecent(p.location);
+		this.project_ = p;
+		this.sendHintDB() ;
+		this.updateMenuState(true);
+		if (this.project_.info?.locked_) {
+			this.startSyncServer();
+		}
+		this.setView("info");
+		this.sendNavData();
+		this.setTitle(this.project_?.location) ;
 	}
 
 	private findPrimaryIPAddress() : string {
@@ -290,7 +292,7 @@ export class SCCentral extends SCBase {
 			}
 			else {
 
-				this.setView('empty') ;
+				this.setView('text', 'No Event Loaded') ;
 			}
 		}
 	}
@@ -303,7 +305,7 @@ export class SCCentral extends SCBase {
 			}
 			else {
 
-				this.setView('empty') ;
+				this.setView('text', 'No Event Loaded') ;
 			}
 		}
 	}
@@ -361,15 +363,7 @@ export class SCCentral extends SCBase {
 						let evpath = path.join(one, 'event.json');
 						Project.openEvent(this.logger_, evpath, this.year_!)
 							.then((p) => {
-								this.addRecent(p.location);
-								this.project_ = p;
-								this.sendHintDB() ;
-								this.updateMenuState(true);
-								if (this.project_  && this.project_.isLocked) {
-									this.startSyncServer();
-								}
-								this.setView('info');
-								this.sendNavData();
+								this.afterCreateOrLoadProject(p) ;
 							})
 							.catch((err) => {
 								let errobj: Error = err as Error;
@@ -697,33 +691,8 @@ export class SCCentral extends SCBase {
 	}
 
 	public async sendMatchStatus() {
-		interface data {
-			comp_level: string;
-			set_number: number;
-			match_number: number;
-			played: boolean;
-			red1: number;
-			redtab1: string;
-			redst1: string;
-			red2: number;
-			redtab2: string;
-			redst2: string;
-			red3: number;
-			redtab3: string;
-			redst3: string;
-			blue1: number;
-			bluetab1: string;
-			bluest1: string;
-			blue2: number;
-			bluetab2: string;
-			bluest2: string;
-			blue3: number;
-			bluetab3: string;
-			bluest3: string;
-		}
-
 		try {
-			let ret: data[] = [];
+			let ret: IPCMatchStatus[] = [];
 
 			if (this.project_ && this.project_.isInitialized() && this.project_.match_mgr_!.hasMatches()) {
 				for (let one of this.project_.match_mgr_!.getMatches()) {
@@ -752,6 +721,12 @@ export class SCCentral extends SCBase {
 							one.match_number,
 							this.keyToTeamNumber(r1)
 						),
+						red1questionable: this.project_!.data_mgr_!.isMatchScoutingResultQuestionable(
+							one.comp_level,
+							one.set_number,
+							one.match_number,
+							this.keyToTeamNumber(r1)
+						),
 						red2: this.keyToTeamNumber(r2),
 						redtab2: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
@@ -760,6 +735,12 @@ export class SCCentral extends SCBase {
 							this.keyToTeamNumber(r2)
 						),
 						redst2: this.project_!.data_mgr_!.hasMatchScoutingResult(
+							one.comp_level,
+							one.set_number,
+							one.match_number,
+							this.keyToTeamNumber(r2)
+						),
+						red2questionable: this.project_!.data_mgr_!.isMatchScoutingResultQuestionable(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
@@ -778,6 +759,12 @@ export class SCCentral extends SCBase {
 							one.match_number,
 							this.keyToTeamNumber(r3)
 						),
+						red3questionable: this.project_!.data_mgr_!.isMatchScoutingResultQuestionable(
+							one.comp_level,
+							one.set_number,
+							one.match_number,
+							this.keyToTeamNumber(r3)
+						),
 						blue1: this.keyToTeamNumber(b1),
 						bluetab1: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
@@ -786,6 +773,12 @@ export class SCCentral extends SCBase {
 							this.keyToTeamNumber(b1)
 						),
 						bluest1: this.project_!.data_mgr_!.hasMatchScoutingResult(
+							one.comp_level,
+							one.set_number,
+							one.match_number,
+							this.keyToTeamNumber(b1)
+						),
+						blue1questionable: this.project_!.data_mgr_!.isMatchScoutingResultQuestionable(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
@@ -804,6 +797,12 @@ export class SCCentral extends SCBase {
 							one.match_number,
 							this.keyToTeamNumber(b2)
 						),
+						blue2questionable: this.project_!.data_mgr_!.isMatchScoutingResultQuestionable(
+							one.comp_level,
+							one.set_number,
+							one.match_number,
+							this.keyToTeamNumber(b2)
+						),
 						blue3: this.keyToTeamNumber(b3),
 						bluetab3: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
@@ -812,6 +811,12 @@ export class SCCentral extends SCBase {
 							this.keyToTeamNumber(b3)
 						),
 						bluest3: this.project_!.data_mgr_!.hasMatchScoutingResult(
+							one.comp_level,
+							one.set_number,
+							one.match_number,
+							this.keyToTeamNumber(b3)
+						),
+						blue3questionable: this.project_!.data_mgr_!.isMatchScoutingResultQuestionable(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
@@ -976,7 +981,7 @@ export class SCCentral extends SCBase {
 		this.project_?.data_mgr_?.setTeamColConfig(data);
 	}
 
-	public setTeamData(data: TeamNickNameNumber[]) {
+	public setTeamData(data: IPCTeamNickNameNumber[]) {
 		this.project_?.team_mgr_?.setTeamData(data);
 		this.setView('info');
 	}
@@ -1573,21 +1578,13 @@ export class SCCentral extends SCBase {
 			this.setFormView('match');
 		} else if (cmd === SCCentral.viewTeamStatus) {
 			if (!this.project_?.tablet_mgr_?.hasTeamAssignments()) {
-				this.sendToRenderer(
-					"update-main-window-view",
-					"empty",
-					"Scouting schedule not generated yet"
-				);
+				this.setView('text', "No Team Assignments") ;
 			} else {
 				this.setView("team-status");
 			}
 		} else if (cmd === SCCentral.viewMatchStatus) {
 			if (!this.project_?.tablet_mgr_?.hasMatchAssignments()) {
-				this.sendToRenderer(
-					"update-main-window-view",
-					"empty",
-					"Scouting schedule not generated yet"
-				);
+				this.setView('text', "No Match Assignments") ;
 			} else {
 				this.setView('match-status');
 			}
@@ -1860,12 +1857,13 @@ export class SCCentral extends SCBase {
 								this.updateMenuState(true);
 								this.setView("info");
 								this.sendNavData();
-								resolve() ;
+								this.setTitle(pathname.filePaths[0]);
+								resolve();
 							})
 							.catch((err) => {
 								let errobj: Error = err as Error;
 								dialog.showErrorBox("Create Project Error", errobj.message);
-								reject(err) ;
+								reject(err);
 							});
 					}
 				})
@@ -1999,15 +1997,7 @@ export class SCCentral extends SCBase {
 				if (!pathname.canceled) {
 					Project.openEvent(this.logger_, pathname.filePaths[0], year)
 						.then((p) => {
-							this.addRecent(p.location);
-							this.project_ = p;
-							this.sendHintDB() ;
-							this.updateMenuState(true);
-							if (this.project_.info?.locked_) {
-								this.startSyncServer();
-							}
-							this.setView("info");
-							this.sendNavData();
+							this.afterCreateOrLoadProject(p) ;
 						})
 						.catch((err) => {
 							let errobj: Error = err as Error;

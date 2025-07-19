@@ -82,57 +82,76 @@ export class XeroMatchStatus extends XeroView {
 
                 { title: 'Blue 1', field: 'blue1'},
                 { title: 'Blue Tablet 1', field: 'bluetab1'},
-                { title: 'Blue 1 Status', field: 'bluest1', formatter: this.cellFormatter.bind(this) },
+                { title: 'Blue 1 Status', field: 'bluest1', formatter: this.cellFormatter.bind(this, 'blue1questionable') },
 
                 { title: 'Blue 2', field: 'blue2'},
                 { title: 'Blue Tablet 2', field: 'bluetab2'},
-                { title: 'Blue 2 Status', field: 'bluest2', formatter: this.cellFormatter.bind(this)},
+                { title: 'Blue 2 Status', field: 'bluest2', formatter: this.cellFormatter.bind(this, 'blue2questionable') },
 
                 { title: 'Blue 3', field: 'blue3'},
                 { title: 'Blue Tablet 3', field: 'bluetab3'},
-                { title: 'Blue 3 Status', field: 'bluest3', formatter: this.cellFormatter.bind(this)},
+                { title: 'Blue 3 Status', field: 'bluest3', formatter: this.cellFormatter.bind(this, 'blue3questionable') },
 
                 { title: 'Red 1', field: 'red1'},
                 { title: 'Red Tablet 1', field: 'redtab1'},
-                { title: 'Red 1 Status', field: 'redst1', formatter: this.cellFormatter.bind(this)},
+                { title: 'Red 1 Status', field: 'redst1', formatter: this.cellFormatter.bind(this, 'red1questionable')},
 
                 { title: 'Red 2', field: 'red2'},
                 { title: 'Red Tablet 2', field: 'redtab2'},
-                { title: 'Red 2 Status', field: 'redst2', formatter: this.cellFormatter.bind(this)},
+                { title: 'Red 2 Status', field: 'redst2', formatter: this.cellFormatter.bind(this, 'red2questionable')},
 
                 { title: 'Red 3', field: 'red3'},
                 { title: 'Red Tablet 3', field: 'redtab3'},
-                { title: 'Red 3 Status', field: 'redst3', formatter: this.cellFormatter.bind(this)},
+                { title: 'Red 3 Status', field: 'redst3', formatter: this.cellFormatter.bind(this, 'red3questionable')},
             ],
         }) ;
     }
 
-    private cellFormatter(cell: CellComponent, params: any, onRendered: any) : HTMLElement{
+    private cellFormatter(quest: string, cell: CellComponent, params: any, onRendered: any) : HTMLElement{
         let val = cell.getValue();
         let played = cell.getRow().getData().played;
+        let q = cell.getRow().getData()[quest] || false;
         let el = cell.getElement();
 
         if (val == 'Y') {
             el.style.fontSize = '16px';
             el.style.textAlign = 'center' ;
-         
-            if (played === true) {
-                el.style.backgroundColor = 'green' ;
-                el.style.color = 'white' ;         
-                val = 'Scouted/BA' ;                        
+
+            if (played === true && q === true) {
+                //
+                // We have blue alliance data and scouting data
+                // but the scouting data is questionable
+                //
+                val = 'Scouted?/BA' ;  
+                el.style.backgroundColor = 'yellow' ;
+                el.style.color = 'black' ;
             }
-            else {
-                el.style.backgroundColor = 'lightgreen' ;
-                el.style.color = 'black' ; 
+            else if (played === true && q === false) {
+                //
+                // We have blue alliance data and scouting data
+                // and the scouting data is reliable
+                //
+                val = 'Scouted/BA' ;
+                el.style.backgroundColor = 'green' ;
+                el.style.color = 'white' ;
+            }
+            else if (played === false && q === true) {
+                val = 'Scouted?' ;
+                el.style.backgroundColor = 'yellow' ;
+                el.style.color = 'black' ;
+            }
+            else if (played === false && q === false) {
                 val = 'Scouted' ;
+                el.style.backgroundColor = 'lightgreen' ;
+                el.style.color = 'black' ;
             }
         }
         else if (played === true) {
             el.style.fontSize = '16px';
             el.style.textAlign = 'center' ;
-            el.style.backgroundColor = 'red' ;
-            el.style.color = 'white' ;
-            val = 'Missing' ;            
+            el.style.backgroundColor = 'rgb(255, 128, 128)' ;
+            el.style.color = 'black' ;
+            val = 'Missing/BA' ;            
         }
         else {
             val = '' ;

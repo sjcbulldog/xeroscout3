@@ -325,6 +325,27 @@ body {
     padding-top: 10px ;
 }
 
+.xero-popup-form-edit-dialog-radio {
+    width: 18px ;
+    height: 18px ;
+    margin-right: 5px;
+    margin-left: 10px;
+    padding-top: 10px ;
+}
+
+.xero-popup-form-edit-dialog-error {
+    color: red ;
+    font-size: 14px ;
+}
+
+.xero-popup-form-edit-dialog-matches {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+}
+
 .xero-popup-form-edit-dialog-label-error {
     font: arial;
     font-size: 24px;
@@ -489,6 +510,7 @@ xero-status-overlay-close-visible {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    overflow-y: auto ;
 }
 
 .xero-dataset-editor-list-item {
