@@ -31,13 +31,30 @@ export let scappbase : SCBase | undefined = undefined ;
 const Config = require('electron-config') ;
 let config = new Config() ;
 
+function extractAppType() : string | undefined {
+    let index = 2 ;
+    while (index < process.argv.length && process.argv[index].startsWith('-')) {
+        index++ ;
+    }
+    if (index === process.argv.length) {
+        return undefined ;
+    }
+
+    return process.argv[index] ;
+}
+
 function createWindow() : void {
     const args = process.argv;
 
     let content = path.join(process.cwd(), 'content') ;
     let icon = path.join(content, 'images', 'tardis.ico') ;
 
-    let bounds = config.get('windowBounds') ;
+    let appType = extractAppType();
+    if (!appType) {
+        dialog.showErrorBox('Invalid Command Line', 'No application specified - the first argument that is not a flag must be the application name (e.g. scout, coach, central)') ;
+        app.exit(1);
+    }
+    let bounds = config.get(appType + '-windowBounds') ;
     let opts : BrowserWindowConstructorOptions = {
         icon: icon,
         webPreferences: {
@@ -118,7 +135,6 @@ function createWindow() : void {
     Menu.setApplicationMenu(scappbase!.createMenu()) ;
 
     win.on('ready-to-show', () => {
-        // win.webContents.openDevTools() ;
     }) ;
     
     win.on("close", (event) => {
@@ -127,7 +143,8 @@ function createWindow() : void {
                 event.preventDefault() ;
             }
             else {
-                config.set('windowBounds', win.getBounds()) ;
+                let appType = extractAppType() ;
+                config.set(appType + '-windowBounds', win.getBounds()) ;
             }
         }
     });

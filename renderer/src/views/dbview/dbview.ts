@@ -1,4 +1,4 @@
-import { CellComponent, ColumnDefinition, RowComponent, TabulatorFull } from "tabulator-tables";
+import { CellComponent, ColumnDefinition, GlobalTooltipOption, RowComponent, SortDirection, TabulatorFull } from "tabulator-tables";
 import { XeroApp  } from "../../apps/xeroapp.js";
 import { IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataValue, IPCFormula, IPCProjColumnsConfig, IPCProjectColumnCfg, IPCTypedDataValue  } from "../../shared/ipc.js";
 import { XeroView  } from "../xeroview.js";
@@ -219,6 +219,14 @@ export class DatabaseView extends XeroView {
         }
     }
 
+    private getToolTip(ev: MouseEvent, cell: CellComponent, onrender: ()=> void) : string  {
+        let fmt = this.getFormat(cell) ;
+        if (fmt) {
+            return fmt.message ;
+        }
+        return '' ;
+    }
+
     private receiveData(data: IPCDatabaseData) {
         this.reset() ;
         this.table_div_ = document.createElement('div') ;
@@ -230,7 +238,18 @@ export class DatabaseView extends XeroView {
         this.keycol_ = data.keycols ;
         this.data_ = this.convertData(data.data) ;
         let coldefs = this.createColumnDescs() ;
+        let initsort = [] ;
+        if (this.type_ === 'match') {
+            initsort = [{ column: 'comp_level', dir: 'asc' as SortDirection}] ;
+        }
+        else {
+            initsort = [{ column: 'team_number', dir: 'asc' as SortDirection}] ;
+        }
         this.table_ = new TabulatorFull(this.table_div_!, {
+            columnDefaults : {
+                tooltip: this.getToolTip.bind(this),
+            },
+            initialSort: initsort,
             data: this.data_,
             columns: coldefs,
             layout:"fitData",
@@ -421,7 +440,7 @@ export class DatabaseView extends XeroView {
             this.popup_menu_?.closeMenu() ;
             this.table_?.alert("Saving changes...") ;
             //
-            // Revert the display of the cells that have been changed and are currently bolded
+            // Update the display of the cells that have been changed and are currently bolded
             //
             for(let change of this.changes_) {
                 let row = this.findRowFromSearch(change.search) ;
@@ -569,47 +588,77 @@ export class DatabaseView extends XeroView {
     private evalOneField(mrow: MatchRowCollection, field: string) : IPCTypedDataValue | undefined {
         let ret: IPCTypedDataValue | undefined = undefined ;
 
-        let cfg = this.getColumnDesc(field) ;
-        if (!cfg) {
-            this.logMessage('Column not found: ' + field) ;
-            return undefined ;
-        }
-
-        if (cfg.source === 'form') {
-            if (cfg.type !== 'integer' && cfg.type !== 'real') {
-                this.logMessage('Unsupported type for field: ' + field) ;
+        let formula = this.findFormulaByName(field) ;
+        if (formula) {
+            let expr = Expr.parse(formula) ;
+            if (expr.hasError()) {
+                this.logMessage('Error parsing formula: ' + field + ' - ' + expr.getErrorMessage()) ;
                 return undefined ;
             }
 
-            let sum = 0.0 ;
-            let nans = 0 ;
-            for(let row of mrow.rows) {
-                let value = row.getData()[field] ;
-                let v = parseFloat(value) ;
-                if (isNaN(v)) {
-                    v = 0.0 ;
-                    nans++ ;
+            let vars = expr.variables() ;
+            let varvalues : Map<string, IPCTypedDataValue> = new Map<string, IPCTypedDataValue>() ;
+
+            for(let varname of vars) {
+                let v = this.evalOneField(mrow, varname) ;
+                if (v) {
+                    varvalues.set(varname, v) ;
                 }
-                sum += v ;
+                else {
+                    // We are missing matches as they have not yet been played (or transferred from the scouting tablet)
+                    return undefined ;
+                }
             }
-            if (nans === mrow.rows.length) {
-                // We have an empty value across all robots in the alliance.  This means
-                // this match has not been played yet, so we return a null value
+
+            ret = expr.evaluate(varvalues) ;
+            if (ret instanceof Error) {
+                this.logMessage('Error evaluating formula: ' + field + ' - ' + ret.message) ;
                 return undefined ;
             }
-            else if (cfg.type === 'integer') {
-                ret = DataValue.fromInteger(Math.round(sum)) ;
-            }
-            else {
-                ret = DataValue.fromReal(sum) ;
-            }
         }
-        else if (cfg.source === 'bluealliance') {
-            //
-            // We expect the field to be the same across all rows for this alliance in the match
-            //
-            if (mrow.rows.length > 0) {
-                ret = DataValue.convertFromString(cfg.type, mrow.rows[0].getData()[field]) ;
+        else {
+            let cfg = this.getColumnDesc(field) ;
+            if (!cfg) {
+                this.logMessage('Column not found: ' + field) ;
+                return undefined ;
+            }
+
+            if (cfg.source === 'form') {
+                if (cfg.type !== 'integer' && cfg.type !== 'real') {
+                    this.logMessage('Unsupported type for field: ' + field) ;
+                    return undefined ;
+                }
+
+                let sum = 0.0 ;
+                let nans = 0 ;
+                for(let row of mrow.rows) {
+                    let value = row.getData()[field] ;
+                    let v = parseFloat(value) ;
+                    if (isNaN(v)) {
+                        v = 0.0 ;
+                        nans++ ;
+                    }
+                    sum += v ;
+                }
+                if (nans === mrow.rows.length) {
+                    // We have an empty value across all robots in the alliance.  This means
+                    // this match has not been played yet, so we return a null value
+                    return undefined ;
+                }
+                else if (cfg.type === 'integer') {
+                    ret = DataValue.fromInteger(Math.round(sum)) ;
+                }
+                else {
+                    ret = DataValue.fromReal(sum) ;
+                }
+            }
+            else if (cfg.source === 'bluealliance') {
+                //
+                // We expect the field to be the same across all rows for this alliance in the match
+                //
+                if (mrow.rows.length > 0) {
+                    ret = DataValue.convertFromString(cfg.type, mrow.rows[0].getData()[field]) ;
+                }
             }
         }
 

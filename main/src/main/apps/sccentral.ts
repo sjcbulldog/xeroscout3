@@ -2068,6 +2068,12 @@ export class SCCentral extends SCBase {
 					results.push(one) ;
 				}
 			}
+
+			// Find any match results that were changed by the central
+			for(let match of this.project_!.data_mgr_!.getChangedMatchResults()) {
+				results.push(match) ;
+			}
+
 			let msg: string = JSON.stringify(results) ;
 			resp = new PacketObj(PacketType.ProvideMatchResults, Buffer.from(msg, "utf-8"));
 		} else if (p.type_ === PacketType.RequestTeamResults) {

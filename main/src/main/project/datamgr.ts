@@ -9,6 +9,7 @@ import { DataValue } from '../../shared/datavalue' ;
 import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
+import { SCBase } from "../apps/scbase";
 
 
 export class DataInfo {
@@ -23,6 +24,9 @@ export class DataInfo {
 
     public match_formulas_ : IPCCheckDBViewFormula[] = [] ;
     public team_formulas_ : IPCCheckDBViewFormula[] = [] ;
+
+    public matchdb_changed_rows_ : string[] = [] ; // The list of rows that have been changed in the match database by the central server
+    public teamdb_changed_rows_ : string[] = [] ;  // The list of rows that have been changed in the team database by the central server
 } ;
 
 export class DataManager extends Manager {
@@ -37,6 +41,15 @@ export class DataManager extends Manager {
         super(logger, writer) ;
 
         this.info_ = info ;
+
+        if (this.info_.matchdb_changed_rows_ === undefined) {
+            this.info_.matchdb_changed_rows_ = [] ;
+        }
+
+        if (this.info_.teamdb_changed_rows_ === undefined) {
+            this.info_.teamdb_changed_rows_ = [] ;
+        }
+        
         this.formula_mgr_ = formula_mgr ;
 
         let filename: string ;
@@ -188,7 +201,7 @@ export class DataManager extends Manager {
                         }
 
                         try {
-                            let status = await this.matchdb_.processScoutingResults(obj) ;
+                            let status = await this.matchdb_.processScoutingResults(obj, this.info_.matchdb_changed_rows_) ;
                             num = status.length ;
                             for(let st of status) {
                                 if (!this.info_.scouted_match_.includes(st)) {
@@ -290,8 +303,34 @@ export class DataManager extends Manager {
         return this.matchdb_.getAllData() ;
     }
 
+    private updateMatchResult(result: IPCScoutResult, name: string, value: IPCTypedDataValue) {
+        for(let data of result.data) {
+            if (data.tag === name) {
+                data.value = value ;
+                return ;
+            }
+        }
+    }
+
     public updateMatchDB(changes: IPCChange[]) {
         this.matchdb_.update(changes) ;
+
+        // Flag the match results as changed so that the sync operation will not change it
+        for(let change of changes) {
+            let team = SCBase.stripKeyString(DataValue.toDisplayString(change.search.team_key)) ;
+            let tag = 'sm-' + DataValue.toDisplayString(change.search.comp_level) + '-' + DataValue.toDisplayString(change.search.set_number) + 
+                        '-' + DataValue.toDisplayString(change.search.match_number) + '-' + team ;
+            if (!this.info_.matchdb_changed_rows_.includes(tag)) {
+                this.info_.matchdb_changed_rows_.push(tag) ;
+            }
+
+            let result = this.getMatchResult(tag) ;
+            if (result) {
+                this.updateMatchResult(result, change.column, change.newvalue) ;
+            }
+        }
+
+        this.write() ;
     }    
 
     // #endregion
@@ -328,6 +367,14 @@ export class DataManager extends Manager {
 
     public updateTeamDB(changes: IPCChange[]) {
         this.teamdb_.update(changes) ;
+
+        for(let change of changes) {
+            if (!this.info_.matchdb_changed_rows_.includes(change.search.team_key)) {
+                this.info_.matchdb_changed_rows_.push(change.search.team_key) ;
+            }
+        }        
+
+        this.write() ;
     }
 
     // #endregion
@@ -362,6 +409,18 @@ export class DataManager extends Manager {
             ret = this.matchdb_.exportToCSV(filename, table);
         }
 
+        return ret ;
+    }
+
+    public getChangedMatchResults() : IPCScoutResult[] {
+        let ret: IPCScoutResult[] = [] ;
+        for(let tag of this.info_.matchdb_changed_rows_) {
+            let res = this.getMatchResult(tag) ;
+            if (res) {
+                res.edited = true ; // Mark the result as edited
+                ret.push(res) ;
+            }
+        }
         return ret ;
     }
 

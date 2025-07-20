@@ -186,6 +186,7 @@ export interface IPCScoutResult {
     item?: string ;
     questionable?: boolean ;
     data: IPCNamedDataValue[] ;
+    edited?: boolean ; // Indicates if the result has been edited
 }
 
 export interface IPCScoutResults {

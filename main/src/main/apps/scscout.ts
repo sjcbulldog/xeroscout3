@@ -715,7 +715,7 @@ export class SCScout extends SCBase {
             if (this.info_.purpose_ === 'match') {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
-                    if (!this.getResults(res.item)) {
+                    if (res.edited || !this.getResults(res.item)) {
                         this.addResults(res.item, res.questionable, res.data) ;
                     }
                 }

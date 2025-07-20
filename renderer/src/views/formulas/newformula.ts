@@ -1,4 +1,4 @@
-import { TabulatorFull } from "tabulator-tables";
+import { CellComponent, TabulatorFull } from "tabulator-tables";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 import { IPCColumnDesc, IPCFormula } from "../../shared/ipc.js";
 import { Expr } from "../../shared/expr.js";
@@ -128,6 +128,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitData',
             maxHeight: '300px',
         }) ;
+        this.match_fields_table_.on('cellDblClick', this.appendCellValueToFormula.bind(this)) ;
 
         this.team_fields_table_div_ = document.createElement('div') ;
         this.team_fields_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
@@ -141,6 +142,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitColumns',
             maxHeight: '300px'
         }) ;        
+        this.team_fields_table_.on('cellDblClick', this.appendCellValueToFormula.bind(this)) ;
 
         this.formula_table_div_ = document.createElement('div') ;
         this.formula_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
@@ -154,6 +156,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitColumns',
             maxHeight: '300px'
         }) ;
+        this.formula_table_.on('cellDblClick', this.appendCellValueToFormula.bind(this)) ;        
         
         this.function_table_div_ = document.createElement('div') ;
         this.function_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
@@ -170,6 +173,26 @@ export class NewFormulaDialog extends XeroDialog {
 
         div.appendChild(this.list_div_) ;
         pdiv.appendChild(div) ;
+    }
+
+    private appendCellValueToFormula(ev: UIEvent, cell: CellComponent) {
+        let value = cell.getValue() ;
+        let len = this.expr_input_!.value.length - 1 ;
+        while (len >= 0) {
+            let ch = this.expr_input_!.value[len] ;
+            if (ch.match(/[a-zA-Z0-9_]/) === null) {
+                break ;
+            }
+            len-- ;
+        }
+        if (len === -1) {
+            this.expr_input_!.value = value + ' ' ;
+        }
+        else {
+            this.expr_input_!.value = this.expr_input_!.value.substring(0, len + 1) + value + ' ' ;
+        }
+
+        setTimeout(() => { this.expr_input_!.focus() ; }, 10) ;
     }
 
     private onExprChanged() {

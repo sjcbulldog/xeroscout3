@@ -290,11 +290,18 @@ export class MatchDataModel extends DataModel {
         return dr ;
     }
 
-    public async processScoutingResults(data: IPCScoutResults) : Promise<string[]> {
+    public async processScoutingResults(data: IPCScoutResults, changedRows: string[]) : Promise<string[]> {
         let ret = new Promise<string[]>(async (resolve, reject) => {
             let ret: string[] = [] ;
             let records: DataRecord[] = [] ;
             for(let record of data.results) {
+                if (record.item) {
+                    if (changedRows && changedRows.includes(record.item!)) {
+                        // This match has been changed, so we will not add it to the database
+                        continue ;
+                    }
+                }
+
                 let dr = this.convertScoutDataToRecord(record.item, record.data) ;
                 ret.push(record.item!) ;
                 records.push(dr) ;
