@@ -11,6 +11,7 @@ export class DataModelInfo {
     public col_descs_ : IPCColumnDesc[] = [] ;
 }
 
+
 export abstract class DataModel extends EventEmitter {
     private static readonly ColummTableName: string = 'cols' ;
     private static queryno_ : number = 0 ;

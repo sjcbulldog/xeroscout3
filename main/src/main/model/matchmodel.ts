@@ -7,6 +7,16 @@ import { DataRecord } from './datarecord';
 import { DataValue } from '../../shared/datavalue' ;
 import { IPCColumnDesc, IPCScoutResults, IPCTypedDataValue } from '../../shared/ipc';
 
+export class MatchScoutProcessingResult {
+    public readonly scouted: string[] ;
+    public readonly ignored: string[] ;
+
+    public constructor(scouted: string[], ignored: string[]) {
+        this.scouted = scouted ;
+        this.ignored = ignored ;
+    }
+}
+
 export class MatchDataModel extends DataModel {
     public static readonly TableName: string = 'matches' ;
     private static readonly BlueAlliancePrefix: string = 'ba_' ;
@@ -119,10 +129,6 @@ export class MatchDataModel extends DataModel {
         ret += ');' ;
 
         return ret ;
-    }
-
-    private isValidDataType(value: any) {
-        return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ;
     }
 
     private getDataValueFromObject(obj: any) : IPCTypedDataValue {
@@ -290,24 +296,35 @@ export class MatchDataModel extends DataModel {
         return dr ;
     }
 
-    public async processScoutingResults(data: IPCScoutResults, changedRows: string[]) : Promise<string[]> {
-        let ret = new Promise<string[]>(async (resolve, reject) => {
-            let ret: string[] = [] ;
+    public async processScoutingResults(data: IPCScoutResults, changedRows: string[]) : Promise<MatchScoutProcessingResult> {
+        let ret = new Promise<MatchScoutProcessingResult>(async (resolve, reject) => {
+            let processed: string[] = [] ;
+            let ignored: string[] = [] ;
+
             let records: DataRecord[] = [] ;
             for(let record of data.results) {
                 if (record.item) {
                     if (changedRows && changedRows.includes(record.item!)) {
                         // This match has been changed, so we will not add it to the database
+                        ignored.push(record.item!) ;
                         continue ;
                     }
                 }
 
                 let dr = this.convertScoutDataToRecord(record.item, record.data) ;
-                ret.push(record.item!) ;
+                processed.push(record.item!) ;
                 records.push(dr) ;
             }
-            await this.addColsAndData(['comp_level', 'set_number', 'match_number', 'team_key'], records, true, 'form') ;
-            resolve(ret) ;
+            if (records.length > 0) {
+                try {
+                    await this.addColsAndData(['comp_level', 'set_number', 'match_number', 'team_key'], records, true, 'form') ;
+                }
+                catch(err) {
+                    reject(err) ;
+                    return ;
+                }
+            }
+            resolve({ scouted: processed, ignored: ignored }) ;
         }) ;
         return ret ;
     }

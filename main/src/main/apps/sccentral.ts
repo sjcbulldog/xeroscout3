@@ -19,7 +19,7 @@ import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber, IPCTeamStatus } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -837,14 +837,7 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendTeamStatus() {
-		interface data {
-			number: number;
-			status: string;
-			tablet: string;
-			teamname: string;
-		}
-
-		let ret: data[] = [];
+		let ret: IPCTeamStatus[] = [];
 
 		if (this.project_ && this.project_.tablet_mgr_!.hasTeamAssignments()) {
 			for (let t of this.project_.tablet_mgr_!.getTeamAssignments()) {
@@ -2086,6 +2079,12 @@ export class SCCentral extends SCBase {
 					results.push(one) ;
 				}
 			}
+
+			// Find any team results that were changed by the central
+			for(let match of this.project_!.data_mgr_!.getChangedTeamResults()) {
+				results.push(match) ;
+			}
+
 			let msg: string = JSON.stringify(results) ;
 			resp = new PacketObj(PacketType.ProvideTeamResults, Buffer.from(msg, "utf-8"));
 		} else if (p.type_ === PacketType.RequestTablets) {

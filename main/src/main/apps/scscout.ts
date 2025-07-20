@@ -47,6 +47,7 @@ export class SCScout extends SCBase {
     private tablets_?: IPCTabletDefn[] ;
     private conn_?: SyncClient ;
     private current_scout_? : string ;
+    private most_recent_view_? : string ;
     private alliance_? : string ;
     private want_cmd_ : boolean = false ;
     private next_cmd_? : string ;
@@ -221,6 +222,14 @@ export class SCScout extends SCBase {
 
     public syncDone() {
         this.sync_client_ = undefined ;
+        if (this.most_recent_view_) {
+            if (this.most_recent_view_.startsWith('st-')) {
+                this.scoutTeam(this.most_recent_view_, true) ;
+            }
+            else if (this.most_recent_view_.startsWith('sm-')) {
+                this.scoutMatch(this.most_recent_view_, true) ;
+            }
+        }
     }
 
     public executeCommand(cmd: string) : void {   
@@ -306,7 +315,6 @@ export class SCScout extends SCBase {
     }
 
     private resetTabletCmd() {
-
         let ans = dialog.showMessageBoxSync(
             {
               title: 'Reset Tablet',
@@ -368,6 +376,7 @@ export class SCScout extends SCBase {
                 }
             }
 
+            this.most_recent_view_ = team ;
             this.highlightItem(team);
             this.current_scout_ = team;
             this.setView('form-scout', 'team') ;
@@ -414,6 +423,7 @@ export class SCScout extends SCBase {
                         return ;
                     }
                 }
+                this.most_recent_view_ = match ;
                 this.highlightItem(match) ;
                 this.current_scout_ = match ;
                 this.setView('form-scout', 'match') ;
@@ -728,7 +738,7 @@ export class SCScout extends SCBase {
             if (this.info_.purpose_ === 'team') {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
-                    if (!this.getResults(res.item)) {
+                    if (res.edited || !this.getResults(res.item)) {
                         this.addResults(res.item, res.questionable, res.data) ;
                     }
                 }

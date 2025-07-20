@@ -297,6 +297,13 @@ export interface IPCDataSet {
     matches: IPCMatchSet ;                            // The set of matches to use for the data set
 }
 
+export interface IPCTeamStatus {
+    number: number;
+    status: string;
+    tablet: string;
+    teamname: string;
+}
+
 export interface IPCMatchStatus {
     comp_level: string;
     set_number: number;

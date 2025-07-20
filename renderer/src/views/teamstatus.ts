@@ -1,6 +1,7 @@
 import { CellComponent, TabulatorFull } from "tabulator-tables";
 import {  XeroApp  } from "../apps/xeroapp.js";
 import {  XeroView  } from "./xeroview.js";
+import { IPCTeamStatus } from "../shared/ipc.js";
 
 export class XeroTeamStatus extends XeroView {
     private main_div_? : HTMLDivElement ;
@@ -13,13 +14,13 @@ export class XeroTeamStatus extends XeroView {
         this.request('get-team-status', args) ;
     }
 
-    private receivedTeamStatus( args: any) {
+    private receivedTeamStatus(status: IPCTeamStatus[]) {
         this.main_div_ = document.createElement('div') ;
         this.main_div_.classList.add('xero-teamstatus-view') ;
         this.elem.appendChild(this.main_div_) ;
 
         this.table_ = new TabulatorFull(this.main_div_, {
-            data: args,
+            data: status,
             columns: [
                 { title: 'Number', field: 'number'},
                 { title: 'Name', field: 'teamname'},

@@ -202,8 +202,7 @@ export class DataManager extends Manager {
 
                         try {
                             let status = await this.matchdb_.processScoutingResults(obj, this.info_.matchdb_changed_rows_) ;
-                            num = status.length ;
-                            for(let st of status) {
+                            for(let st of status.scouted) {
                                 if (!this.info_.scouted_match_.includes(st)) {
                                     this.info_.scouted_match_.push(st) ;
                                 }
@@ -224,11 +223,15 @@ export class DataManager extends Manager {
                         }
 
                         try {
-                            let teams = await this.teamdb_.processScoutingResults(obj) ;
-                            num = teams.length ;
-                            for (let st of teams) {
-                                if (!this.info_.scouted_team_.includes(st)) {
-                                    this.info_.scouted_team_.push(st) ;
+                            let teams = await this.teamdb_.processScoutingResults(obj, this.info_.teamdb_changed_rows_) ;
+                            for (let st of teams.scouted) {
+                                if (st.startsWith('st-')) {
+                                    let num = parseInt(st.substring(3)) ;
+                                    if (!isNaN(num)) {
+                                        if (!this.info_.scouted_team_.includes(num)) {
+                                            this.info_.scouted_team_.push(num) ;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -303,7 +306,7 @@ export class DataManager extends Manager {
         return this.matchdb_.getAllData() ;
     }
 
-    private updateMatchResult(result: IPCScoutResult, name: string, value: IPCTypedDataValue) {
+    private updateResult(result: IPCScoutResult, name: string, value: IPCTypedDataValue) {
         for(let data of result.data) {
             if (data.tag === name) {
                 data.value = value ;
@@ -326,7 +329,7 @@ export class DataManager extends Manager {
 
             let result = this.getMatchResult(tag) ;
             if (result) {
-                this.updateMatchResult(result, change.column, change.newvalue) ;
+                this.updateResult(result, change.column, change.newvalue) ;
             }
         }
 
@@ -369,8 +372,15 @@ export class DataManager extends Manager {
         this.teamdb_.update(changes) ;
 
         for(let change of changes) {
-            if (!this.info_.matchdb_changed_rows_.includes(change.search.team_key)) {
-                this.info_.matchdb_changed_rows_.push(change.search.team_key) ;
+            let tag = 'st-' + DataValue.toDisplayString(change.search.team_number) ;
+
+            if (!this.info_.teamdb_changed_rows_.includes(tag)) {
+                this.info_.teamdb_changed_rows_.push(tag) ;
+            }
+
+            let result = this.getTeamResult(tag) ;
+            if (result) {
+                this.updateResult(result, change.column, change.newvalue) ;
             }
         }        
 
@@ -504,6 +514,18 @@ export class DataManager extends Manager {
                 }) ;
         }) ;
 
+        return ret ;
+    }    
+
+    public getChangedTeamResults() : IPCScoutResult[] {
+        let ret: IPCScoutResult[] = [] ;
+        for(let tag of this.info_.teamdb_changed_rows_) {
+            let res = this.getTeamResult(tag) ;
+            if (res) {
+                res.edited = true ; // Mark the result as edited
+                ret.push(res) ;
+            }
+        }
         return ret ;
     }    
     

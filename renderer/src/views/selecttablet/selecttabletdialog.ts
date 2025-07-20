@@ -2,7 +2,6 @@ import { CellComponent, RowComponent, TabulatorFull } from "tabulator-tables";
 import { IPCTabletDefn } from "../../shared/ipc.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 
-
 export class SelectTabletDialog extends XeroDialog {
     private tablets_: IPCTabletDefn[] ;
     private table_? : TabulatorFull ;
@@ -32,8 +31,18 @@ export class SelectTabletDialog extends XeroDialog {
                 layout: 'fitColumns',
             }) ;
 
+        this.table_.on('cellDblClick', this.cellDblClick.bind(this)) ;
+
         pdiv.appendChild(div) ;
     }    
+
+    private cellDblClick(ev: UIEvent, cell: CellComponent) {
+        let row = cell.getRow() ;
+        if (row) {
+            row.select() ;
+            this.okButton(ev) ;
+        }
+    }
 
     protected isOKToClose(ok: boolean): boolean {
         let ret  = true ;

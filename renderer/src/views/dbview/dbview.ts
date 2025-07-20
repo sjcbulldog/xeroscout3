@@ -96,12 +96,22 @@ export class DatabaseView extends XeroView {
         this.formulas_ = data ;
     }
 
+    private findColDesc(name: string) : IPCColumnDesc | undefined {
+        if (this.col_descs_) {
+            return this.col_descs_.find((desc) => desc.name === name);
+        }
+    }
+
     private createColumnDescs() : ColumnDefinition[] {
         let cols: ColumnDefinition[] = [] ;
 
         for (let i = 0; i < this.col_cfgs_!.columns.length; i++) {
             let colcfg = this.col_cfgs_!.columns[i] ;
-            let desc = this.col_descs_![i] ;
+            let desc = this.findColDesc(colcfg.name) ;
+            if (desc === undefined) {
+                continue ;
+            }
+            
             let col_desc: ColumnDefinition = {
                 formatter: this.cellFormatter.bind(this),
                 title: colcfg.name,
@@ -116,6 +126,19 @@ export class DatabaseView extends XeroView {
 
             if (colcfg.width !== -1) {
                 col_desc.width = colcfg.width ;
+            }
+
+            if (desc.type === 'string') {
+                col_desc.sorter = 'string' ;
+            }
+            else if (desc.type === 'integer') {
+                col_desc.sorter = 'number' ;
+            }
+            else if (desc.type === 'real') {
+                col_desc.sorter = 'number' ;
+            }
+            else if (desc.type === 'boolean') {
+                col_desc.sorter = 'boolean' ;
             }
 
             if (desc.editable) {
@@ -255,6 +278,7 @@ export class DatabaseView extends XeroView {
             layout:"fitData",
             resizableColumnFit:true,
             movableColumns:true,
+            editTriggerEvent: 'dblclick'
         }) ;
 
         this.table_.on('tableBuilt', this.tableReady.bind(this)) ;

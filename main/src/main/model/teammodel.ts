@@ -7,11 +7,15 @@ import { DataRecord } from './datarecord';
 import { DataValue } from '../../shared/datavalue' ;
 import { IPCColumnDesc, IPCScoutResults } from '../../shared/ipc';
 
-interface scoutvalue {
-    tag: string,
-    type: string,
-    value: any
-} ;
+export class TeamScoutProcessingResult {
+    public readonly scouted: string[] ;
+    public readonly ignored: string[] ;
+
+    public constructor(scouted: string[], ignored: string[]) {
+        this.scouted = scouted ;
+        this.ignored = ignored ;
+    }
+}
 
 export class TeamDataModel extends DataModel {
     public static readonly TableName: string = 'teams' ;
@@ -304,18 +308,35 @@ export class TeamDataModel extends DataModel {
         return dr ;
     }
 
-    public async processScoutingResults(data: IPCScoutResults) : Promise<number[]> {
-        let ret = new Promise<number[]>(async (resolve, reject) => {
-            let ret: number[] = [] ;
+    public async processScoutingResults(data: IPCScoutResults, changedRows: string[]) : Promise<TeamScoutProcessingResult> {
+        let ret = new Promise<TeamScoutProcessingResult>(async (resolve, reject) => {
+            let processed: string[] = [] ;
+            let ignored: string[] = [] ;
             let records: DataRecord[] = [] ;
             for(let record of data.results) {
+                if (record.item) {
+                    if (changedRows && changedRows.includes(record.item!)) {
+                        // This match has been changed, so we will not add it to the database
+                        ignored.push(record.item!) ;
+                        continue ;
+                    }
+                }
+
                 let dr = this.convertScoutDataToRecord(record.item, record.data) ;
-                ret.push(DataValue.toInteger(dr.value('team_number')!)) ;
+                processed.push(record.item!) ;
                 records.push(dr) ;
             }
             try {
-                await this.addColsAndData(['team_number'], records, true, 'form') ;
-                resolve(ret) ;
+                if (records.length > 0) {
+                    try {
+                        await this.addColsAndData(['team_number'], records, true, 'form') ;
+                    }
+                    catch(err) {
+                        reject(err) ;
+                        return ;
+                    }
+                }
+                resolve({ scouted: processed, ignored: ignored }) ;
             }
             catch(err) {
                 reject(err) ;
