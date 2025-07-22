@@ -41,6 +41,7 @@ export class EditDataSetDialog extends XeroDialog {
 
         this.data_set_name_ = document.createElement('input') ;
         this.data_set_name_.type = 'text' ;
+        this.data_set_name_.maxLength = 16 ;
         this.data_set_name_.className = 'xero-popup-form-edit-dialog-input' ;
         this.data_set_name_.value = this.dataset_.name ;
         if (this.data_set_name_.value === '') {

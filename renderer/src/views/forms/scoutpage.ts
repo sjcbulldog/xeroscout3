@@ -16,6 +16,7 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private scale_ : number = 1.0 ;
     private reversed_ : boolean = false ;
     private color_: string = 'blue' ;
+    private readonly_ : boolean = false ;
 
     public constructor(app: XeroApp, data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean) {
         super('div', 'xero-form-section-page') ;
@@ -43,8 +44,9 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         this.addControlToLayout(control) ;
     }
 
-    public doLayout() : void {
+    public doLayout(ro: boolean) : void {
         this.formdiv_.innerHTML = '' ;
+        this.readonly_ = ro ;
 
         let fbounds = this.formdiv_.getBoundingClientRect() ;
         let xscale = fbounds.width / this.size_.width ;
@@ -54,6 +56,15 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         for(let control of this.controls_) {
             control.resetHTMLControl() ;
             this.addControlToLayout(control) ;
+        }
+
+        if (ro) {
+            let nodes = this.formdiv_.getElementsByTagName('*');
+            for(let node of nodes) {
+                if (node instanceof HTMLElement) {
+                    (node as any).disabled = true ;
+                }
+            }
         }
     }
 
@@ -113,7 +124,7 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private resized(entries: ResizeObserverEntry[]) : void {
         for(let entry of entries) {
             if (entry.target === this.elem) {
-                this.doLayout() ;
+                this.doLayout(this.readonly_) ;
             }
         }
 

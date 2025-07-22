@@ -502,7 +502,7 @@ export class SCScout extends SCBase {
             this.sendToRenderer('send-form', ret);
             let data: IPCScoutResult | undefined = this.getResults(this.current_scout_!) ;
             if (data) {
-                this.sendToRenderer('send-initial-values', data.data) ;
+                this.sendToRenderer('send-initial-values', data) ;
             }
         }
     }
@@ -554,11 +554,12 @@ export class SCScout extends SCBase {
         }
     }
     
-    private addResults(scout: string, questionable: boolean, result: IPCNamedDataValue[]) {
+    private addResults(scout: string, questionable: boolean, result: IPCNamedDataValue[], edited?: boolean ) {
         let resobj : IPCScoutResult = {
             item: scout,
             data: result,
-            questionable: questionable
+            questionable: questionable,
+            edited: edited ? edited : false
         } ;
 
         //
@@ -726,7 +727,7 @@ export class SCScout extends SCBase {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
                     if (res.edited || !this.getResults(res.item)) {
-                        this.addResults(res.item, res.questionable, res.data) ;
+                        this.addResults(res.item, res.questionable, res.data, res.edited) ;
                     }
                 }
             }
@@ -739,7 +740,7 @@ export class SCScout extends SCBase {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
                     if (res.edited || !this.getResults(res.item)) {
-                        this.addResults(res.item, res.questionable, res.data) ;
+                        this.addResults(res.item, res.questionable, res.data, res.edited) ;
                     }
                 }
             }

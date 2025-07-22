@@ -505,19 +505,47 @@ xero-status-overlay-close-visible {
     height: 100%;
 }
 
+.xero-dataset-editor {
+    height: 100% ;
+}
+
 .xero-dataset-editor-div {
     padding: 2px ;
     display: flex;
     flex-direction: column;
     justify-content: center;
     overflow-y: auto ;
+    height: 100%;
+
+}
+
+.xero-dataset-editor-list-item-top {
+    width: 95%;
+    height: 100px ;
+    display: flex ;
+    flex-direction: row;
+    border: 1px solid black ;
+    border-radius: 5px ;
+    background-color: rgb(212, 212, 212);    
+}
+
+.xero-dataset-editor-list-item-delete {
+    font-size: 32px;
+    cursor: pointer;
+    flex-grow: 0;
+    color: red ;
+    background-color: rgb(212, 212, 212);
+    border: none ;
+    padding: 0 ;
+    outline: none ;
+}
+
+.xero-dataset-editor-list-item-delete:focus {
+    outline: none;
 }
 
 .xero-dataset-editor-list-item {
-    border: 1px solid black;
-    border-radius: 5px ;
-    width: 90%;
-    height: 100px ;
+    height: 100%;
     margin: 5px auto;
     font-size: 24px;
     text-align: center;
@@ -526,4 +554,5 @@ xero-status-overlay-close-visible {
     flex-direction: column;
     justify-content: center;
     user-select: none;
+    flex-grow: 1;
 }

@@ -32,6 +32,7 @@ export class XeroScoutFormView extends XeroView {
     private section_pages_ : XeroFormScoutSectionPage[] = [] ;
     private titlediv_? : HTMLElement ;
     private tabdiv_? : HTMLElement ;
+    private readonly_ : boolean = false ;
 
     private confirm_dialog_? : ConfirmScoutDialog ;
 
@@ -133,15 +134,23 @@ export class XeroScoutFormView extends XeroView {
         }
     }
 
-    private initForm(values: IPCNamedDataValue[]) : void {
-        for(let one of values) {
+    private initForm(result: IPCScoutResult) : void {
+        if (result && result.edited) {
+            this.readonly_ = true ;
+            this.titlediv_!.innerText += ' (Read Only)' ;
+        }
+        else {
+            this.readonly_ = false ;
+        }
+
+        for(let one of result.data) {
             this.data_.set(one.tag, one.value) ;
         }
         this.data_.dirty = false ;
 
         let page = this.tabbed_ctrl_!.selectedPageNumber ;
         if (page >= 0 && page < this.section_pages_.length) {
-            this.section_pages_[page].doLayout() ;
+            this.section_pages_[page].doLayout(this.readonly_ ) ;
         }
     }
 
@@ -277,7 +286,7 @@ export class XeroScoutFormView extends XeroView {
 
     private afterSectionChanged(oldpage: number, newpage: number) : void {
         if (newpage !== -1) {
-            this.section_pages_[newpage].doLayout() ;            
+            this.section_pages_[newpage].doLayout(this.readonly_) ;            
         }        
     }
 }

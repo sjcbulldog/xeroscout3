@@ -8,6 +8,7 @@ export class DataSetEditor extends XeroView {
     private dialog_ : EditDataSetDialog | undefined ;
     private teams_ : IPCTeamNickNameNumber[] = [] ; 
     private datasets_ : IPCDataSet[] = [] ;
+    private oldname_ : string | undefined ;
 
     // Class implementation goes here
     constructor(app: XeroApp) {
@@ -57,28 +58,71 @@ export class DataSetEditor extends XeroView {
         return label ;
     }
 
+    private deleteDataSet(ds: IPCDataSet) {
+        this.request('delete-dataset', ds.name) ;
+        this.datasets_ = this.datasets_.filter(d => d.name !== ds.name) ;
+        this.addDataSets() ;
+    }
+
     private addDataSetItem(ds: IPCDataSet) {
+        let top = document.createElement('div') ;
+        top.className = 'xero-dataset-editor-list-item-top' ;
+
+        let button = document.createElement('button') ;
+        button.className = 'xero-dataset-editor-list-item-delete' ;
+        button.innerHTML = '&#x2612' ;
+        button.addEventListener('click', this.deleteDataSet.bind(this, ds)) ;
+        top.appendChild(button) ;
+
         let div = document.createElement('div') ;
         div.style.cursor = 'pointer' ;
         div.className = 'xero-dataset-editor-list-item' ;
         div.innerText = this.datasetToLabel(ds) ;
-        div.addEventListener('click', this.editDataSet.bind(this)) ;
-        this.div_.appendChild(div) ;
+        div.addEventListener('click', this.editDataSet.bind(this, ds)) ;
+
+        top.appendChild(div) ;
+        this.div_.appendChild(top) ;
     }
 
     private addNewDataSetSentinel() {
+        let top = document.createElement('div') ;
+        top.className = 'xero-dataset-editor-list-item-top' ;
+
         let div = document.createElement('div') ;
         div.style.cursor = 'pointer' ;
         div.className = 'xero-dataset-editor-list-item' ;
         div.innerText = 'Add New Data Set' ;
         div.addEventListener('click', this.addNewDataSet.bind(this)) ;
-        this.div_.appendChild(div) ;
+
+        top.appendChild(div) ;
+        this.div_.appendChild(top) ;
     }
 
-    private editDataSetClosed(changed: boolean) {
+    private editDataSetClosed(newds: boolean, changed: boolean) {
         if (changed) {
-            this.request('update-dataset', this.dialog_!.dataset) ;
-            this.datasets_.push(this.dialog_!.dataset) ;
+            let newobj = this.dialog_!.dataset ;
+            if (!newds) {
+                if (this.oldname_ && this.oldname_ !== newobj.name) {
+                    //
+                    // The dataset name has changed, so we need to remove the old one
+                    // and add the new one.
+                    //
+                    this.datasets_ = this.datasets_.filter(d => d.name !== this.oldname_) ;
+                    this.request('delete-dataset', this.oldname_) ;
+                    this.oldname_ = undefined ;
+                    this.datasets_.push(this.dialog_!.dataset) ;
+                }
+                else {
+                    // The dataset has not changed, so we can just update it.
+                    let index = this.datasets_.findIndex(d => d.name === newobj.name) ;
+                    this.datasets_[index] = newobj ;
+                }
+            }
+            else {
+                this.datasets_.push(this.dialog_!.dataset) ;
+            }
+
+            this.request('update-dataset', newobj) ;
             this.addDataSets() ;
         }
         this.dialog_ = undefined ;
@@ -101,14 +145,24 @@ export class DataSetEditor extends XeroView {
 
         let names : string[] = this.datasets_.map(d => d.name) ;
         this.dialog_ = new EditDataSetDialog(ds, this.teams_, names) ;
-        this.dialog_.on('closed', this.editDataSetClosed.bind(this)) ;
+        this.dialog_.on('closed', this.editDataSetClosed.bind(this, true)) ;
         this.dialog_.showCentered(this.elem.parentElement!) ;
     }
 
     
-    private editDataSet() {
+    private editDataSet(ds: IPCDataSet) {
         if (this.dialog_) {
             return ;
         }
+
+        this.oldname_ = ds.name ;
+
+        let names : string[] = this.datasets_.map(d => d.name) ;
+        if (names.includes(ds.name)) {
+            names = names.filter(name => name !== ds.name) ;
+        }
+        this.dialog_ = new EditDataSetDialog(ds, this.teams_, names) ;
+        this.dialog_.on('closed', this.editDataSetClosed.bind(this, false)) ;
+        this.dialog_.showCentered(this.elem.parentElement!) ;        
     }
 }
