@@ -937,7 +937,17 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendDataSets() : void {
-		this.sendToRenderer('send-datasets', this.project_?.dataset_mgr_?.getDataSets()) ;
+		let dslist = this.project_?.dataset_mgr_?.getDataSets() ;
+		dslist = dslist?.sort((a, b) => {
+			if (a.name < b.name) {
+				return -1;
+			}
+			if (a.name > b.name) {
+				return 1;
+			}
+			return 0;
+		}) ;
+		this.sendToRenderer('send-datasets', dslist) ;
 	}
 
 	public renameDataSet(oldname: string, newname: string) : void {

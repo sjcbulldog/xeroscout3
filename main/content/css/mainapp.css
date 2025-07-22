@@ -513,10 +513,9 @@ xero-status-overlay-close-visible {
     padding: 2px ;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    align-items: flex-start;
     overflow-y: auto ;
     height: 100%;
-
 }
 
 .xero-dataset-editor-list-item-top {
@@ -526,7 +525,10 @@ xero-status-overlay-close-visible {
     flex-direction: row;
     border: 1px solid black ;
     border-radius: 5px ;
-    background-color: rgb(212, 212, 212);    
+    box-shadow: 5px 5px 5px lightgray;
+    background-color: rgb(212, 212, 212);
+    justify-content: center;
+    margin: 8px auto;
 }
 
 .xero-dataset-editor-list-item-delete {
@@ -536,7 +538,6 @@ xero-status-overlay-close-visible {
     color: red ;
     background-color: rgb(212, 212, 212);
     border: none ;
-    padding: 0 ;
     outline: none ;
 }
 
@@ -546,7 +547,6 @@ xero-status-overlay-close-visible {
 
 .xero-dataset-editor-list-item {
     height: 100%;
-    margin: 5px auto;
     font-size: 24px;
     text-align: center;
     background-color: rgb(212, 212, 212);
