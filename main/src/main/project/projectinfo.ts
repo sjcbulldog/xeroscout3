@@ -5,7 +5,7 @@ import { DataInfo } from "./datamgr";
 import { DataSetInfo } from "./datasetmgr";
 import { FormInfo } from "./formmgr";
 import { FormulaInfo } from "./formulamgr";
-import { GraphInfo } from "./graphmgr";
+import { AnalysisViewInfo } from "./analysismgr";
 import { MatchInfo } from "./matchmgr";
 import { PickListData } from "./picklistmgr";
 import { TabletInfo } from "./tabletmgr";
@@ -25,7 +25,7 @@ export class ProjectInfo {
     public formula_info_ : FormulaInfo = new FormulaInfo() ;            // The formula information for the project
     public tablet_info_ : TabletInfo = new TabletInfo() ;               // The tablet information for the project
     public match_info_ : MatchInfo = new MatchInfo() ;                  // The match information for the project
-    public graph_info_ : GraphInfo = new GraphInfo() ;                  // The graph information for the project
+    public analysis_view_info_ : AnalysisViewInfo = new AnalysisViewInfo() ;                  // The graph information for the project
     public form_info_ : FormInfo = new FormInfo() ;                     // The form information for the project
     public team_db_info_ : DataModelInfo = new DataModelInfo() ;        // The team database information for the project
     public match_db_info_ : DataModelInfo = new DataModelInfo() ;       // The match database information for the project

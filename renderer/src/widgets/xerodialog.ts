@@ -152,23 +152,31 @@ export abstract class XeroDialog extends EventEmitter {
 
     private keyDown(event: KeyboardEvent) {
         if (event.key === 'Escape') {
-            this.cancelButton(event) ;
+            this.pressCancelButton(event) ;
         }
         else if (event.key === 'Enter' && this.process_enter_key_) {
-            this.okButton(event) ;
+            this.pressOKButton(event) ;
         }
     }
 
-    public okButton(event: Event) {
+    private pressOKButton(event: Event) {
         if (this.isOKToClose(true)) {
+            this.okButton(event) ;
             this.close(true) ;
         }
     }
 
-    public cancelButton(event: Event) {
+    private pressCancelButton(event: Event) {
         if (this.isOKToClose(false)) {
+            this.cancelButton(event) ;
             this.close(false) ;
         }
+    }
+
+    public okButton(event: Event) {
+    }
+
+    public cancelButton(event: Event) {
     }
 
     protected isOKToClose(ok: boolean) : boolean { 
@@ -179,13 +187,13 @@ export abstract class XeroDialog extends EventEmitter {
         let okbutton = document.createElement('button') ;
         okbutton.innerText = this.yes_no_ ? 'Yes' : 'OK' ;
         okbutton.className = 'xero-popup-form-edit-dialog-button' ;
-        okbutton.addEventListener('click', this.okButton.bind(this)) ;
+        okbutton.addEventListener('click', this.pressOKButton.bind(this)) ;
         div.appendChild(okbutton) ;
 
         let cancelbutton = document.createElement('button') ;
         cancelbutton.innerText = this.yes_no_ ? 'No' : 'Cancel' ;
         cancelbutton.className = 'xero-popup-form-edit-dialog-button' ;
-        cancelbutton.addEventListener('click', this.cancelButton.bind(this)) ;
+        cancelbutton.addEventListener('click', this.pressCancelButton.bind(this)) ;
         div.appendChild(cancelbutton) ;
     }
 

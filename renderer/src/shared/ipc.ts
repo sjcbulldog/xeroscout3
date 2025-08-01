@@ -339,3 +339,26 @@ export interface IPCTeamNickNameNumber {
     number : number,
     nickname: string
 }
+
+export interface IPCAnalysisViewConfig {
+    name: string ;
+    description: string ;
+    dataset: string ;
+    fields: string[] ;
+}
+
+export interface IPCAnalysisConfigData {
+    current: string | undefined ; // The current single team config name
+    data: IPCAnalysisViewConfig[] ; // The data for the single team view
+}
+
+export interface IPCAnalysisData  {
+    message?: string ;       // A message to display in the analysis view when error occurs
+    data?: any[] ;           // Array of objects that contain the data for the analysis view
+    matches?: any[] ;        // Array of objects that contain the match data for the analysis view
+}
+
+export interface IPCMatches {
+    team: number ;
+    matches: any[] ;
+}

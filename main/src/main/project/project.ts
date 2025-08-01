@@ -22,9 +22,8 @@ import { FormulaManager } from './formulamgr';
 import { FormManager } from './formmgr';
 import { TabletData, TabletManager } from './tabletmgr';
 import { ManualMatchData, MatchManager } from './matchmgr';
-import { GraphManager } from './graphmgr';
+import { AnalysisViewManager } from './analysismgr';
 import { IPCHint, IPCScoutResults } from '../../shared/ipc';
-import { RulesEngine } from '../../shared/rulesengine';
 import { PlayoffManager } from './playoffmgr';
 
 export class Project {
@@ -45,7 +44,7 @@ export class Project {
     public form_mgr_?: FormManager ;
     public tablet_mgr_? : TabletManager ;
     public match_mgr_? : MatchManager ;
-    public graph_mgr_? : GraphManager ;
+    public analysis_view_mgr_? : AnalysisViewManager ;
     public playoff_mgr_? : PlayoffManager ;
 
     constructor(logger: winston.Logger, dir: string, year: number) {
@@ -65,12 +64,12 @@ export class Project {
         this.team_mgr_ = new TeamManager(this.logger_, this.writeEventFile.bind(this), this.info_.team_info_) ;
         this.match_mgr_ = new MatchManager(this.logger_, this.writeEventFile.bind(this), this.info_.match_info_) ;
         this.formula_mgr_ = new FormulaManager(this.logger_, this.writeEventFile.bind(this), this.info_.formula_info_) ;
-        this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.info_.team_db_info_, this.info_.match_db_info_, this.formula_mgr_) ;
+        this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.info_.team_db_info_, this.info_.match_db_info_, this.formula_mgr_, this.match_mgr_) ;
         this.form_mgr_ = new FormManager(this.logger_, this.writeEventFile.bind(this), this.info_.form_info_, this.location_, this.data_mgr_) ;
-        this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.data_mgr_) ;
+        this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.data_mgr_, this.match_mgr_) ;
         this.picklist_mgr_ = new PicklistMgr(this.logger_, this.writeEventFile.bind(this), this.info_.picklist_info_, this.team_mgr_, this.dataset_mgr_, this.data_mgr_, this.formula_mgr_) ;
         this.tablet_mgr_ = new TabletManager(this.logger_, this.writeEventFile.bind(this), this.info_.tablet_info_, this.team_mgr_, this.match_mgr_) ;
-        this.graph_mgr_ =  new GraphManager(this.logger_, this.writeEventFile.bind(this), this.info_.graph_info_, this.data_mgr_) ;
+        this.analysis_view_mgr_ =  new AnalysisViewManager(this.logger_, this.writeEventFile.bind(this), this.info_.analysis_view_info_, this.data_mgr_) ;
         this.playoff_mgr_ = new PlayoffManager(this.logger_, this.writeEventFile.bind(this), this.info_.playoff_info_, this.match_mgr_) ;
 
         this.writeEventFile() ;
@@ -422,6 +421,19 @@ export class Project {
 
                 if (ret.hidden_hints_ === undefined) {
                     ret.hidden_hints_ = [] ;
+                }
+
+                if (ret.analysis_view_info_ === undefined) {
+                    ret.analysis_view_info_ = {
+                        single_team_data_: {
+                            current: '',
+                            data: []
+                        },
+                        team_graph_data_ : {
+                            current: '',
+                            data: []
+                        }
+                    } ;
                 }
             }
             catch(err) {

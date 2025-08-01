@@ -15,11 +15,10 @@ import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
-import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber, IPCTeamStatus } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber, IPCTeamStatus, IPCAnalysisConfigData, IPCAnalysisViewConfig, IPCAnalysisData } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -1179,10 +1178,10 @@ export class SCCentral extends SCBase {
 			let omitted: string = '' ;
 			let count = 0 ;
 
-			for(let gr of proj.graph_mgr_!.getGraphs()) {
+			for(let gr of proj.analysis_view_mgr_!.graphs.data) {
 				if (gr.name.length > 0) {
-					if (!this.project_!.graph_mgr_!.findGraphByName(gr.name)) {
-						this.project_!.graph_mgr_!.storeGraph(gr) ;
+					if (!this.project_!.analysis_view_mgr_!.findGraphByName(gr.name)) {
+						this.project_!.analysis_view_mgr_!.updateGraph(gr) ;
 						count++ ;
 					}
 					else {
@@ -2339,103 +2338,8 @@ export class SCCentral extends SCBase {
 		this.sendToRenderer('send-team-list', ret) ;
 	}
 
-	public async saveTeamGraphSetup(desc: GraphConfig) {
-		this.project_?.graph_mgr_?.storeGraph(desc) ;
-	}
-
-	//
-	// request is of the form of an object
-	//
-	// {
-	//    teams: [list of team number],
-	//    data: {
-	//      team: ["field1", "field2", etc.]
-	//      match: ["field1", "field2", etc.]
-	//    }
-	// }
-	//
-	// Output format ...
-	//
-	//  let grdata =  {
-	//     labels: ['Category 1', 'Category 2', 'Category 3'],
-	//     datasets: [
-	//       {
-	//         label: 'Dataset 1',
-	//         data: [12, 19, 3],
-	//         backgroundColor: 'rgba(255, 99, 132, 0.2)',
-	//         borderColor: 'rgba(255, 99, 132, 1)',
-	//         borderWidth: 1
-	//       },
-	//       {
-	//         label: 'Dataset 2',
-	//         data: [10, 5, 8],
-	//         backgroundColor: 'rgba(54, 162, 235, 0.2)',
-	//         borderColor: 'rgba(54, 162, 235, 1)',
-	//         borderWidth: 1
-	//       }
-	//     ]
-	//   };
-	//
-	public async sendTeamGraphData(request: GraphDataRequest) {
-		if (this.project_ && this.project_.isInitialized()) {
-			let labels: Array<Array<string>> = [];
-			let group: GraphData[] = [];
-
-			let ds = this.project_!.dataset_mgr_!.getDataSetByName(request.ds) ;
-			if (ds) {
-				for (let team of ds?.teams) {
-					let t = this.project_.team_mgr_!.findTeamByNumber(team) ;
-
-					let oneteam: string[] = [] ;
-					if (t) {
-						oneteam.push(team.toString()) ;
-						oneteam.push(t.nickname) ;
-					}
-					else {
-						oneteam.push(team.toString());
-					}
-					
-					labels.push(oneteam) ;
-				}
-
-				for (let tdset of request.data.leftteam) {
-					let data = await this.project_!.graph_mgr_!.createTeamDataset(ds.teams, tdset, 'y');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				for (let tdset of request.data.leftmatch) {
-					let data = await this.project_!.graph_mgr_!.createMatchDataset(ds.teams, tdset, 'y');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				for (let tdset of request.data.rightteam) {
-					let data = await this.project_!.graph_mgr_!.createTeamDataset(ds.teams, tdset, 'y2');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				for (let tdset of request.data.rightmatch) {
-					let data = await this.project_!.graph_mgr_!.createMatchDataset(ds.teams, tdset, 'y2');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				//
-				// TODO: fix graphs
-				//
-				// let grdata : GraphData = {
-				// 	labels: labels,
-				// 	datasets: group,
-				// };
-				// this.sendToRenderer('send-team-graph-data', grdata);
-			}
-		}
+	public async saveTeamGraphSetup(desc: IPCAnalysisViewConfig) {
+		this.project_?.analysis_view_mgr_?.updateGraph(desc) ;
 	}
 
 	private getTeamNumbersFromKeys(keys: string[]) : number[] {
@@ -2470,13 +2374,13 @@ export class SCCentral extends SCBase {
 
 	public getStoredGraphList() {
 		if (this.project_ && this.project_!.isInitialized()) {
-			this.sendToRenderer('send-stored-graph-list', this.project_!.graph_mgr_!.getGraphs()) ;
+			this.sendToRenderer('send-stored-graph-list', this.project_!.analysis_view_mgr_!.graphs) ;
 		}
 	}
 
 	public deleteStoredGraph(name: string) {
 		if (this.project_ && this.project_!.isInitialized()) {
-			this.project_!.graph_mgr_!.deleteGraph(name) ;
+			this.project_!.analysis_view_mgr_!.deleteGraph(name) ;
 			this.getStoredGraphList() ;
 		}
 	}
@@ -2684,20 +2588,54 @@ export class SCCentral extends SCBase {
 
 	//#endregion
 
-	public async getSingleTeamData(ds: string, team: number) {
-		interface MyObject {
-			[key: string]: any; // Allows any property with a string key
+
+	// #region single team display
+	public async sendSingleTeamConfigs() {
+		if (this.project_ && this.project_.isInitialized()) {
+			let config = this.project_!.analysis_view_mgr_!.singleTeamData ;
+			this.sendToRenderer('send-single-team-configs', config) ;
 		}
-		let retdata : MyObject = {} ;
+	}
+
+	public async updateSingleTeamConfig(config: IPCAnalysisViewConfig) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.analysis_view_mgr_!.updateSingleTeamConfig(config) ;
+		}
+	}	
+
+	public async updateSingleTeamCurrent(config: string) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.analysis_view_mgr_!.updateSingleTeamCurrent(config) ;
+		}
+	}		
+
+	public async getSingleTeamData(config: IPCAnalysisViewConfig) {
+		let retdata : IPCAnalysisData  = {} ;
 
 		if (this.project_ && this.project_.isInitialized()) {
-			retdata.matches = this.project_.match_mgr_!.getMatchResults(+team) ;
-			retdata.teamdata = await this.project_.dataset_mgr_!.getDataSetData(ds) ;
-			retdata.videoicon = this.getIconData('video.png') ;
+			try {
+				retdata.data = await this.project_.dataset_mgr_!.getDataSetData(config.dataset, config.fields) ;
+				retdata.matches = await this.project_.dataset_mgr_!.getDataSetMatches(config.dataset) ;
+			}
+			catch(err) {
+				let errobj = err as Error ;
+				retdata.message = errobj.message ;
+			}
+		}
+		else {
+			retdata.message = "Project is not initialized" ;
 		}
 
 		this.sendToRenderer('send-single-team-data', retdata) ;
 	}
+
+	public async deleteSingleTeamConfig(name: string) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.analysis_view_mgr_!.deleteSingleTeam(name) ;
+		}
+	}
+
+	// #endregion
 
 	private importFormulasFromFileWithPath(path: string) {
 		if (this.project_ && this.project_.isInitialized()) {

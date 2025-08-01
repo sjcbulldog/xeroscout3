@@ -6,11 +6,11 @@ import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { DataValue } from '../../shared/datavalue' ;
-import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet } from "../../shared/ipc";
+import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet, IPCMatches } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
 import { SCBase } from "../apps/scbase";
-
+import { MatchManager } from "./matchmgr";
 
 export class DataInfo {
     public matchdb_col_config_? : IPCProjColumnsConfig ;       // List of hidden columns in match data
@@ -35,9 +35,10 @@ export class DataManager extends Manager {
     private teamdb_ : TeamDataModel ;
     private matchdb_ : MatchDataModel ;
     private formula_mgr_ : FormulaManager ;
+    private match_mgr_ : MatchManager ;
     private info_ : DataInfo ;
 
-    constructor(logger: winston.Logger, writer: () => void, dir: string, info: DataInfo, teaminfo: DataModelInfo, matchinfo: DataModelInfo, formula_mgr: FormulaManager) {
+    constructor(logger: winston.Logger, writer: () => void, dir: string, info: DataInfo, teaminfo: DataModelInfo, matchinfo: DataModelInfo, formula_mgr: FormulaManager, matchmgr: MatchManager) {
         super(logger, writer) ;
 
         this.info_ = info ;
@@ -51,6 +52,7 @@ export class DataManager extends Manager {
         }
         
         this.formula_mgr_ = formula_mgr ;
+        this.match_mgr_ = matchmgr ;
 
         let filename: string ;
 
@@ -135,6 +137,45 @@ export class DataManager extends Manager {
         }) ;
 
         return ret ;
+    }
+
+    public getTeamMatches(m: IPCMatchSet, team: number) : Promise<IPCMatches> {
+        let ret = new Promise<IPCMatches>((resolve, reject) => {
+            let fields = 'comp_level, set_number, match_number' ;
+            let teamkey = 'frc' + team ;
+            let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" ;' ;
+            this.matchdb_.all(query, undefined)        
+                .then((data) => {
+                    let datam : any[] = [] ;
+                    for(let one of data) {
+                        let onem = {
+                            comp_level : DataValue.toString(one.value('comp_level')!),
+                            set_number : DataValue.toInteger(one.value('set_number')!),
+                            match_number : DataValue.toInteger(one.value('match_number')!)
+                        } ;
+                        datam.push(onem) ;
+                    }
+                    let answer: BAMatch[] = [] ;
+                    let sorted = this.sortData(datam) ;
+                    let [start, end] = this.findMatchFilteredRange(m, data) ;
+                    for(let i = start ; i <= end ; i++) {
+                        let m = this.match_mgr_.findMatchByInfo(sorted[i].comp_level, sorted[i].set_number, sorted[i].match_number);
+                        if (m) {
+                            answer.push(m);
+                        }
+                    }
+
+                    let value : IPCMatches = {
+                        team: team,
+                        matches: answer
+                    } ;
+                    resolve(value) ;
+                })
+                .catch((err) => {
+                    reject(err) ;
+                }) ;
+        }) ;
+        return ret;
     }
 
     //
@@ -622,10 +663,9 @@ export class DataManager extends Manager {
         return ret ;
     }
 
-    private filterMatchData(m: IPCMatchSet, data: any[]) : any[] {
+    private findMatchFilteredRange(m: IPCMatchSet, data: any[]) : [number, number] {
         let start = 0 ;
         let end = data.length - 1 ;
-        let newdata : any[] = [] ;
 
         if (m.kind == 'first') {
             // 
@@ -641,7 +681,7 @@ export class DataManager extends Manager {
             // We want the last N entries
             //
             end = data.length - 1 ;
-            start = data.length - m.first ;
+            start = data.length - m.last ;
             if (start < 0) {
                 start = 0 ;
             }
@@ -664,6 +704,13 @@ export class DataManager extends Manager {
             }
         }
 
+        return [start, end] ;
+    }
+
+    private filterMatchData(m: IPCMatchSet, data: any[]) : any[] {
+        let newdata : any[] = [] ;
+
+        let [start, end] = this.findMatchFilteredRange(m, data) ;
         for(let i = start ; i <= end ; i++) {
             newdata.push(data[i]) ;
         }

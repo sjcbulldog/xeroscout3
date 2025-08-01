@@ -23,7 +23,11 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getMatchFormatFormulas,
          getTeamFormatFormulas,
          setMatchFormatFormulas,
-         setTeamFormatFormulas} from "./main/ipchandlers" ;
+         setTeamFormatFormulas,
+         getSingleTeamConfigs,
+         updateSingleTeamConfig,
+         updateSingleTeamCurrent,
+         deleteSingleTeamConfig} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -212,6 +216,10 @@ app.on("ready", () => {
     ipcMain.on('get-picklist-col-data', (event, ...args) => { getPicklistColData('get-picklist-col-data', ...args)}) ;
     ipcMain.on('client-log', (event, ...args) => { clientLog('client-log', ...args)}) ;
     ipcMain.on('get-single-team-data', (event, ...args) => { getSingleTeamData('get-single-team-data', ...args)}) ;
+    ipcMain.on('get-single-team-configs', (event, ...args) => { getSingleTeamConfigs('get-single-team-configs', ...args)}) ;
+    ipcMain.on('delete-single-team-config', (event, ...args) => { deleteSingleTeamConfig('delete-single-team-config', ...args)}) ;
+    ipcMain.on('update-single-team-config', (event, ...args) => { updateSingleTeamConfig('update-single-team-config', ...args)}) ;    
+    ipcMain.on('update-single-team-current', (event, ...args) => { updateSingleTeamCurrent('update-single-team-current', ...args)}) ;
     ipcMain.on('get-hint-db', (event, ...args) => { getHintDB('get-hint-db', ...args)}) ;
     ipcMain.on('set-hint-hidden', (event, ...args) => { setHintHidden('get-hint-db', ...args)}) ;
     ipcMain.on('get-playoff-status', (event, ...args) => { getPlayoffStatus('get-playoff-status', ...args)}) ;

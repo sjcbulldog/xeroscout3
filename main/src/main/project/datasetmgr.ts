@@ -1,11 +1,9 @@
 import winston from "winston" ;
 import { Manager } from "./manager";
 import { DataManager } from "./datamgr";
-import { IPCDataSet, IPCMatchSet, IPCTypedDataValue } from "../../shared/ipc";
-
-
-
-
+import { IPCDataSet, IPCMatches, IPCMatchSet, IPCTypedDataValue } from "../../shared/ipc";
+import { MatchManager } from "./matchmgr";
+import { BAMatch } from "../extnet/badata";
 
 //
 // DataSetData -
@@ -23,11 +21,13 @@ export class DataSetInfo {
 export class DataSetManager extends Manager {
     private info_ : DataSetInfo ;
     private datamgr_ : DataManager ;
+    private matchmgr_ : MatchManager ;
 
-    constructor(logger: winston.Logger,  writer: () => void, info: DataSetInfo, datamgr: DataManager) {
+    constructor(logger: winston.Logger,  writer: () => void, info: DataSetInfo, datamgr: DataManager, matchmgr: MatchManager) {
         super(logger, writer) ;
         this.info_ = info ;
         this.datamgr_ = datamgr ;
+        this.matchmgr_ = matchmgr ;
     }
 
     public getDataSets() : IPCDataSet[] {
@@ -58,26 +58,57 @@ export class DataSetManager extends Manager {
         return ret; 
     }
 
-    public async getDataSetData(dsname: string) : Promise <any> {
+    public async getDataSetData(dsname: string, fields: string[]) : Promise <object[]> {
         interface OneTeam {
             [key: string]: any; // Allows any property with a string key
         }
 
-        let ret = new Promise<any>(async (resolve, reject) => {
+        let ret = new Promise<object[]>(async (resolve, reject) => {
             let ds = this.findDataSet(dsname) ;
             if (!ds) {
                 reject(new Error("data set '" + dsname + "' not found")) ;
             }
             else {
                 let allteams = [] ;
-                for(let t of ds.teams) {          
+                for(let t of ds.teams) {  
                     let teamData: OneTeam = {} ;
                     teamData['team_number'] = t ;
                     allteams.push(teamData) ;
+
+                    for(let field of fields) {
+                        try {
+                            let data = await this.getData(ds, field, t) ;
+                            teamData[field] = data.value ;
+                        }
+                        catch(err) {
+                            this.logger_.error({ message: 'getDataSetData error', error: err, dsname: dsname, field: field, team: t }) ;
+                            teamData[field] = null ; // Set to null if there is an error
+                        }
+                    }
                 }
                 resolve(allteams) ;
             }
         }) ;
+        return ret ;
+    }
+
+    public async getDataSetMatches(dsname: string) : Promise<IPCMatches[]> {
+        let ret = new Promise<IPCMatches[]>(async (resolve, reject) => {
+            let data: IPCMatches[] = [] ;
+
+            let ds = this.findDataSet(dsname) ;
+            if (!ds) {
+                return undefined ;
+            }
+
+            for(let team of ds.teams) {
+                let matches = await this.datamgr_.getTeamMatches(ds.matches, team) ;
+                data.push(matches) ;
+            }
+
+            resolve(data) ;
+        }) ;
+
         return ret ;
     }
 

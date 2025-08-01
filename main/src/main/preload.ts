@@ -75,7 +75,6 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'set-multi-selected-teams',
         'get-team-field-list',
         'get-match-field-list',
-        'get-single-team-formulas',
         'save-team-graph-setup',
         'get-match-list',
         'get-stored-graph-list',
@@ -96,9 +95,11 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 
         'client-log',
 
+        'get-single-team-configs',
         'get-single-team-data',
-        'update-single-team-data',
-        'get-single-team-fields',
+        'update-single-team-config',
+        'update-single-team-current',
+        'delete-single-team-config',
 
         'get-hint-db',
         'set-hint-hidden',
@@ -167,7 +168,6 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-multi-selected-teams',
         'send-team-field-list',
         'send-match-field-list',
-        'send-single-team-formulas',
         'send-match-list',
         'send-stored-graph-list',
         'tablet-title',
@@ -178,7 +178,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-picklist-col-data',
         'send-picklist-notes',
         'send-single-team-data',
-        'send-single-team-fields',
+        'send-single-team-configs',
         'send-hint-db',
         'send-playoff-status',
         'send-match-format-formulas',

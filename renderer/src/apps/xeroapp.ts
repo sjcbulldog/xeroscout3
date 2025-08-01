@@ -25,6 +25,7 @@ import { ResizeBar } from "./resizebar.js";
 import { XeroFormulasView } from "../views/formulas/formulas.js";
 import { XeroPlayoffsView } from "../views/playoffs/playoffs.js";
 import { DataSetEditor } from "../views/dataset/datasetedit.js";
+import { SingleTeamView } from "../views/singleteam/singleteamview.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -193,12 +194,12 @@ export class XeroApp extends XeroMainProcessInterface {
     }
 
     private registerViews() {
-        this.registerView('text', XeroTextView, ['central', 'scout', 'coach']) ;
+        this.registerView('text', XeroTextView, ['central', 'scout']) ;
         this.registerView('info', XeroInfoView, ['central']) ;
         this.registerView('select-event', XeroSelectEvent, ['central']) ;
         this.registerView('assign-tablets', XeroAssignTablets, ['central']) ;
         this.registerView('form-edit', XeroEditFormView, ['central']) ;
-        this.registerView('form-scout', XeroScoutFormView, ['central', 'scout', 'coach']) ;
+        this.registerView('form-scout', XeroScoutFormView, ['central', 'scout']) ;
         this.registerView('team-status', XeroTeamStatus, ['central']) ;
         this.registerView('team-db', XeroTeamDatabaseView, ['central']) ;
         this.registerView('match-status', XeroMatchStatus, ['central']) ;
@@ -208,5 +209,6 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('formulas', XeroFormulasView, ['central']) ;
         this.registerView('playoffs', XeroPlayoffsView, ['central', 'scout']) ;
         this.registerView('datasets', DataSetEditor, ['central']) ;
+        this.registerView('singleteam', SingleTeamView, ['central']) ;
     }
 }
