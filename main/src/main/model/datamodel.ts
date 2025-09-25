@@ -194,7 +194,10 @@ export abstract class DataModel extends EventEmitter {
                 }) ;
                 let records = await this.getAllData() ;
                 for(let record of records) {
-                    csvStream.write(record) ;
+                    let obj = record.jsonObj ;
+                    if (obj) {
+                        csvStream.write(obj) ;
+                    }
                 }
                 csvStream.end();
             }

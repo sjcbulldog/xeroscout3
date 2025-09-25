@@ -18,7 +18,8 @@ import { ManualMatchData } from "../project/matchmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber, IPCTeamStatus, IPCAnalysisConfigData, IPCAnalysisViewConfig, IPCAnalysisData } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, 
+		 IPCCheckDBViewFormula, IPCDataSet, IPCMatchStatus, IPCTeamNickNameNumber, IPCTeamStatus, IPCAnalysisConfigData, IPCAnalysisViewConfig} from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -2609,24 +2610,7 @@ export class SCCentral extends SCBase {
 		}
 	}		
 
-	public async getSingleTeamData(config: IPCAnalysisViewConfig) {
-		let retdata : IPCAnalysisData  = {} ;
-
-		if (this.project_ && this.project_.isInitialized()) {
-			try {
-				retdata.data = await this.project_.dataset_mgr_!.getDataSetData(config.dataset, config.fields) ;
-				retdata.matches = await this.project_.dataset_mgr_!.getDataSetMatches(config.dataset) ;
-			}
-			catch(err) {
-				let errobj = err as Error ;
-				retdata.message = errobj.message ;
-			}
-		}
-		else {
-			retdata.message = "Project is not initialized" ;
-		}
-
-		this.sendToRenderer('send-single-team-data', retdata) ;
+	public async getSingleTeamData(config: IPCAnalysisViewConfig) {;
 	}
 
 	public async deleteSingleTeamConfig(name: string) {

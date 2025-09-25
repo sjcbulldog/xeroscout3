@@ -1,5 +1,5 @@
 import { XeroApp } from "../../apps/xeroapp.js";
-import { IPCDataSet, IPCTeamNickNameNumber } from "../../shared/ipc.js";
+import { IPCColumnDesc, IPCDataSet, IPCFormula, IPCTeamNickNameNumber } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 import { EditDataSetDialog } from "./editdataset.js";
 
@@ -10,14 +10,26 @@ export class DataSetEditor extends XeroView {
     private datasets_ : IPCDataSet[] = [] ;
     private oldname_ : string | undefined ;
 
+    private formulas_ : string[] = [] ;
+    private match_fields_ : string[] = [] ;
+    private team_fields_ : string[] = [] ;
+    private seen_formulas_ : boolean = false ;
+    private seen_match_fields_ : boolean = false ;
+    private seen_team_fields_ : boolean = false ;    
+
     // Class implementation goes here
     constructor(app: XeroApp) {
         super(app, 'xero-dataset-editor');
 
         this.registerCallback('send-team-list', this.receivedTeams.bind(this)) ;
         this.registerCallback('send-datasets', this.receivedDataSets.bind(this)) ;
+        this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;
+        this.registerCallback('send-match-field-list', this.receivedMatchFields.bind(this)) ;
+        this.registerCallback('send-team-field-list', this.receivedTeamFields.bind(this)) ;        
         this.request('get-team-list', true) ;
-        this.request('get-datasets') ;
+        this.request('get-match-field-list') ;
+        this.request('get-team-field-list') ;
+        this.request('get-formulas') ;  
 
         this.div_ = document.createElement('div') ;
         this.div_.className = 'xero-dataset-editor-div' ;
@@ -25,6 +37,30 @@ export class DataSetEditor extends XeroView {
 
         this.addNewDataSetSentinel() ;
     }
+
+    private checkReady() {
+        if (this.seen_formulas_ && this.seen_match_fields_ && this.seen_team_fields_) {
+            this.request('get-datasets') ;
+        }
+    }
+
+    private receivedFormulas(data: IPCFormula[]) {
+        this.formulas_ = data.map(f => f.name) ;
+        this.seen_formulas_ = true ;
+        this.checkReady() ;
+    }
+
+    private receivedMatchFields(data: IPCColumnDesc[]) {
+        this.match_fields_ = data.map(f => f.name) ;
+        this.seen_match_fields_ = true ;
+        this.checkReady() ;
+    }
+
+    private receivedTeamFields(data: IPCColumnDesc[]) {
+        this.team_fields_ = data.map(f => f.name) ;
+        this.seen_team_fields_ = true ;
+        this.checkReady() ;
+    }     
 
     private receivedTeams(teams: IPCTeamNickNameNumber[]) {
         this.teams_ = teams ;   
@@ -140,11 +176,12 @@ export class DataSetEditor extends XeroView {
                 kind: 'all',
                 first: -1,
                 last: -1,
-            }
+            },
+            fields: [],
         };
 
         let names : string[] = this.datasets_.map(d => d.name) ;
-        this.dialog_ = new EditDataSetDialog(ds, this.teams_, names) ;
+        this.dialog_ = new EditDataSetDialog(ds, this.teams_, names, this.match_fields_, this.team_fields_, this.formulas_) ;
         this.dialog_.on('closed', this.editDataSetClosed.bind(this, true)) ;
         this.dialog_.showCentered(this.elem.parentElement!) ;
     }
@@ -161,7 +198,7 @@ export class DataSetEditor extends XeroView {
         if (names.includes(ds.name)) {
             names = names.filter(name => name !== ds.name) ;
         }
-        this.dialog_ = new EditDataSetDialog(ds, this.teams_, names) ;
+        this.dialog_ = new EditDataSetDialog(ds, this.teams_, names, this.match_fields_, this.team_fields_, this.formulas_) ;
         this.dialog_.on('closed', this.editDataSetClosed.bind(this, false)) ;
         this.dialog_.showCentered(this.elem.parentElement!) ;        
     }

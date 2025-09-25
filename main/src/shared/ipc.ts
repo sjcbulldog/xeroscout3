@@ -294,7 +294,8 @@ export interface IPCMatchSet {
 export interface IPCDataSet {
     name: string ;                                  // The name of the data set
     teams: number[] ;                               // The list of teams in the data set
-    matches: IPCMatchSet ;                            // The set of matches to use for the data set
+    matches: IPCMatchSet ;                          // The set of matches to use for the data set
+    fields: string[] ;                              // The list of fields to use for the data set
 }
 
 export interface IPCTeamStatus {
@@ -352,8 +353,9 @@ export interface IPCAnalysisConfigData {
     data: IPCAnalysisViewConfig[] ; // The data for the single team view
 }
 
-export interface IPCAnalysisData  {
+export interface IPCDataSetData  {
     message?: string ;       // A message to display in the analysis view when error occurs
+    name : string ;
     data?: any[] ;           // Array of objects that contain the data for the analysis view
     matches?: any[] ;        // Array of objects that contain the match data for the analysis view
 }

@@ -12,23 +12,37 @@ export class EditDataSetDialog extends XeroDialog {
     private data_set_name_?: HTMLInputElement ;
     private first_n_?: HTMLInputElement ;
     private last_n_?: HTMLInputElement ;
-    private table_? : TabulatorFull ;
+    private team_table_? : TabulatorFull ;
     private all_ : HTMLElement | undefined ;
     private first_ : HTMLElement | undefined ;
     private last_ : HTMLElement | undefined ;
     private range_ : HTMLElement | undefined ;
     private error_ : HTMLSpanElement | undefined ;
+    private list_div_? : HTMLDivElement ;
+    private match_fields_table_div_? : HTMLDivElement ;
+    private match_fields_table_? : TabulatorFull ;
+    private team_fields_table_div_? : HTMLDivElement ;
+    private team_fields_table_? : TabulatorFull ;
+    private formula_table_div_? : HTMLDivElement ;
+    private formula_table_? : TabulatorFull ;
+
+    private match_fields_ : string[] = [] ;
+    private team_fields_ : string[] = [] ;
+    private formulas_ : string[] = [] ;    
     private button_map_ : Map<HTMLInputElement, string> = new Map() ;
 
     private dataset_ : IPCDataSet ;
     private teams_ : IPCTeamNickNameNumber[] ;
     private names_ : string[] ;
 
-    constructor(ds: IPCDataSet, teams: IPCTeamNickNameNumber[], names: string[]) {
+    constructor(ds: IPCDataSet, teams: IPCTeamNickNameNumber[], names: string[], match_fields: string[], team_fields: string[], formulas: string[]) {
         super('Edit Data Set') ;
         this.dataset_ = JSON.parse(JSON.stringify(ds)) ;        // Deep copy to avoid modifying original dataset
         this.teams_ = teams ;
         this.names_ = names ;
+        this.match_fields_ = match_fields ;
+        this.team_fields_ = team_fields ;
+        this.formulas_ = formulas ;
     }
 
     public get dataset(): IPCDataSet {
@@ -36,6 +50,10 @@ export class EditDataSetDialog extends XeroDialog {
     }
 
     async populateDialog(pdiv: HTMLDivElement) {
+        let theight = '200px' ;
+        if (window.innerHeight < 800) {
+            theight = '150px' ;
+        }
         let div = document.createElement('div') ;
         div.className = 'xero-popup-form-edit-dialog-rowdiv' ;
 
@@ -111,9 +129,9 @@ export class EditDataSetDialog extends XeroDialog {
         div5.className = 'xero-popup-form-edit-dialog-rowdiv' ;
         div.appendChild(div5) ;
 
-        this.table_ = new TabulatorFull(div5, {
+        this.team_table_ = new TabulatorFull(div5, {
             data: this.createTeamList(),
-            height: '200px',
+            height: theight,
             layout: 'fitColumns',
             columns: [
                 { title: 'Team Number', field: 'number' },
@@ -121,7 +139,59 @@ export class EditDataSetDialog extends XeroDialog {
                 { title: 'Included', field: 'visible', formatter: 'tickCross', width: 100},
             ],
         }) ;
-        this.table_.on('cellClick', this.cellClick.bind(this)) ;
+        this.team_table_.on('cellClick', this.cellClick.bind(this)) ;
+
+        this.list_div_ = document.createElement('div') ;
+        this.list_div_.className = 'xero-popup-form-new-formula-list-div' ;
+        div.appendChild(this.list_div_) ;
+
+        this.match_fields_table_div_ = document.createElement('div') ;
+        this.match_fields_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
+        this.list_div_.appendChild(this.match_fields_table_div_) ;
+
+        this.match_fields_table_ = new TabulatorFull(this.match_fields_table_div_, {
+            data: this.createFieldData(this.match_fields_),
+            height: theight,
+            columns: [
+                { title: 'Included', field: 'visible', formatter: 'tickCross', width: 100},                  
+                { title: 'Match', field: 'name' , width: 200},
+            ],
+            layout: 'fitData',
+            maxHeight: '300px',
+        }) ;
+        this.match_fields_table_.on('cellClick', this.cellClick.bind(this)) ;
+
+        this.team_fields_table_div_ = document.createElement('div') ;
+        this.team_fields_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
+        this.list_div_.appendChild(this.team_fields_table_div_) ;
+
+        this.team_fields_table_ = new TabulatorFull(this.team_fields_table_div_, {
+            data: this.createFieldData(this.team_fields_),
+            height: theight,
+            columns: [
+                { title: 'Included', field: 'visible', formatter: 'tickCross', width: 100},                 
+                { title: 'Team', field: 'name' , width: 200},
+            ],
+            layout: 'fitColumns',
+            maxHeight: '300px'
+        }) ;        
+        this.team_fields_table_.on('cellClick', this.cellClick.bind(this)) ;
+
+        this.formula_table_div_ = document.createElement('div') ;
+        this.formula_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
+        this.list_div_.appendChild(this.formula_table_div_) ;
+
+        this.formula_table_ = new TabulatorFull(this.formula_table_div_, {
+            data: this.createFieldData(this.formulas_),
+            height: theight,
+            columns: [
+                { title: 'Included', field: 'visible', formatter: 'tickCross', width: 100},                  
+                { title: 'Formula', field: 'name' , width: 200},
+            ],
+            layout: 'fitColumns',
+            maxHeight: '300px'
+        }) ;
+        this.formula_table_.on('cellClick', this.cellClick.bind(this)) ;        
 
         this.error_ = document.createElement('span') ;
         this.error_.className = 'xero-popup-form-edit-dialog-error' ;
@@ -149,6 +219,20 @@ export class EditDataSetDialog extends XeroDialog {
             data.visible = !data.visible ;
             cell.setValue(data.visible) ;
         }
+    }    
+
+    private createFieldData(names: string[]) : any[] {
+        let ret = [] ;
+        for(let name of names) {
+            let visible = this.dataset_.fields && this.dataset_.fields.includes(name) ;
+            ret.push(
+                { 
+                    name: name, 
+                    visible: visible
+            }) ;
+        }
+
+        return ret ;
     }    
 
     private createTeamList(): DataSetTeamList[] {
@@ -215,6 +299,25 @@ export class EditDataSetDialog extends XeroDialog {
         }
     }
 
+    private extractFieldsFromTable(table: TabulatorFull) : string[] {
+        let fields: string[] = [] ;
+        let data = table.getData() ;
+        for (let row of data) {
+            if (row.visible) {
+                fields.push(row.name) ;
+            }
+        }
+        return fields ;
+    }
+
+    private extractAllFields() : string[] {
+        let fields: string[] = [] ;
+        fields.push(...this.extractFieldsFromTable(this.match_fields_table_!)) ;
+        fields.push(...this.extractFieldsFromTable(this.team_fields_table_!)) ;
+        fields.push(...this.extractFieldsFromTable(this.formula_table_!)) ;
+        return fields ;
+    }
+
     protected isOKToClose(ok: boolean): boolean {
         if (ok) {
             let name = this.data_set_name_?.value.trim() || '' ;            
@@ -243,6 +346,11 @@ export class EditDataSetDialog extends XeroDialog {
                 this.data_set_name_!.focus() ;
                 return false ;
             }
+
+            if (this.extractAllFields().length === 0) {
+                this.error_!.innerText = 'At least one field must be selected.' ;
+                return false ;
+            }
         }
 
         return true ;
@@ -252,7 +360,7 @@ export class EditDataSetDialog extends XeroDialog {
         this.dataset_.name = this.data_set_name_?.value || '' ;
         this.dataset_.matches.first = parseInt(this.first_n_?.value || '-1', 10) ;
         this.dataset_.matches.last = parseInt(this.last_n_?.value || '-1', 10) ;
-        this.dataset_.teams = this.table_?.getData().filter(team => team.visible).map(team => team.number) || [] ;
+        this.dataset_.teams = this.team_table_?.getData().filter(team => team.visible).map(team => team.number) || [] ;
 
         if ((this.all_?.firstChild as HTMLInputElement).checked) {
             this.dataset_.matches.kind = 'all' ;
@@ -266,6 +374,8 @@ export class EditDataSetDialog extends XeroDialog {
         else if ((this.range_?.firstChild as HTMLInputElement).checked) {
             this.dataset_.matches.kind = 'range' ;
         }
+
+        this.dataset_.fields = this.extractAllFields() ;
 
         super.okButton(event) ;
     }
