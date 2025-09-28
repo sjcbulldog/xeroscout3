@@ -1059,7 +1059,7 @@ export class XeroEditFormView extends XeroView {
 
     private editControlProperties() {
 
-        if (this.popup_menu_ || this.edit_dialog_) {
+        if (this.edit_dialog_) {
             return ;
         }
 
