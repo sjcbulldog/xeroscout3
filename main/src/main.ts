@@ -69,13 +69,7 @@ function createWindow() : void {
         }
 
         if (index === process.argv.length) {
-            dialog.showMessageBoxSync(win, {
-                type: 'error',
-                title: 'Error',
-                message: 'No application specified - the first argument that is not a flag must be the application name (e.g. scout, coach, central)',
-                buttons: ['OK']
-            });
-            app.exit(1) ;
+            scappbase = new SCCentral(win, args) ;            
         }       
         else if (process.argv[index] === "scout") {
             scappbase = new SCScout(win, args) ;

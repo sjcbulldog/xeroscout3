@@ -4,3 +4,5 @@ dist
 xeroscout-scout.txt
 xeroscout-server.txt
 installer/*.exe
+**/.DS_Store
+
