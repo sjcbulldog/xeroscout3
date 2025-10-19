@@ -78,7 +78,6 @@ function createWindow() : void {
   
     const win = new BrowserWindow(opts);
 
-    bounds = undefined ;
     if (!bounds) {
         win.maximize() ;
     }
