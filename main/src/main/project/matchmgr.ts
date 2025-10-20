@@ -79,13 +79,13 @@ export class MatchManager extends Manager {
                 alliances: {
                   red: {
                     score: 0,
-                    team_keys: ['frc-' + d.red[0], 'frc-' + d.red[1], 'frc-' + d.red[2]],
+                    team_keys: ['frc' + d.red[0], 'frc' + d.red[1], 'frc' + d.red[2]],
                     surrogate_team_keys: [],
                     dq_team_keys: []
                   },
                   blue: {
                     score: 0,
-                    team_keys: ['frc-' + d.blue[0], 'frc-' + d.blue[1], 'frc-' + d.blue[2]],
+                    team_keys: ['frc' + d.blue[0], 'frc' + d.blue[1], 'frc' + d.blue[2]],
                     surrogate_team_keys: [],
                     dq_team_keys: []
                   }

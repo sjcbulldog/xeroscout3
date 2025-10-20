@@ -2,10 +2,7 @@ import winston from "winston" ;
 import { Manager } from "./manager";
 import { DataManager } from "./datamgr";
 import { IPCDataSet, IPCMatchSet, IPCTypedDataValue } from "../../shared/ipc";
-
-
-
-
+import { TeamManager } from "./teammgr";
 
 //
 // DataSetData -
@@ -23,11 +20,13 @@ export class DataSetInfo {
 export class DataSetManager extends Manager {
     private info_ : DataSetInfo ;
     private datamgr_ : DataManager ;
+    private team_mgr_ : TeamManager ;
 
-    constructor(logger: winston.Logger,  writer: () => void, info: DataSetInfo, datamgr: DataManager) {
+    constructor(logger: winston.Logger,  writer: () => void, info: DataSetInfo, datamgr: DataManager, teammgr: TeamManager ) {
         super(logger, writer) ;
         this.info_ = info ;
         this.datamgr_ = datamgr ;
+        this.team_mgr_ = teammgr ;
     }
 
     public getDataSets() : IPCDataSet[] {
@@ -70,7 +69,7 @@ export class DataSetManager extends Manager {
             }
             else {
                 let allteams = [] ;
-                for(let t of ds.teams) {          
+                for(let t of this.team_mgr_.getSortedTeamNumbers()) {
                     let teamData: OneTeam = {} ;
                     teamData['team_number'] = t ;
                     allteams.push(teamData) ;

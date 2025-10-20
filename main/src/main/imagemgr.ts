@@ -132,5 +132,7 @@ export class ImageManager {
                 fs.unlinkSync(filePath) ;
             }
         }
+
+        this.rescanImageDirs() ;        
     }
 }

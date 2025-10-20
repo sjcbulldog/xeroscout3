@@ -291,6 +291,6 @@ export interface IPCMatchSet {
 //
 export interface IPCDataSet {
     name: string ;                                  // The name of the data set
-    teams: number[] ;                               // The list of teams in the data set
-    matches: IPCMatchSet ;                            // The set of matches to use for the data set
+    matches: IPCMatchSet ;                          // The set of matches to use for the data set
+    formula: string ;                               // The formula to use to filter the data set
 }

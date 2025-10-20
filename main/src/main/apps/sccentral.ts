@@ -865,11 +865,15 @@ export class SCCentral extends SCBase {
 		let ret: number = -1;
 		let m1 = /^frc[0-9]+$/;
 		let m2 = /^[0-9]+$/;
+		let m3 = /^frc-[0-9]+$/;
 
 		if (m1.test(key)) {
 			ret = +key.substring(3);
 		} else if (m2.test(key)) {
 			ret = +key;
+		}
+		else if (m3.test(key)) {
+			ret = +key.substring(4) ;
 		}
 
 		return ret;
@@ -1060,7 +1064,7 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendMatchData(): void {
-		if (this.project_ && this.project_.isInitialized() && this.project_.match_mgr_!.hasMatches()) {
+		if (this.project_ && this.project_.isInitialized()) {
 			this.sendMatchDataInternal(this.project_.match_mgr_!.getMatches());
 		}
 	}
@@ -1762,11 +1766,6 @@ export class SCCentral extends SCBase {
 	}
 
 	private importMatchesFromFile(filename: string) {
-		interface TeamData {
-			number_: Number;
-			nickname_: string;
-		}
-
 		const file = fs.readFileSync(filename, "utf8");
 
 		Papa.parse(file, {
@@ -2338,39 +2337,6 @@ export class SCCentral extends SCBase {
 		this.project_?.graph_mgr_?.storeGraph(desc) ;
 	}
 
-	//
-	// request is of the form of an object
-	//
-	// {
-	//    teams: [list of team number],
-	//    data: {
-	//      team: ["field1", "field2", etc.]
-	//      match: ["field1", "field2", etc.]
-	//    }
-	// }
-	//
-	// Output format ...
-	//
-	//  let grdata =  {
-	//     labels: ['Category 1', 'Category 2', 'Category 3'],
-	//     datasets: [
-	//       {
-	//         label: 'Dataset 1',
-	//         data: [12, 19, 3],
-	//         backgroundColor: 'rgba(255, 99, 132, 0.2)',
-	//         borderColor: 'rgba(255, 99, 132, 1)',
-	//         borderWidth: 1
-	//       },
-	//       {
-	//         label: 'Dataset 2',
-	//         data: [10, 5, 8],
-	//         backgroundColor: 'rgba(54, 162, 235, 0.2)',
-	//         borderColor: 'rgba(54, 162, 235, 1)',
-	//         borderWidth: 1
-	//       }
-	//     ]
-	//   };
-	//
 	public async sendTeamGraphData(request: GraphDataRequest) {
 		if (this.project_ && this.project_.isInitialized()) {
 			let labels: Array<Array<string>> = [];
@@ -2378,7 +2344,8 @@ export class SCCentral extends SCBase {
 
 			let ds = this.project_!.dataset_mgr_!.getDataSetByName(request.ds) ;
 			if (ds) {
-				for (let team of ds?.teams) {
+				let teamlist = this.project_!.team_mgr_!.getSortedTeamNumbers() ;
+				for (let team of teamlist) {
 					let t = this.project_.team_mgr_!.findTeamByNumber(team) ;
 
 					let oneteam: string[] = [] ;
@@ -2394,41 +2361,32 @@ export class SCCentral extends SCBase {
 				}
 
 				for (let tdset of request.data.leftteam) {
-					let data = await this.project_!.graph_mgr_!.createTeamDataset(ds.teams, tdset, 'y');
+					let data = await this.project_!.graph_mgr_!.createTeamDataset(teamlist, tdset, 'y');
 					if (data) {
 						group.push(data);
 					}
 				}
 
 				for (let tdset of request.data.leftmatch) {
-					let data = await this.project_!.graph_mgr_!.createMatchDataset(ds.teams, tdset, 'y');
+					let data = await this.project_!.graph_mgr_!.createMatchDataset(teamlist, tdset, 'y');
 					if (data) {
 						group.push(data);
 					}
 				}
 
 				for (let tdset of request.data.rightteam) {
-					let data = await this.project_!.graph_mgr_!.createTeamDataset(ds.teams, tdset, 'y2');
+					let data = await this.project_!.graph_mgr_!.createTeamDataset(teamlist, tdset, 'y2');
 					if (data) {
 						group.push(data);
 					}
 				}
 
 				for (let tdset of request.data.rightmatch) {
-					let data = await this.project_!.graph_mgr_!.createMatchDataset(ds.teams, tdset, 'y2');
+					let data = await this.project_!.graph_mgr_!.createMatchDataset(teamlist, tdset, 'y2');
 					if (data) {
 						group.push(data);
 					}
 				}
-
-				//
-				// TODO: fix graphs
-				//
-				// let grdata : GraphData = {
-				// 	labels: labels,
-				// 	datasets: group,
-				// };
-				// this.sendToRenderer('send-team-graph-data', grdata);
 			}
 		}
 	}
@@ -2631,7 +2589,8 @@ export class SCCentral extends SCBase {
 				return ;
 			}
 
-			for(let t of ds.teams) {
+			let teamlist = this.project_!.team_mgr_!.getSortedTeamNumbers() ;			
+			for(let t of teamlist) {
 				let v = await this.project_!.data_mgr_!.getData(ds.matches, field, t) ;
 				values.push(v) ;
 				teams.push(t) ;

@@ -1,17 +1,20 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import { IPCDataSet } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
-import { EditDataSetDialog } from "./editdataset.js";
+import { EditDataSetDialog } from "./editdatasetdialog.js";
 
 export class DataSetEditor extends XeroView {
     private div_ : HTMLDivElement ;
     private dialog_ : EditDataSetDialog | undefined ;
+    private formulas_ : string[] = [] ;
 
     // Class implementation goes here
     constructor(app: XeroApp) {
         super(app, 'xero-dataset-editor');
 
-        this.registerCallback('send-datasets', this.receivedDataSets.bind(this)) ;        
+        this.registerCallback('send-datasets', this.receivedDataSets.bind(this)) ;
+        this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;
+        this.request('get-formulas') ;
         this.request('get-datasets') ;
 
         this.div_ = document.createElement('div') ;
@@ -19,6 +22,10 @@ export class DataSetEditor extends XeroView {
         this.elem.appendChild(this.div_) ;
 
         this.addNewDataSetSentinel() ;
+    }
+
+    private receivedFormulas(formulas: any[]) {
+        this.formulas_ = formulas.map((f: any) => f.name) ; 
     }
 
     private receivedDataSets(dsets: IPCDataSet[]) {
@@ -36,7 +43,14 @@ export class DataSetEditor extends XeroView {
     }
 
     private editDataSetClosed(changed: boolean) {
-        if (changed) {
+        if (changed && this.dialog_) {
+            if (this.dialog_.isNew) {
+                // Create a new dataset
+
+            }
+            else {
+                // Update existing dataset
+            }
         }
         this.dialog_ = undefined ;
     }
@@ -48,15 +62,15 @@ export class DataSetEditor extends XeroView {
 
         let ds: IPCDataSet = {
             name: 'New Data Set',
-            teams: [],
             matches: {
                 kind: 'all',
-                first: -1,
-                last: -1,
-            }
+                first: 4,
+                last: 4,
+            },
+            formula: '',
         };
 
-        this.dialog_ = new EditDataSetDialog(ds, true) ;
+        this.dialog_ = new EditDataSetDialog(ds, this.formulas_, true) ;
         this.dialog_.on('closed', this.editDataSetClosed.bind(this)) ;
         this.dialog_.showCentered(this.elem.parentElement!) ;
     }

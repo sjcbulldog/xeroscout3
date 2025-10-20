@@ -21,7 +21,6 @@ export abstract class DataModel extends EventEmitter {
     private logger_ : winston.Logger ;
     private info_ : DataModelInfo ;
 
-
     constructor(dbname: string, tname: string, info: DataModelInfo, logger: winston.Logger) {
         super() ;
         this.dbname_ = dbname ;
@@ -157,21 +156,52 @@ export abstract class DataModel extends EventEmitter {
         return values.join(', ') ;
     }
 
+    private syncColumnNames() : Promise<void> {
+        let ret = new Promise<void>((resolve, reject) => {
+            this.getColumnNamesFromDB()
+            .then((dbcols) => {
+                let i = 0 ;
+                while (i < this.info_.col_descs_.length) {
+                    let col = this.info_.col_descs_[i] ;
+                    if (!dbcols.includes(col.name)) {
+                        this.info_.col_descs_.splice(i, 1) ;
+                    }
+                    else {
+                        i++ ;
+                    }
+                }
+                resolve() ;
+            })
+            .catch((err) => {
+                this.logger_.error('Error getting column names from database', err) ;
+                reject(err) ;
+            });
+        }) ;
+
+        return ret ;
+    }
+        
+
     private getColumnNamesFromDB() : Promise<string[]> {
         let ret = new Promise<string[]>((resolve, reject) => {
             let ret: string[] = [] ;
-            this.db_?.each('PRAGMA table_info(' + this.table_name_ + ');', (err, row) => {
+
+            let query = 'PRAGMA table_info(' + this.table_name_ + ');' ;
+            this.db_?.all(query, (err, rows) => {
                 if (err) {
-                    this.logger_.error('Error getting column names from table \'' + this.table_name_ + '\'', err) ;
+                    this.logger_.error('Error running query \'' + query + '\'', err) ;
                     reject(err) ;
                 }
                 else {
-                    let r: any = row as any ;
-                    ret.push(r.name) ;
+                    if (rows) {
+                        for(let row of rows) {
+                            ret.push((row as any).name) ;
+                        }
+                    }
+
+                    resolve(ret) ;
                 }
             }) ;
-
-            resolve(ret) ;
         }) ;
         return ret ;
     }
@@ -403,42 +433,48 @@ export abstract class DataModel extends EventEmitter {
     protected addColsAndData(keys: string[], records: DataRecord[], editable: boolean, source: IPCColumnDefnSource) : Promise<void> {
         let fields: IPCColumnDesc[] = [] ;
 
-        //
-        // Find the unique set of fields across all records and associated type
-        //
-        for(let r of records) {
-            for (let f of r.keys()) {
-                if (!this.containsColumn(f) && !this.listContainsColumn(fields, f)) {
-                    let type = this.extractType(f, records) ;
-                    fields.push(
-                        {
-                            name: f, 
-                            type: type,
-                            choices: undefined,
-                            source: source,
-                            editable: editable,
-                        }
-                    ) ;
-                }
-            }
-        }
-
         let ret = new Promise<void>(async (resolve, reject) => {
-            try {
-                await this.addNecessaryCols(fields) ;
-            }
-            catch(err) {
-                reject(err) ;
-            }
-            for(let record of records) {
-                try {
-                    await this.insertOrUpdate(this.table_name_, keys, record) ;
+            this.syncColumnNames()
+            .then(() => {
+                //
+                // Find the unique set of fields across all records and associated type
+                //
+                for(let r of records) {
+                    for (let f of r.keys()) {
+                        if (!this.containsColumn(f) && !this.listContainsColumn(fields, f)) {
+                            let type = this.extractType(f, records) ;
+                            fields.push(
+                                {
+                                    name: f, 
+                                    type: type,
+                                    choices: undefined,
+                                    source: source,
+                                    editable: editable,
+                                }
+                            ) ;
+                        }
+                    }
                 }
-                catch(err) {
+
+                this.addNecessaryCols(fields)
+                .then(async () => {
+                    for(let record of records) {
+                        try {
+                            await this.insertOrUpdate(this.table_name_, keys, record) ;
+                        }
+                        catch(err) {
+                            reject(err) ;
+                        }
+                    }
+                    resolve() ;
+                })
+                .catch((err) => {   
                     reject(err) ;
-                }
-            }
-            resolve() ;
+                }) ;
+            })
+            .catch((err) => {
+                reject(err) ;
+            }) ;
         }) ;
 
         return ret ;

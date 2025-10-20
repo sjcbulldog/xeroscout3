@@ -119,12 +119,14 @@ export class PicklistMgr extends Manager {
     public addPicklist(name: string, dataset: string) {
         let ds = this.dset_mgr_.findDataSet(dataset) ;
         if (ds) {
+			let teamlist = this.team_mgr_!.getSortedTeamNumbers() ;
+
             let fields = [...this.data_mgr_.teamColumnNames, this.data_mgr_.matchColumnNames, this.formula_mgr_.formulaNames] ;
             let picklist = {
                 name: name,
                 dataset: dataset,
                 notes: [],
-                rank: ds.teams,
+                rank: teamlist,
                 cols: []
             }
             this.info_.picklist_.push(picklist) ;
@@ -151,7 +153,7 @@ export class PicklistMgr extends Manager {
                     }) ;
 
                     let rank = 1 ;
-                    for(let team of ds.teams) {
+                    for(let team of this.team_mgr_.getSortedTeamNumbers()) {
                         let teamobj = this.team_mgr_.findTeamByNumber(team) ;
                         let record : MyObject = {
                             'rank' : rank++,
