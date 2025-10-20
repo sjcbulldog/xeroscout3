@@ -31,7 +31,7 @@ export class DataSetManager extends Manager {
 
     public getDataSets() : IPCDataSet[] {
         return this.info_.datasets_ ;
-    }   
+    }
 
     public getDataSetByName(name: string) : IPCDataSet | undefined {
         let ret: IPCDataSet | undefined = undefined ;
@@ -90,26 +90,11 @@ export class DataSetManager extends Manager {
         }
     }
 
-    public updateDataSet(ds: IPCDataSet) : void {
-        let index = this.findDataSetIndex(ds.name) ;
-        if (index === -1) {
-            this.info_.datasets_.push(ds) ;
-        }
-        else {
-            this.info_.datasets_[index] = ds ;
-        }
-
+    public updateDataSet(ds: IPCDataSet[]) : void {
+        this.info_.datasets_ = ds ;
         this.write() ;
     }
 
-    public deleteDataSet (name: string) : void {
-        let index = this.findDataSetIndex(name) ;
-        if (index !== -1) {
-            this.info_.datasets_.splice(index, 1) ;
-            this.write() ;
-        }
-    }
-    
     public findDataSet(name: string) : IPCDataSet | undefined {
         let ret: IPCDataSet | undefined = undefined ;
 

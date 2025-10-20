@@ -951,12 +951,8 @@ export class SCCentral extends SCBase {
 		this.sendDataSets() ;
 	}
 
-	public updateDataSet(ds: IPCDataSet) : void {
+	public updateDataSet(ds: IPCDataSet[]) : void {
 		this.project_?.dataset_mgr_?.updateDataSet(ds) ;
-	}
-
-	public deleteDataSet(name: string) : void {
-		this.project_?.dataset_mgr_?.deleteDataSet(name)
 	}
 
 	public sendTabletData(): void {

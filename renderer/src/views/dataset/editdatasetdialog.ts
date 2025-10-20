@@ -23,6 +23,10 @@ export class EditDataSetDialog extends XeroDialog {
         return this.new_ ;
     }
 
+    public get dataset() : IPCDataSet {
+        return this.dataset_ ;
+    }
+
     async populateDialog(pdiv: HTMLDivElement) {
         let div = document.createElement('div') ;
         div.className = 'xero-popup-form-edit-dialog-rowdiv' ;

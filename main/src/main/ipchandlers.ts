@@ -109,20 +109,7 @@ export async function updateDataSet(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1) {
-            central.updateDataSet(args[0] as IPCDataSet) ;
-        } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }        
-    }
-}
-
-// delete-dataset
-export async function deleteDataSet(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.deleteDataSet(args[0] as string) ;
+            central.updateDataSet(args[0] as IPCDataSet[]) ;
         } else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }        

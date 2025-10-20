@@ -7,6 +7,9 @@ export class DataSetEditor extends XeroView {
     private div_ : HTMLDivElement ;
     private dialog_ : EditDataSetDialog | undefined ;
     private formulas_ : string[] = [] ;
+    private dsets_ : IPCDataSet[] = [] ;
+    private oldname_ : string = '' ;
+    private selected_index_ : number = -1 ; // Track selected dataset index
 
     // Class implementation goes here
     constructor(app: XeroApp) {
@@ -29,8 +32,118 @@ export class DataSetEditor extends XeroView {
     }
 
     private receivedDataSets(dsets: IPCDataSet[]) {
+        this.dsets_ = dsets ;        
+        this.displayAll() ;
+    }
+
+    private displayAll() : void {
         this.div_.innerHTML = '' ; // Clear existing content
+
+        // Display all existing datasets
+        for (let i = 0; i < this.dsets_.length; i++) {
+            const dataset = this.dsets_[i] ;
+            const div = document.createElement('div') ;
+            div.style.cursor = 'pointer' ;
+            div.className = 'xero-dataset-editor-list-item' ;
+            div.style.position = 'relative' ; // Enable positioning for the delete icon
+            div.style.display = 'flex' ;
+            div.style.alignItems = 'center' ;
+            div.style.justifyContent = 'space-between' ;
+            
+            // Create text span for dataset name
+            const nameSpan = document.createElement('span') ;
+            nameSpan.innerText = dataset.name ;
+            nameSpan.style.flexGrow = '1' ;
+            div.appendChild(nameSpan) ;
+            
+            // Create delete icon
+            const deleteIcon = document.createElement('span') ;
+            deleteIcon.innerHTML = '🗑️' ; // Garbage can emoji
+            deleteIcon.style.cursor = 'pointer' ;
+            deleteIcon.style.fontSize = '18px' ; // Increased from 14px
+            deleteIcon.style.fontWeight = 'bold' ; // Make it bolder
+            deleteIcon.style.filter = 'brightness(1.3) contrast(1.2)' ; // Make it brighter
+            deleteIcon.style.padding = '4px' ; // Increased padding
+            deleteIcon.style.marginLeft = '10px' ;
+            deleteIcon.title = 'Delete dataset' ;
+            
+            // Add click handler for delete icon
+            deleteIcon.addEventListener('click', (e) => {
+                e.stopPropagation() ; // Prevent triggering selection
+                this.deleteDataSet(i) ;
+            }) ;
+            
+            // Add hover effect for delete icon
+            deleteIcon.addEventListener('mouseenter', () => {
+                deleteIcon.style.backgroundColor = '#ff4444' ;
+                deleteIcon.style.borderRadius = '3px' ;
+            }) ;
+            deleteIcon.addEventListener('mouseleave', () => {
+                deleteIcon.style.backgroundColor = '' ;
+                deleteIcon.style.borderRadius = '' ;
+            }) ;
+            
+            div.appendChild(deleteIcon) ;
+            
+            // Apply selection styling if this dataset is selected
+            if (i === this.selected_index_) {
+                div.style.backgroundColor = '#007acc' ; // Blue background for selected
+                div.style.color = 'white' ; // White text for selected
+            } else {
+                div.style.backgroundColor = '' ; // Default background
+                div.style.color = '' ; // Default text color
+            }
+            
+            // Add hover effects for non-selected items
+            if (i !== this.selected_index_) {
+                div.addEventListener('mouseenter', () => {
+                    if (this.selected_index_ !== i) {
+                        div.style.backgroundColor = '#f0f0f0' ;
+                    }
+                }) ;
+                div.addEventListener('mouseleave', () => {
+                    if (this.selected_index_ !== i) {
+                        div.style.backgroundColor = '' ;
+                    }
+                }) ;
+            }
+            
+            // Add single-click handler to select the dataset (only on the name span)
+            nameSpan.addEventListener('click', () => this.selectDataSet(i)) ;
+            
+            // Add double-click handler to edit the dataset (only on the name span)
+            nameSpan.addEventListener('dblclick', () => this.editDataSet(i)) ;
+            
+            this.div_.appendChild(div) ;
+        }
+
         this.addNewDataSetSentinel() ;
+    }
+
+    private selectDataSet(index: number) {
+        this.selected_index_ = index ;
+        this.displayAll() ; // Refresh display to update selection styling
+    }
+
+    private deleteDataSet(index: number) {
+        // Confirm deletion
+        if (confirm(`Are you sure you want to delete the dataset "${this.dsets_[index].name}"?`)) {
+            // Remove the dataset from the array
+            this.dsets_.splice(index, 1) ;
+            
+            // Adjust selected index if necessary
+            if (this.selected_index_ === index) {
+                this.selected_index_ = -1 ; // Clear selection if deleted item was selected
+            } else if (this.selected_index_ > index) {
+                this.selected_index_-- ; // Adjust selection index if it was after the deleted item
+            }
+            
+            // Update the backend with the modified dataset list
+            this.request('update-dataset', this.dsets_) ;
+            
+            // Refresh the display
+            this.displayAll() ;
+        }
     }
 
     private addNewDataSetSentinel() {
@@ -38,7 +151,15 @@ export class DataSetEditor extends XeroView {
         div.style.cursor = 'pointer' ;
         div.className = 'xero-dataset-editor-list-item' ;
         div.innerText = 'Add New Data Set' ;
-        div.addEventListener('click', this.addNewDataSet.bind(this)) ;
+        
+        // Make the "Add New Data Set" item visually distinct
+        div.style.fontStyle = 'italic' ;
+        div.style.color = '#666' ; // Gray color to distinguish from selectable items
+        div.style.borderTop = '1px solid #ccc' ; // Add separator line
+        div.style.marginTop = '5px' ;
+        div.style.paddingTop = '5px' ;
+        
+        div.addEventListener('dblclick', this.addNewDataSet.bind(this)) ;
         this.div_.appendChild(div) ;
     }
 
@@ -46,13 +167,43 @@ export class DataSetEditor extends XeroView {
         if (changed && this.dialog_) {
             if (this.dialog_.isNew) {
                 // Create a new dataset
-
+                let ds = this.dialog_.dataset ;
+                this.dsets_.push(ds) ;
             }
             else {
-                // Update existing dataset
+                let i = this.dsets_.findIndex(d => d.name === this.oldname_) ;
+                if (i !== -1) {
+                    this.dsets_[i] = this.dialog_.dataset ;
+                }
             }
+            this.request('update-dataset', this.dsets_) ;          
+            this.displayAll() ;
         }
         this.dialog_ = undefined ;
+    }
+
+    private editDataSet(index: number) {
+        if (this.dialog_) {
+            return ;
+        }
+
+        this.oldname_ = this.dsets_[index].name ;
+
+        // Create a copy of the dataset to edit
+        const originalDataset = this.dsets_[index] ;
+        const datasetCopy: IPCDataSet = {
+            name: originalDataset.name,
+            matches: {
+                kind: originalDataset.matches.kind,
+                first: originalDataset.matches.first,
+                last: originalDataset.matches.last
+            },
+            formula: originalDataset.formula
+        } ;
+
+        this.dialog_ = new EditDataSetDialog(datasetCopy, this.formulas_, false) ;
+        this.dialog_.on('closed', this.editDataSetClosed.bind(this)) ;
+        this.dialog_.showCentered(this.elem.parentElement!) ;
     }
 
     private addNewDataSet() {

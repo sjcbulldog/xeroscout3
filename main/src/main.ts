@@ -9,7 +9,7 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          provideResult, setEventName, getMatchDB, getTeamDB, sendMatchColConfig, sendTeamColConfig, getTeamGraphData, generateRandomData,
          getTeamList, saveTeamGraphSetup, getMatchList, getStoredGraphList, deleteStoredGraph, getForm, getPicklistData, getPicklistList,
          createNewPicklist, deletePicklist, clientLog, updatePicklistNotes, getPicklistNotes, getSingleTeamData, getFormulas, deleteFormula,
-         renameFormula, updateFormula, getDataSets, updateDataSet, deleteDataSet, renameDataSet, getTeamFieldList, getMatchFieldList,
+         renameFormula, updateFormula, getDataSets, updateDataSet, renameDataSet, getTeamFieldList, getMatchFieldList,
          saveForm, getImages, importImage, getImageData, updatePicklistColumns, updatePicklistData, getPicklistColumns, getPicklistColData,
          getHintDB,
          setHintHidden,
@@ -137,8 +137,7 @@ app.on("ready", () => {
     ipcMain.on('get-formulas', (event, ...args) => { getFormulas('get-formulas', ...args)}) ;
     ipcMain.on('get-datasets', (event, ...args) => { getDataSets('get-datasets', ...args)}) ;
     ipcMain.on('rename-dataset', (event, ...args) => { renameDataSet('rename-dataset', ...args)}) ;
-    ipcMain.on('update-dataset', (event, ...args) => { updateDataSet('update-datasets', ...args)}) ;
-    ipcMain.on('delete-dataset', (event, ...args) => { deleteDataSet('delete-datasets', ...args)}) ;
+    ipcMain.on('update-dataset', (event, ...args) => { updateDataSet('update-dataset', ...args)}) ;
     ipcMain.on('delete-formula', (event, ...args) => { deleteFormula('delete-formulas', ...args)}) ;
     ipcMain.on('rename-formula', (event, ...args) => { renameFormula('rename-formulas', ...args)}) ;
     ipcMain.on('update-formula', (event, ...args) => { updateFormula('update-formulas', ...args)}) ;
