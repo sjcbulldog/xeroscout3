@@ -15,102 +15,60 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
   //
   send: (channel: string, data: any) => {
       let validChannels = [
-        'splitter-changed',
-        'get-nav-data', 
-        'sync-ipaddr',
-
-        'get-info-data',
-
-        'get-formulas',
-        'delete-formula',
-        'add-formula',
-        'rename-formula',
-        'update-formula',
-
-        'get-datasets',
-        'rename-dataset',
-        'update-dataset',
-        'create-dataset',
-        'delete-dataset',
-
-        'generate-random-data',
-
-        'set-event-name',
-        'get-event-data',
-
-        'get-tablet-data',
-        'set-tablet-data',
-
-        'get-team-data',
-        'set-team-data',
-
-        'get-match-data',
-        'set-match-data',
-        
-        'load-ba-event-data',
-        'execute-command',
-        'get-form',
-        'get-image-data',
-        'import-image',
-        'get-images',
-        'save-form',
-
-        'get-match-db',
-        'update-match-db',
-        'send-match-col-config',
-
-        'get-team-db',
-        'update-team-db',
-        'send-team-col-config',
-
-        'get-team-status',
-        'get-match-status',
-
-        'set-tablet-name-purpose',
-        'provide-result',
-
-        'get-team-graph-data',
-        'get-team-list',
-        'get-multi-selected-teams',
-        'get-multi-team-data',
-        'set-multi-selected-teams',
-        'get-team-field-list',
-        'get-match-field-list',
-        'get-single-team-formulas',
-        'save-team-graph-setup',
-        'get-match-list',
-        'get-stored-graph-list',
-        'delete-stored-graph',
-
-        'get-picklist-data',
-        'get-picklist-list',
-        'get-picklist-col-data',
-        'get-picklist-columns',
-        'create-new-picklist',
-        'delete-picklist',
-        'get-picklist-columns',
-        'get-picklist-col-data',
-        'update-picklist-columns',
-        'update-picklist-notes',
-        'update-picklist-data',
-        'get-picklist-notes',
-
-        'client-log',
-
-        'get-single-team-data',
-        'update-single-team-data',
-        'get-single-team-fields',
-
-        'get-hint-db',
-        'set-hint-hidden',
-
-        'get-playoff-status',
-        'set-alliance-teams',
-        'set-playoff-match-outcome',
-        'get-match-format-formulas',
-        'get-team-format-formulas',
-        'set-match-format-formulas',
-        'set-team-format-formulas',        
+        'splitter-changed',         // apps/xeroapp.ts
+        'get-nav-data',             // xeronav.ts
+        'sync-ipaddr',              // views/syncipaddr/syncipaddr.ts
+        'get-info-data',            // views/infoview.ts
+        'get-formulas',             // views/dataset/datasetedit.ts, views/dbview/dbview.ts, views/formulas/formulas.ts
+        'delete-formula',           // views/formulas/formulas.ts
+        'rename-formula',           // views/formulas/formulas.ts
+        'update-formula',           // views/formulas/formulas.ts
+        'get-datasets',             // views/dataset/datasetedit.ts, views/singleteam/singleteamview.ts
+        'update-datasets',          // views/dataset/datasetedit.ts
+        'generate-random-data',     // views/infoview.ts
+        'set-event-name',           // views/infoview.ts
+        'get-event-data',           // views/selectevent.ts
+        'get-tablet-data',          // views/assigntablets.ts, views/selecttablet/selecttablet.ts
+        'set-tablet-data',          // views/assigntablets.ts
+        'get-team-data',            // views/editteams/editteamsview.ts, views/editmatches/editmatchesview.ts
+        'set-team-data',            // views/editteams/editteamsview.ts
+        'get-match-data',           // views/editmatches/editmatchesview.ts
+        'set-match-data',           // views/editmatches/editmatchesview.ts
+        'load-ba-event-data',       // views/selectevent.ts
+        'execute-command',          // xeronav.ts, views/infoview.ts, views/editteams/editteamsview.ts, views/editmatches/editmatchesview.ts
+        'get-form',                 // views/forms/editformview.ts, views/forms/scoutformview.ts
+        'get-image-data',           // apps/imagesrc.ts
+        'get-image-names',          // apps/imagesrc.ts
+        'get-images',               // views/forms/editformview.ts
+        'save-form',                // views/forms/editformview.ts
+        'get-match-db',             // views/dbview/dbview.ts
+        'update-match-db',          // views/dbview/dbview.ts
+        'send-match-col-config',    // views/dbview/dbview.ts
+        'get-team-db',              // views/dbview/dbview.ts
+        'update-team-db',           // views/dbview/dbview.ts
+        'send-team-col-config',     // views/dbview/dbview.ts
+        'get-team-status',          // views/teamstatus.ts
+        'get-match-status',         // views/matchstatus.ts
+        'set-tablet-name-purpose',  // views/selecttablet/selecttablet.ts
+        'provide-result',           // views/forms/scoutformview.ts
+        'get-single-team-configs',  // views/singleteam/singleteamview.ts
+        'update-single-team-configs',     // views/singleteam/singleteamview.ts
+        'get-team-chart-data',      // views/singleteam/singleteamview.ts
+        'get-team-fields',          // views/singleteam/singleteamview.ts
+        'get-match-fields',         // views/singleteam/singleteamview.ts
+        'get-match-field-list',     // views/formulas/formulas.ts
+        'get-team-field-list',      // views/formulas/formulas.ts
+        'get-formula-field-list',   // views/formulas/formulas.ts
+        'get-team-list',            // views/playoffs/playoffs.ts
+        'get-hint-db',              // apps/hintmgr.ts
+        'set-hint-hidden',          // apps/hintmgr.ts
+        'get-playoff-status',       // views/playoffs/playoffs.ts
+        'set-alliance-teams',       // views/playoffs/playoffs.ts
+        'set-playoff-match-outcome',// views/playoffs/playoffs.ts
+        'get-match-format-formulas',// views/dbview/dbview.ts
+        'get-team-format-formulas', // views/dbview/dbview.ts
+        'set-match-format-formulas',// views/dbview/dbview.ts
+        'set-team-format-formulas', // views/dbview/dbview.ts
       ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -131,59 +89,49 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 
   receive: (channel: string, func:any) => {
       let validChannels = [
-        'update-main-window-view',
-        'send-app-status',
-        'event-name',
-        'send-nav-data', 
-        'send-nav-highlight',
-        'send-info-data',
-        'send-formulas',
-        'send-datasets',
-        'send-event-data',
-        'send-tablet-data',
-        'send-team-data',
-        'send-match-data',
-        'send-form',
-        'send-images',
-        'send-image-data',
-        'send-form-image',
-        'send-initial-values',
-        'send-team-status',
-        'send-match-status',
-        'send-match-db',
-        'send-team-db',
-        'send-team-col-config',
-        'send-match-col-config',
-        'xero-app-init',
-        'set-status-text',
-        'set-status-html',
-        'set-status-title',
-        'set-status-visible',
-        'set-status-close-button-visible',
-        'set-status-bar-message',
-        'request-results',
-        'send-team-graph-data',
-        'send-team-list',
-        'send-multi-team-data',
-        'send-multi-selected-teams',
-        'send-team-field-list',
-        'send-match-field-list',
-        'send-single-team-formulas',
-        'send-match-list',
-        'send-stored-graph-list',
-        'tablet-title',
-        'resize-window',
-        'send-picklist-data',
-        'send-picklist-list',
-        'send-picklist-columns',
-        'send-picklist-col-data',
-        'send-picklist-notes',
-        'send-single-team-data',
-        'send-single-team-fields',
-        'send-hint-db',
-        'send-playoff-status',
-        'send-match-format-formulas',
-        'send-team-format-formulas'
+        'update-main-window-view',      // main/apps/scbase.ts
+        'send-app-status',              // main/apps/sccentral.ts, main/apps/scscout.ts
+        'send-nav-data',                // main/apps/sccentral.ts, main/apps/scscout.ts
+        'send-nav-highlight',           // main/apps/scscout.ts
+        'send-info-data',               // main/apps/sccentral.ts
+        'send-formulas',                // main/apps/sccentral.ts
+        'send-datasets',                // main/apps/sccentral.ts
+        'send-event-data',              // main/apps/sccentral.ts
+        'send-tablet-data',             // main/apps/sccentral.ts, main/apps/scscout.ts
+        'send-team-data',               // main/apps/sccentral.ts
+        'send-match-data',              // main/apps/sccentral.ts
+        'send-form',                    // main/apps/sccentral.ts, main/apps/scscout.ts
+        'send-images',                  // main/apps/scbase.ts, main/apps/sccentral.ts
+        'send-image-data',              // main/apps/scbase.ts, main/apps/scscout.ts
+        'send-initial-values',          // main/apps/scscout.ts
+        'send-team-status',             // main/apps/sccentral.ts
+        'send-match-status',            // main/apps/sccentral.ts
+        'send-match-db',                // main/apps/sccentral.ts
+        'send-team-db',                 // main/apps/sccentral.ts
+        'xero-app-init',                // main/apps/scbase.ts
+        'set-status-text',              // main/apps/sccentral.ts, main/apps/scscout.ts
+        'set-status-html',              // main/apps/sccentral.ts
+        'set-status-title',             // main/apps/sccentral.ts, main/apps/scscout.ts
+        'set-status-visible',           // main/apps/sccentral.ts, main/apps/scscout.ts
+        'set-status-close-button-visible', // main/apps/sccentral.ts, main/apps/scscout.ts
+        'request-results',              // main/apps/scscout.ts
+        'send-team-list',               // main/apps/sccentral.ts
+        'send-team-field-list',         // main/apps/sccentral.ts
+        'send-match-field-list',        // main/apps/sccentral.ts
+        'send-match-list',              // main/apps/sccentral.ts
+        'send-stored-graph-list',       // main/apps/sccentral.ts
+        'tablet-title',                 // main/apps/scscout.ts
+        'resize-window',                // main/apps/scscout.ts
+        'send-picklist-data',           // main/apps/sccentral.ts
+        'send-picklist-list',           // main/apps/sccentral.ts
+        'send-picklist-columns',        // main/apps/sccentral.ts
+        'send-picklist-col-data',       // main/apps/sccentral.ts
+        'send-picklist-notes',          // main/apps/sccentral.ts
+        'send-single-team-data',        // main/apps/sccentral.ts
+        'send-hint-db',                 // main/apps/sccentral.ts
+        'send-playoff-status',          // main/apps/sccentral.ts
+        'send-match-format-formulas',   // main/apps/sccentral.ts
+        'send-team-format-formulas',    // main/apps/sccentral.ts
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));

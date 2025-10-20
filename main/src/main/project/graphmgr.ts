@@ -2,21 +2,6 @@ import { DataManager } from "./datamgr";
 import { Manager } from "./manager";
 import winston from "winston";
 
-export interface GraphConfig {
-    name: string;
-    teams: number[];
-    data: {
-      leftteam: string[];
-      leftmatch: string[];
-      rightteam: string[];
-      rightmatch: string[];
-    };
-}
-
-export class GraphInfo {
-    public team_graph_data_: GraphConfig[] = [] ;                // Stored graphs defined by the user
-}
-
 export class GraphManager extends Manager {
     private info_: GraphInfo ;
     private data_mgr_ : DataManager ;

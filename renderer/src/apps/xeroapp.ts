@@ -27,6 +27,7 @@ import { XeroPlayoffsView } from "../views/playoffs/playoffs.js";
 import { DataSetEditor } from "../views/dataset/datasetedit.js";
 import { EditTeamsView } from "../views/editteams/editteamsview.js";
 import { EditMatchesView } from "../views/editmatches/editmatchesview.js";
+import { SingleTeamView } from "../views/singleteam/singleteamview.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -212,5 +213,6 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('datasets', DataSetEditor, ['central']) ;
         this.registerView('edit-teams', EditTeamsView, ['central']) ;
         this.registerView('edit-matches', EditMatchesView, ['central']) ;
+        this.registerView('singleteam', SingleTeamView, ['central', 'coach']) ;
     }
 }

@@ -294,3 +294,28 @@ export interface IPCDataSet {
     matches: IPCMatchSet ;                          // The set of matches to use for the data set
     formula: string ;                               // The formula to use to filter the data set
 }
+
+export interface IPCGraphItem {
+    label: string ;                                 // The label to use for the data series
+    name: string ;                                  // The name of the field or expression to use for the data
+    dataset: string ;                               // The name of the data set to use to filter match or expression data
+}
+
+export interface IPCGraphConfig {
+    name: string ;                                  // The name of the graph configuration
+    xlabel: string ;                                // The label to use for the X axis
+    ylabel: string ;                                // The label to use for the Y axis
+    title: string ;                                 // The title to use for the graph
+    type: string ;                                  // The type of the graph (e.g. line, bar, etc.)
+    leftitems: IPCGraphItem[] ;                     // The items to display on the left side of the graph
+    rightitems: IPCGraphItem[] ;                    // The items to display on the right side of the graph
+}
+
+export interface IPCGraphItemData {
+    name: string ;                                  // The name of the data series
+    values: number[] ;                              // The values for the data series
+}
+
+export interface IPCGraphData {
+    items: IPCGraphItemData[] ;                      // The data items for the graph
+}

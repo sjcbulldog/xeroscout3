@@ -2,10 +2,8 @@ import { scappbase } from "../main";
 import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
-import { GraphDataRequest } from "./apps/sccentral";
 import { TeamNickNameNumber } from "./project/teammgr";
 import { TabletData } from "./project/tabletmgr";
-import { GraphConfig } from "./project/graphmgr";
 import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
 import { IPCCheckDBViewFormula, IPCDataSet, IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
 
@@ -595,39 +593,11 @@ export async function getTeamGraphData(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Central) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            central.sendTeamGraphData(args[0] as GraphDataRequest) ;
+        if (args.length === 1 && typeof args[0] === 'string') {
+            central.sendTeamGraphData(args[0] as string) ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// save-team-graph-setup data:object
-export async function saveTeamGraphSetup(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            central.saveTeamGraphSetup(args[0] as GraphConfig) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});            
-        }
-    } 
-}
-
-// delete-stored-graph graph_name:string
-export async function deleteStoredGraph(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.deleteStoredGraph(args[0]) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});            
         }
     } 
 }
@@ -814,6 +784,19 @@ export async function getSingleTeamData(cmd: string, ...args: any[]) {
             else {
                 scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
             }
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    } 
+}
+
+export async function getSingleTeamConfig(cmd: string, ...args: any[]) {
+    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'object') {       
+            central.getSingleTeamConfigs() ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});

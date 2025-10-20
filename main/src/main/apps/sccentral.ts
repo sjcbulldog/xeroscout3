@@ -16,7 +16,6 @@ import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { TeamNickNameNumber } from "../project/teammgr";
 import { ManualMatchData } from "../project/matchmgr";
-import { GraphConfig } from "../project/graphmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
@@ -24,16 +23,6 @@ import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPC
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
-
-export interface GraphDataRequest {
-	ds: string,
-	data: {
-		leftteam: string[];
-		leftmatch: string[];
-		rightteam: string[];
-		rightmatch: string[];
-	};
-}
 
 export interface PickListColData {
 	field: string,
@@ -2333,7 +2322,7 @@ export class SCCentral extends SCBase {
 		this.project_?.graph_mgr_?.storeGraph(desc) ;
 	}
 
-	public async sendTeamGraphData(request: GraphDataRequest) {
+	public async sendTeamGraphData(request: string) {
 		if (this.project_ && this.project_.isInitialized()) {
 			let labels: Array<Array<string>> = [];
 			let group: GraphData[] = [];
@@ -2647,6 +2636,10 @@ export class SCCentral extends SCBase {
 		}
 
 		this.sendToRenderer('send-single-team-data', retdata) ;
+	}
+
+	public async getSingleTeamConfigs() {
+
 	}
 
 	private importFormulasFromFileWithPath(path: string) {

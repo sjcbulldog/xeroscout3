@@ -139,7 +139,7 @@ export class DataSetEditor extends XeroView {
             }
             
             // Update the backend with the modified dataset list
-            this.request('update-dataset', this.dsets_) ;
+            this.request('update-datasets', this.dsets_) ;
             
             // Refresh the display
             this.displayAll() ;
@@ -176,7 +176,7 @@ export class DataSetEditor extends XeroView {
                     this.dsets_[i] = this.dialog_.dataset ;
                 }
             }
-            this.request('update-dataset', this.dsets_) ;          
+            this.request('update-datasets', this.dsets_) ;          
             this.displayAll() ;
         }
         this.dialog_ = undefined ;
