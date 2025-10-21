@@ -1,5 +1,5 @@
 import { XeroDialog } from "../../widgets/xerodialog.js";
-import { IPCDataSet, IPCGraphConfig, IPCGraphItem } from "../../shared/ipc.js";
+import { IPCDataSet, IPCGraphConfig, IPCDataItem } from "../../shared/ipc.js";
 
 export class SingleTeamConfigDialog extends XeroDialog {
     private config_name_?: HTMLInputElement ;
@@ -140,7 +140,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         this.items_container_.innerHTML = '' ;
 
         // Combine left and right items with their axis info
-        const allItems: Array<{item: IPCGraphItem, axis: 'left' | 'right', index: number}> = [] ;
+        const allItems: Array<{item: IPCDataItem, axis: 'left' | 'right', index: number}> = [] ;
         
         for (let i = 0; i < this.config_.leftitems.length; i++) {
             allItems.push({item: this.config_.leftitems[i], axis: 'left', index: i}) ;
@@ -167,6 +167,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
 
         // Store all items in leftitems temporarily for editing
         this.config_.leftitems = allItems.map(ai => ai.item) ;
+        this.config_.rightitems = [] ;  // Clear rightitems since all items are now in leftitems
 
         for (let i = 0; i < allItems.length; i++) {
             const itemDiv = this.createItemRow(allItems[i].item, i) ;
@@ -174,7 +175,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         }
     }
 
-    private determineItemType(item: IPCGraphItem, index: number): 'team-field' | 'match-field' | 'formula' {
+    private determineItemType(item: IPCDataItem, index: number): 'team-field' | 'match-field' | 'formula' {
         // First check if we have an explicitly set type for this item
         if (this.itemTypes_.has(index)) {
             return this.itemTypes_.get(index)! ;
@@ -193,7 +194,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         return 'formula' ;
     }
 
-    private createItemRow(item: IPCGraphItem, index: number): HTMLDivElement {
+    private createItemRow(item: IPCDataItem, index: number): HTMLDivElement {
         const row = document.createElement('div') ;
         row.style.display = 'flex' ;
         row.style.flexDirection = 'column' ;
@@ -374,7 +375,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         return row ;
     }
 
-    private createDatasetSelect(item: IPCGraphItem, index: number): HTMLSelectElement {
+    private createDatasetSelect(item: IPCDataItem, index: number): HTMLSelectElement {
         const datasetSelect = document.createElement('select') ;
         datasetSelect.style.flex = '1' ;
         datasetSelect.style.padding = '5px' ;
@@ -453,7 +454,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
     }
 
     private addPlotItem(): void {
-        const newItem: IPCGraphItem = {
+        const newItem: IPCDataItem = {
             label: '',
             name: '',
             dataset: ''
@@ -517,8 +518,8 @@ export class SingleTeamConfigDialog extends XeroDialog {
         }
 
         // Separate items into left and right based on axis selection
-        const leftItems: IPCGraphItem[] = [] ;
-        const rightItems: IPCGraphItem[] = [] ;
+        const leftItems: IPCDataItem[] = [] ;
+        const rightItems: IPCDataItem[] = [] ;
 
         for (let i = 0; i < this.config_.leftitems.length; i++) {
             const item = this.config_.leftitems[i] ;

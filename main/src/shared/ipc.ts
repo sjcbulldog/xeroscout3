@@ -322,7 +322,7 @@ export interface IPCTeamInfo {
     nickname: string ;                              // The team nickname
 }
 
-export interface IPCGraphItem {
+export interface IPCDataItem {
     label: string ;                                 // The label to use for the data series
     name: string ;                                  // The name of the field or expression to use for the data
     dataset: string ;                               // The name of the data set to use to filter match or expression data
@@ -336,11 +336,11 @@ export interface IPCGraphConfig {
     title: string ;                                 // The title to use for the graph
     type: string ;                                  // The type of the graph (e.g. line, bar, etc.)
     teams: number[] ;                               // The teams to include in the graph
-    leftitems: IPCGraphItem[] ;                     // The items to display on the left side of the graph
-    rightitems: IPCGraphItem[] ;                    // The items to display on the right side of the graph
+    leftitems: IPCDataItem[] ;                     // The items to display on the left side of the graph
+    rightitems: IPCDataItem[] ;                    // The items to display on the right side of the graph
 }
 
-export interface IPCGraphItemData {
+export interface IPCDataItemData {
     name: string ;                                  // The name of the data series
     values: IPCTypedDataValue[] ;                   // The values for the data series
 }
@@ -348,5 +348,5 @@ export interface IPCGraphItemData {
 export interface IPCGraphData {
     config: string ;
     teams: number[] ;
-    items: IPCGraphItemData[] ;                      // The data items for the graph
+    items: IPCDataItemData[] ;                      // The data items for the graph
 }

@@ -1,4 +1,4 @@
-import { IPCGraphConfig, IPCGraphData, IPCGraphItemData } from "../../shared/ipc";
+import { IPCGraphConfig, IPCGraphData, IPCDataItemData } from "../../shared/ipc";
 import { DataManager } from "./datamgr";
 import { DataSetManager } from "./datasetmgr";
 import { Manager } from "./manager";
@@ -74,7 +74,7 @@ export class GraphManager extends Manager {
             }
 
             for(let item of [...config.leftitems, ...config.rightitems]) {
-                let one : IPCGraphItemData = {
+                let one : IPCDataItemData = {
                     name: item.name,
                     values: []
                 };

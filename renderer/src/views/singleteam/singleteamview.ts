@@ -1,11 +1,12 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import { XeroView } from "../xeroview.js";
-import { IPCColumnDesc, IPCDataSet, IPCFormula, IPCGraphConfig, IPCGraphData, IPCGraphItem, IPCMatchInfo, IPCTeamInfo } from "../../shared/ipc.js";
+import { IPCColumnDesc, IPCDataSet, IPCFormula, IPCGraphConfig, IPCGraphData, IPCDataItem, IPCMatchInfo, IPCTeamInfo } from "../../shared/ipc.js";
 import { SingleTeamConfigDialog } from "./singleteamconfigdialog.js";
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // Register Chart.js components
-Chart.register(...registerables);
+Chart.register(...registerables, ChartDataLabels);
 
 export class SingleTeamView extends XeroView {
     private left_panel_!: HTMLDivElement ;
@@ -444,6 +445,7 @@ export class SingleTeamView extends XeroView {
         } else {
             this.selected_teams_.add(teamNumber) ;
         }
+        this.resetMatchSelector() ;
         this.displayTeams() ;
         
         // If a config is selected, request chart data
@@ -457,6 +459,7 @@ export class SingleTeamView extends XeroView {
         for (const team of this.teams_) {
             this.selected_teams_.add(team.number) ;
         }
+        this.resetMatchSelector() ;
         this.displayTeams() ;
         
         // If a config is selected, request chart data
@@ -467,6 +470,7 @@ export class SingleTeamView extends XeroView {
 
     private unselectAllTeams(): void {
         this.selected_teams_.clear() ;
+        this.resetMatchSelector() ;
         this.displayTeams() ;
         this.clearChart() ;
     }
@@ -474,11 +478,19 @@ export class SingleTeamView extends XeroView {
     private selectTeam(teamNumber: number): void {
         this.selected_teams_.clear() ;
         this.selected_teams_.add(teamNumber) ;
+        this.resetMatchSelector() ;
         this.displayTeams() ;
         
         // If a config is selected, request chart data
         if (this.selected_config_index_ !== -1) {
             this.requestChartData() ;
+        }
+    }
+
+    private resetMatchSelector(): void {
+        // Reset the match selector to default "-- Select Match --" option
+        if (this.match_select_) {
+            this.match_select_.value = '' ;
         }
     }
 
@@ -886,6 +898,32 @@ export class SingleTeamView extends XeroView {
                     legend: {
                         display: true,
                         position: 'top'
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'start',
+                        rotation: -90,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 16
+                        },
+                        formatter: (value: any) => {
+                            // Only show label if value is not zero
+                            if (value === 0 || value === null || value === undefined) {
+                                return '';
+                            }
+                            // Format the number to show up to 2 decimal places
+                            if (typeof value === 'number') {
+                                return value % 1 === 0 ? value.toString() : value.toFixed(2);
+                            }
+                            return value;
+                        },
+                        // Only display if there's enough space in the bar
+                        display: (context: any) => {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value && Math.abs(value) > 0;
+                        }
                     }
                 },
                 scales: scalesConfig
