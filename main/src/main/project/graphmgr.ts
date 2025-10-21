@@ -73,20 +73,6 @@ export class GraphManager extends Manager {
                 data.teams.push(team) ;
             }
 
-            for(let item of config.leftitems) {
-                let one : IPCGraphItemData = {
-                    name: item.name,
-                    values: []
-                };
-                data.items.push(one) ;
-
-                for(let team of config.teams) {
-                    let ds = this.dataset_mgr_.findDataSet(item.dataset) ;
-                    let tdata = await this.data_mgr_.getData(ds, item.name, team) ;
-                    one.values.push(tdata) ;
-                }
-            }
-
             for(let item of [...config.leftitems, ...config.rightitems]) {
                 let one : IPCGraphItemData = {
                     name: item.name,

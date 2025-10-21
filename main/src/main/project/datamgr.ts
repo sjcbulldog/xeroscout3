@@ -6,7 +6,7 @@ import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { DataValue } from '../../shared/datavalue' ;
-import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet, IPCDataSet } from "../../shared/ipc";
+import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCMatchSet, IPCDataValueType } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
 
@@ -374,50 +374,137 @@ export class DataManager extends Manager {
 
     // #endregion
 
+    private computeOneConditional(data: DataRecord, formula: string, teamnum: number) : Promise<IPCTypedDataValue> {
+
+        let ds : IPCDataSet = {
+            name: '',
+            formula: '',
+            matches: {
+                kind: 'specific',
+                comp_level: DataValue.toString(data.value('comp_level')!),
+                set_number: DataValue.toInteger(data.value('set_number')!),
+                match_number: DataValue.toInteger(data.value('match_number')!)
+            }
+        }
+
+        return this.getData(ds, formula, teamnum) ;
+    }
+
+    private async computeConditionalsPerMatch(data: DataRecord[], formula: string, team: number) : Promise<boolean[]> {
+        let ret = new Promise<boolean[]>(async (resolve, reject) => {
+            let dret: boolean[] = [] ;
+
+            for(let record of data) {
+                try {
+                    let d = await this.computeOneConditional(record, formula, team) ;
+                    if (d.type !== 'boolean') {
+                        throw new Error('conditional formula did not evaluate to boolean') ;
+                    }
+                    dret.push(DataValue.toBoolean(d)) ;
+                }
+                catch(err) {
+                    reject(err) ;
+                }
+            }
+
+            resolve(dret) ;
+        }) ;
+        return ret ;
+    }
+
     private getMatchData(ds: IPCDataSet | undefined, field: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
-            let fields = field + ', comp_level, set_number, match_number' ;
-            let teamkey = 'frc' + team ;
-            let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" ;' ;
-            this.matchdb_.all(query, undefined)
-                .then((data: any[]) => {
-                    if (data.length !== 0) {
-                        let sorted = this.sortData(data) ;
-                        let filtered : any[] ;
-                        if (ds) {
-                            filtered = this.filterMatchData(ds, sorted) ;
-                        }
-                        else {
-                            filtered = sorted ;
+            if (ds && ds.matches.kind === 'specific') {
+                //
+                // We just need one specific value from the match database
+                //
+                if (ds.formula && ds.formula.length > 0) {
+                    throw new Error('cannot use formula with specific match data retrieval') ;
+                }
+
+                let fields = field + ', comp_level, set_number, match_number' ;
+                let teamkey = 'frc' + team ;
+                let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" and comp_level = "' + ds.matches.comp_level + '" and set_number = ' + ds.matches.set_number + ' and match_number = ' + ds.matches.match_number + ' ;' ;
+                this.matchdb_.all(query, undefined)
+                    .then((data: any[]) => {
+                        if (data.length !== 1) {
+                            resolve(
+                                {
+                                    type: 'error',
+                                    value: 'no data found for field ' + field
+                                }) ;
+                            return ;
                         }
 
-                        let value : DataValue[] = [] ;
-                        for(let row of filtered) {
-                            if (row.has(field)) {
-                                value.push(row.value(field)) ;
-                            }
-                        }
-                        resolve (
-                            {
-                                type: 'array',
-                                value: value
-                            }) ;
-                    }
-                    else {
+                        resolve(data[0].value(field) ) ;
+                    })
+                    .catch((err) => {
                         resolve(
                             {
                                 type: 'error',
-                                value: 'no data found for field ' + field
+                                value: err
                             }) ;
-                    }
-                })
-                .catch((err) => {
-                    resolve(
-                        {
-                            type: 'error',
-                            value: err
-                        }) ;
+                    }) ;
+            }
+            else {
+                //
+                // We need to get all values for the team from the match database and filter them appropriately
+                //
+                let fields = field + ', comp_level, set_number, match_number' ;
+                let teamkey = 'frc' + team ;
+                let query = 'select ' + fields + ' from ' + this.matchdb_.tableName + ' where team_key = "' + teamkey + '" ;' ;
+                this.matchdb_.all(query, undefined)
+                    .then(async (data: any[]) => {
+                        let condvals : boolean[] = [] ;
+                        if (data.length !== 0) {
+
+                            let sorted = this.sortData(data) ;                        
+                            if (ds && ds.formula && ds.formula.length > 0) {
+                                try {
+                                    condvals = await this.computeConditionalsPerMatch(data, ds.formula!, team) ;
+                                }
+                                catch(err) {
+                                    reject(err) ;
+                                }
+                            }
+
+                            let filtered : any[] ;
+                            if (ds) {
+                                filtered = this.filterMatchData(ds, condvals, sorted) ;
+                            }
+                            else {
+                                filtered = sorted ;
+                            }
+
+                            let value : DataValue[] = [] ;
+                            for(let row of filtered) {
+                                if (row.has(field)) {
+                                    value.push(row.value(field)) ;
+                                }
+                            }
+                            resolve (
+                                {
+                                    type: 'array',
+                                    value: value
+                                }) ;
+                        }
+                        else {
+                            resolve(
+                                {
+                                    type: 'error',
+                                    value: 'no data found for field ' + field
+                                }) ;
+                        }
+                    })
+                    .catch((err) => {
+                        resolve(
+                            {
+                                type: 'error',
+                                value: err
+                            }) ;
                 }) ;
+
+            }
         }) ;
 
         return ret ;
@@ -536,50 +623,67 @@ export class DataManager extends Manager {
         return ret ;
     }
 
-    private filterMatchData(m: IPCDataSet, data: any[]) : any[] {
-        let start = 0 ;
-        let end = data.length - 1 ;
+    private filterMatchData(ds: IPCDataSet, condvals: boolean[], data: any[]) : any[] {
+        let conddata: any[] = [] ;
         let newdata : any[] = [] ;
 
-        if (m.matches.kind == 'first') {
+        if (ds.formula && ds.formula.length > 0) {
+            if (condvals.length !== data.length) {
+                throw new Error('assert: invalid call to filterMatchData - condvals array must be same size as data array') ;
+            }
+
+            for(let i = 0 ; i < condvals.length ; i++) {
+                if (condvals[i]) {
+                    conddata.push(data[i]) ;
+                }
+            }
+        }
+        else {
+            conddata = data ;
+        }
+
+        let start = 0 ;
+        let end = conddata.length - 1 ;
+
+        if (ds.matches.kind == 'first') {
             // 
             // We want the first N entries
             //
             start = 0 ;
-            if (m.matches.last - 1 < end) {
-                end = m.matches.last - 1 ;
+            if (ds.matches.last - 1 < end) {
+                end = ds.matches.last - 1 ;
             }
         }
-        else if (m.matches.kind == 'last') {
+        else if (ds.matches.kind == 'last') {
             //
             // We want the last N entries
             //
-            end = data.length - 1 ;
-            start = data.length - m.matches.first ;
+            end = conddata.length - 1 ;
+            start = conddata.length - ds.matches.first ;
             if (start < 0) {
                 start = 0 ;
             }
         }
-        else if (m.matches.kind == 'all') {
+        else if (ds.matches.kind == 'all') {
             start = 0 ;
-            end = data.length - 1 ;
+            end = conddata.length - 1 ;
         }
-        else if (m.matches.kind == 'range') {
+        else if (ds.matches.kind == 'range') {
             //
             // We want the entries between the two values
             //
-            start = m.matches.first ;
-            end = m.matches.last ;
+            start = ds.matches.first ;
+            end = ds.matches.last ;
             if (start < 0) {
                 start = 0 ;
             }
-            if (end > data.length - 1) {
-                end = data.length - 1 ;
+            if (end > conddata.length - 1) {
+                end = conddata.length - 1 ;
             }
         }
 
         for(let i = start ; i <= end ; i++) {
-            newdata.push(data[i]) ;
+            newdata.push(conddata[i]) ;
         }
 
         return newdata ;

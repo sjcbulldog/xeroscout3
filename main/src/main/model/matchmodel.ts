@@ -16,39 +16,6 @@ export class MatchDataModel extends DataModel {
         super(dbname, MatchDataModel.TableName, info, logger) ;
     }
 
-    private compareCols(a: string, b: string) : number {
-        let ra = MatchDataModel.fixedcols.indexOf(a) ;
-        let rb = MatchDataModel.fixedcols.indexOf(b) ;
-
-        if (ra !== -1 && rb !== -1) {
-            if (ra < rb) {
-                return -1 ;
-            }
-            else if (ra > rb) {
-                return 1;
-            }
-            return 0 ;
-        }
-
-        if (ra !== -1 && rb === -1) {
-            return -1 ;
-        }
-
-        if (rb !== -1 && ra === -1) {
-            return 1 ;
-        }
-
-        if (!a.startsWith(MatchDataModel.BlueAlliancePrefix) && b.startsWith(MatchDataModel.BlueAlliancePrefix)) {
-            return -1 ;
-        }
-
-        if (a.startsWith(MatchDataModel.BlueAlliancePrefix) && !b.startsWith('_ba')) {
-            return 1 ;
-        }
-
-        return a.localeCompare(b) ;
-    }
-
     public init() : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             super.init()
@@ -119,10 +86,6 @@ export class MatchDataModel extends DataModel {
         ret += ');' ;
 
         return ret ;
-    }
-
-    private isValidDataType(value: any) {
-        return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ;
     }
 
     private getDataValueFromObject(obj: any) : IPCTypedDataValue {

@@ -3,6 +3,10 @@ import { IPCDataSet, IPCGraphConfig, IPCGraphItem } from "../../shared/ipc.js";
 
 export class SingleTeamConfigDialog extends XeroDialog {
     private config_name_?: HTMLInputElement ;
+    private xlabel_?: HTMLInputElement ;
+    private ylabel_left_?: HTMLInputElement ;
+    private ylabel_right_?: HTMLInputElement ;
+    private graph_title_?: HTMLInputElement ;
     private items_container_?: HTMLDivElement ;
     
     private new_: boolean = true ;
@@ -14,6 +18,8 @@ export class SingleTeamConfigDialog extends XeroDialog {
     
     // Track the type for each item index to preserve user's selection
     private itemTypes_: Map<number, 'team-field' | 'match-field' | 'formula'> = new Map() ;
+    // Track which axis (left or right) for each item
+    private itemAxis_: Map<number, 'left' | 'right'> = new Map() ;
 
     constructor(config: IPCGraphConfig, datasets: IPCDataSet[], teamflds: string[], matchflds: string[], formulas: string[], isNew: boolean) {
         super('Edit Single Team Configuration') ;
@@ -48,6 +54,54 @@ export class SingleTeamConfigDialog extends XeroDialog {
         label.className = 'xero-popup-form-edit-dialog-label' ;
         label.innerText = 'Configuration Name' ;
         label.appendChild(this.config_name_) ;
+        div.appendChild(label) ;
+
+        // X-axis Label
+        this.xlabel_ = document.createElement('input') ;
+        this.xlabel_.type = 'text' ;
+        this.xlabel_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.xlabel_.value = this.config_.xlabel || '' ;
+
+        label = document.createElement('label') ;
+        label.className = 'xero-popup-form-edit-dialog-label' ;
+        label.innerText = 'X-Axis Label' ;
+        label.appendChild(this.xlabel_) ;
+        div.appendChild(label) ;
+
+        // Left Y-axis Label
+        this.ylabel_left_ = document.createElement('input') ;
+        this.ylabel_left_.type = 'text' ;
+        this.ylabel_left_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.ylabel_left_.value = this.config_.yleft || '' ;
+
+        label = document.createElement('label') ;
+        label.className = 'xero-popup-form-edit-dialog-label' ;
+        label.innerText = 'Left Y-Axis Label' ;
+        label.appendChild(this.ylabel_left_) ;
+        div.appendChild(label) ;
+
+        // Right Y-axis Label
+        this.ylabel_right_ = document.createElement('input') ;
+        this.ylabel_right_.type = 'text' ;
+        this.ylabel_right_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.ylabel_right_.value = this.config_.yright || '' ;
+
+        label = document.createElement('label') ;
+        label.className = 'xero-popup-form-edit-dialog-label' ;
+        label.innerText = 'Right Y-Axis Label' ;
+        label.appendChild(this.ylabel_right_) ;
+        div.appendChild(label) ;
+
+        // Graph Title
+        this.graph_title_ = document.createElement('input') ;
+        this.graph_title_.type = 'text' ;
+        this.graph_title_.className = 'xero-popup-form-edit-dialog-input' ;
+        this.graph_title_.value = this.config_.title || '' ;
+
+        label = document.createElement('label') ;
+        label.className = 'xero-popup-form-edit-dialog-label' ;
+        label.innerText = 'Graph Title' ;
+        label.appendChild(this.graph_title_) ;
         div.appendChild(label) ;
 
         // Plot Items Section
@@ -85,7 +139,24 @@ export class SingleTeamConfigDialog extends XeroDialog {
 
         this.items_container_.innerHTML = '' ;
 
-        if (this.config_.leftitems.length === 0) {
+        // Combine left and right items with their axis info
+        const allItems: Array<{item: IPCGraphItem, axis: 'left' | 'right', index: number}> = [] ;
+        
+        for (let i = 0; i < this.config_.leftitems.length; i++) {
+            allItems.push({item: this.config_.leftitems[i], axis: 'left', index: i}) ;
+        }
+        for (let i = 0; i < this.config_.rightitems.length; i++) {
+            allItems.push({item: this.config_.rightitems[i], axis: 'right', index: i + this.config_.leftitems.length}) ;
+        }
+
+        // Initialize axis tracking for items that don't have it yet
+        for (const {axis, index} of allItems) {
+            if (!this.itemAxis_.has(index)) {
+                this.itemAxis_.set(index, axis) ;
+            }
+        }
+
+        if (allItems.length === 0) {
             const emptyMsg = document.createElement('p') ;
             emptyMsg.innerText = 'No plot items yet. Click "Add Plot Item" to add one.' ;
             emptyMsg.style.color = '#999' ;
@@ -94,9 +165,11 @@ export class SingleTeamConfigDialog extends XeroDialog {
             return ;
         }
 
-        for (let i = 0; i < this.config_.leftitems.length; i++) {
-            const item = this.config_.leftitems[i] ;
-            const itemDiv = this.createItemRow(item, i) ;
+        // Store all items in leftitems temporarily for editing
+        this.config_.leftitems = allItems.map(ai => ai.item) ;
+
+        for (let i = 0; i < allItems.length; i++) {
+            const itemDiv = this.createItemRow(allItems[i].item, i) ;
             this.items_container_.appendChild(itemDiv) ;
         }
     }
@@ -132,8 +205,10 @@ export class SingleTeamConfigDialog extends XeroDialog {
 
         // Determine current type
         const currentType = this.determineItemType(item, index) ;
+        // Determine current axis (default to 'left' if not set)
+        const currentAxis = this.itemAxis_.has(index) ? this.itemAxis_.get(index)! : 'left' ;
 
-        // First row: Type selector and delete button
+        // First row: Type selector, axis selector, and delete button
         const typeRow = document.createElement('div') ;
         typeRow.style.display = 'flex' ;
         typeRow.style.gap = '10px' ;
@@ -175,6 +250,28 @@ export class SingleTeamConfigDialog extends XeroDialog {
             this.renderItems() ;
         }) ;
 
+        // Axis selector
+        const axisSelect = document.createElement('select') ;
+        axisSelect.style.flex = '0.5' ;
+        axisSelect.style.padding = '5px' ;
+
+        let axisOption = document.createElement('option') ;
+        axisOption.value = 'left' ;
+        axisOption.innerText = 'Left Axis' ;
+        if (currentAxis === 'left') axisOption.selected = true ;
+        axisSelect.appendChild(axisOption) ;
+
+        axisOption = document.createElement('option') ;
+        axisOption.value = 'right' ;
+        axisOption.innerText = 'Right Axis' ;
+        if (currentAxis === 'right') axisOption.selected = true ;
+        axisSelect.appendChild(axisOption) ;
+
+        axisSelect.addEventListener('change', () => {
+            // Store the axis selection
+            this.itemAxis_.set(index, axisSelect.value as 'left' | 'right') ;
+        }) ;
+
         // Delete button
         const deleteBtn = document.createElement('span') ;
         deleteBtn.innerHTML = '🗑️' ;
@@ -189,7 +286,9 @@ export class SingleTeamConfigDialog extends XeroDialog {
             
             // Update the itemTypes_ map: remove the deleted index and shift all higher indices down
             this.itemTypes_.delete(index) ;
+            this.itemAxis_.delete(index) ;
             const updatedTypes = new Map<number, 'team-field' | 'match-field' | 'formula'>() ;
+            const updatedAxis = new Map<number, 'left' | 'right'>() ;
             for (const [key, value] of this.itemTypes_.entries()) {
                 if (key > index) {
                     updatedTypes.set(key - 1, value) ;
@@ -197,7 +296,15 @@ export class SingleTeamConfigDialog extends XeroDialog {
                     updatedTypes.set(key, value) ;
                 }
             }
+            for (const [key, value] of this.itemAxis_.entries()) {
+                if (key > index) {
+                    updatedAxis.set(key - 1, value) ;
+                } else if (key < index) {
+                    updatedAxis.set(key, value) ;
+                }
+            }
             this.itemTypes_ = updatedTypes ;
+            this.itemAxis_ = updatedAxis ;
             
             this.renderItems() ;
         }) ;
@@ -211,6 +318,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         }) ;
 
         typeRow.appendChild(typeSelect) ;
+        typeRow.appendChild(axisSelect) ;
         typeRow.appendChild(deleteBtn) ;
         row.appendChild(typeRow) ;
 
@@ -367,6 +475,18 @@ export class SingleTeamConfigDialog extends XeroDialog {
         if (this.config_name_) {
             this.config_.name = this.config_name_.value ;
         }
+        if (this.xlabel_) {
+            this.config_.xlabel = this.xlabel_.value ;
+        }
+        if (this.ylabel_left_) {
+            this.config_.yleft = this.ylabel_left_.value ;
+        }
+        if (this.ylabel_right_) {
+            this.config_.yright = this.ylabel_right_.value ;
+        }
+        if (this.graph_title_) {
+            this.config_.title = this.graph_title_.value ;
+        }
 
         // Validate that all items have required fields
         let hasErrors = false ;
@@ -395,6 +515,25 @@ export class SingleTeamConfigDialog extends XeroDialog {
             alert(errorMessage) ;
             return ;
         }
+
+        // Separate items into left and right based on axis selection
+        const leftItems: IPCGraphItem[] = [] ;
+        const rightItems: IPCGraphItem[] = [] ;
+
+        for (let i = 0; i < this.config_.leftitems.length; i++) {
+            const item = this.config_.leftitems[i] ;
+            const axis = this.itemAxis_.has(i) ? this.itemAxis_.get(i)! : 'left' ;
+            
+            if (axis === 'left') {
+                leftItems.push(item) ;
+            } else {
+                rightItems.push(item) ;
+            }
+        }
+
+        // Update config with separated items
+        this.config_.leftitems = leftItems ;
+        this.config_.rightitems = rightItems ;
 
         super.okButton(event) ;
     }

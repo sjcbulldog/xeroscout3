@@ -1,4 +1,4 @@
-import { IPCDataSet } from "../../shared/ipc.js";
+import { IPCDataSet, IPCMatchSetRange } from "../../shared/ipc.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 
 export class EditDataSetDialog extends XeroDialog {
@@ -77,10 +77,11 @@ export class EditDataSetDialog extends XeroDialog {
         div.appendChild(label) ;
 
         // First Value (for first N matches or range start)
+        let dsms : IPCMatchSetRange = this.dataset_.matches as IPCMatchSetRange ;
         this.first_value_ = document.createElement('input') ;
         this.first_value_.type = 'number' ;
         this.first_value_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.first_value_.value = this.dataset_.matches.first.toString() ;
+        this.first_value_.value = dsms.first.toString() ;
         this.first_value_.min = '1' ;
 
         label = document.createElement('label') ;
@@ -93,7 +94,7 @@ export class EditDataSetDialog extends XeroDialog {
         this.last_value_ = document.createElement('input') ;
         this.last_value_.type = 'number' ;
         this.last_value_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.last_value_.value = this.dataset_.matches.last.toString() ;
+        this.last_value_.value = dsms.last.toString() ;
         this.last_value_.min = '1' ;
 
         label = document.createElement('label') ;
@@ -190,18 +191,26 @@ export class EditDataSetDialog extends XeroDialog {
         if (this.data_set_name_) {
             this.dataset_.name = this.data_set_name_.value ;
         }
+
+        let dsm : IPCMatchSetRange = {
+            kind: 'all',
+            first: 0,
+            last: 0,
+        }
         
         if (this.match_kind_) {
-            this.dataset_.matches.kind = this.match_kind_.value as "last" | "first" | "range" | "all" ;
+            dsm.kind = this.match_kind_.value as "last" | "first" | "range" | "all" ;
         }
         
         if (this.first_value_) {
-            this.dataset_.matches.first = parseInt(this.first_value_.value) || 0 ;
+            dsm.first = parseInt(this.first_value_.value) || 0 ;
         }
         
         if (this.last_value_) {
-            this.dataset_.matches.last = parseInt(this.last_value_.value) || 0 ;
+            dsm.last = parseInt(this.last_value_.value) || 0 ;
         }
+
+        this.dataset_.matches = dsm ;
         
         if (this.formula_) {
             this.dataset_.formula = this.formula_.value ;

@@ -18,7 +18,7 @@ import { ManualMatchData } from "../project/matchmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCMatchInfo } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -1054,10 +1054,10 @@ export class SCCentral extends SCBase {
 	}
 
 	private sendMatchDataInternal(matches: BAMatch[] | undefined): void {
-		let data = [];
+		let data : IPCMatchInfo[] = [];
 		if (matches) {
 			for (let t of matches) {
-				let d = {
+				let d : IPCMatchInfo = {
 					comp_level: t.comp_level,
 					set_number: t.set_number,
 					match_number: t.match_number,
@@ -1411,33 +1411,6 @@ export class SCCentral extends SCBase {
 					icon: this.getIconData('singleteam.png'),
 					width: dims,
 					height: dims						
-				});				
-
-				treedata.push({
-					type: 'icon',
-					command: SCCentral.viewMultiView,
-					title: "Multiple Team View",
-					icon: this.getIconData('multipleteams.png'),
-					width: dims,
-					height: dims	
-				});
-				
-				treedata.push({
-					type: 'icon',
-					command: SCCentral.viewTeamGraph,
-					title: "Team Graph",
-					icon: this.getIconData('bar-graph.png'),
-					width: dims,
-					height: dims	
-				});
-
-				treedata.push({
-					type: 'icon',
-					command: SCCentral.viewSpider,
-					title: "Spider Graph",
-					icon: this.getIconData('spider.png'),
-					width: dims,
-					height: dims	
 				});
 			}
 		}
@@ -2634,19 +2607,11 @@ export class SCCentral extends SCBase {
 		}
 	}		
 
-	public getGraphData(cfgname: string) {
-		let cfg = this.project_?.graph_mgr_?.singleTeamConfigs.find(c => c.name === cfgname) ;
-		if (!cfg) {
-			cfg = this.project_?.graph_mgr_?.multiTeamConfigs.find(c => c.name === cfgname) ;
-			if (!cfg) {
-				cfg = this.project_?.graph_mgr_?.matchConfigs.find(c => c.name === cfgname) ;
-			}
-		}
-
+	public getGraphData(cfg: IPCGraphConfig) {
 		if (cfg) {
 			this.project_?.graph_mgr_?.generateGraphData(cfg)
 				.then((data) => {
-					this.sendToRenderer('send-graph-data', data) ;
+					this.sendToRenderer('send-chart-data', data) ;
 				}) ;
 		}
 	}

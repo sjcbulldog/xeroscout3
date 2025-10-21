@@ -1,7 +1,11 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import { XeroView } from "../xeroview.js";
-import { IPCColumnDesc, IPCDataSet, IPCFormula, IPCGraphConfig, IPCGraphData, IPCGraphItem, IPCTeamInfo } from "../../shared/ipc.js";
+import { IPCColumnDesc, IPCDataSet, IPCFormula, IPCGraphConfig, IPCGraphData, IPCGraphItem, IPCMatchInfo, IPCTeamInfo } from "../../shared/ipc.js";
 import { SingleTeamConfigDialog } from "./singleteamconfigdialog.js";
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
+
+// Register Chart.js components
+Chart.register(...registerables);
 
 export class SingleTeamView extends XeroView {
     private left_panel_!: HTMLDivElement ;
@@ -9,27 +13,38 @@ export class SingleTeamView extends XeroView {
     private chart_container_!: HTMLDivElement ;
     private config_list_div_!: HTMLDivElement ;
     private team_list_div_!: HTMLDivElement ;
+    private match_select_!: HTMLSelectElement ;
+    private chart_instance_: Chart | null = null ;
     
     private dialog_: SingleTeamConfigDialog | undefined ;
     private configs_: IPCGraphConfig[] = [] ;
     private datasets_: IPCDataSet[] = [] ;
     private selected_config_index_: number = -1 ;
-    private selected_team_: number = -1 ;
+    private selected_teams_: Set<number> = new Set() ;
+    private grouping_mode_: 'teams-within-items' | 'items-within-teams' = 'teams-within-items' ;
     private oldname_: string = '' ;
     private teamflds_: string[] = [] ;  
     private matchflds_ : string[] = [] ;
     private formulas_ : string[] = [] ;
     private teams_ : IPCTeamInfo[] = [] ;
+    private matchdata_ : IPCMatchInfo[] = [] ;
 
     private teamfldsReceived_ : boolean = false ;
     private matchfldsReceived_ : boolean = false ;
     private formulasReceived_ : boolean = false ;    
     private datasetsReceived_ : boolean = false ;
     private teamsReceived_ : boolean = false ;
+    private matchDataReceived_ : boolean = false ;
     private configsReceived_ : boolean = false ;
 
     constructor(app: XeroApp) {
         super(app, 'xero-single-team-view');
+
+        // Set the view to fill its parent
+        this.elem.style.width = '100%' ;
+        this.elem.style.height = '100%' ;
+        this.elem.style.display = 'flex' ;
+        this.elem.style.flexDirection = 'column' ;
 
         // Register callbacks for data from backend
         this.registerCallback('send-single-team-configs', this.receivedConfigs.bind(this)) ;
@@ -38,7 +53,8 @@ export class SingleTeamView extends XeroView {
         this.registerCallback('send-match-field-list', this.receivedMatchFields.bind(this)) ;
         this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;
         this.registerCallback('send-team-list', this.receivedTeam.bind(this)) ;
-        this.registerCallback('send-team-chart-data', this.receivedChartData.bind(this)) ;
+        this.registerCallback('send-chart-data', this.receivedChartData.bind(this)) ;
+        this.registerCallback('send-match-data', this.receivedMatchData.bind(this)) ;
 
 
         // Request initial data
@@ -49,6 +65,7 @@ export class SingleTeamView extends XeroView {
         this.request('get-formulas') ;
         this.request('get-single-team-configs') ;
         this.request('get-team-list', true) ;
+        this.request('get-match-data') ;
     }
 
     private createUI(): void {
@@ -59,13 +76,17 @@ export class SingleTeamView extends XeroView {
         container.style.display = 'flex' ;
         container.style.height = '100%' ;
         container.style.width = '100%' ;
+        container.style.overflow = 'hidden' ;
 
         // Left panel for configuration management
         this.left_panel_ = document.createElement('div') ;
         this.left_panel_.style.width = '300px' ;
+        this.left_panel_.style.height = '100%' ;
         this.left_panel_.style.borderRight = '1px solid #ccc' ;
         this.left_panel_.style.padding = '10px' ;
-        this.left_panel_.style.overflowY = 'auto' ;
+        this.left_panel_.style.display = 'flex' ;
+        this.left_panel_.style.flexDirection = 'column' ;
+        this.left_panel_.style.overflow = 'hidden' ;
 
         // Right panel for chart display
         this.right_panel_ = document.createElement('div') ;
@@ -74,13 +95,68 @@ export class SingleTeamView extends XeroView {
         this.right_panel_.style.display = 'flex' ;
         this.right_panel_.style.flexDirection = 'column' ;
 
-        // Configuration list container
+        // Grouping mode toggle button panel
+        const buttonPanel = document.createElement('div') ;
+        buttonPanel.style.marginBottom = '10px' ;
+        buttonPanel.style.padding = '10px' ;
+        buttonPanel.style.borderBottom = '1px solid #ccc' ;
+        this.left_panel_.appendChild(buttonPanel) ;
+
+        const toggleButton = document.createElement('button') ;
+        toggleButton.innerText = 'Group: Teams within Items' ;
+        toggleButton.style.width = '100%' ;
+        toggleButton.style.padding = '8px' ;
+        toggleButton.style.cursor = 'pointer' ;
+        toggleButton.style.fontSize = '13px' ;
+        toggleButton.addEventListener('click', () => {
+            if (this.grouping_mode_ === 'teams-within-items') {
+                this.grouping_mode_ = 'items-within-teams' ;
+                toggleButton.innerText = 'Group: Items within Teams' ;
+            } else {
+                this.grouping_mode_ = 'teams-within-items' ;
+                toggleButton.innerText = 'Group: Teams within Items' ;
+            }
+            // Re-render chart if data exists
+            if (this.selected_config_index_ !== -1 && this.selected_teams_.size > 0) {
+                this.requestChartData() ;
+            }
+        }) ;
+        buttonPanel.appendChild(toggleButton) ;
+
+        // Match selector
+        const matchLabel = document.createElement('label') ;
+        matchLabel.innerText = 'Match:' ;
+        matchLabel.style.display = 'block' ;
+        matchLabel.style.marginTop = '10px' ;
+        matchLabel.style.marginBottom = '5px' ;
+        matchLabel.style.fontWeight = 'bold' ;
+        matchLabel.style.fontSize = '13px' ;
+        buttonPanel.appendChild(matchLabel) ;
+
+        this.match_select_ = document.createElement('select') ;
+        this.match_select_.style.width = '100%' ;
+        this.match_select_.style.padding = '6px' ;
+        this.match_select_.style.fontSize = '13px' ;
+        this.match_select_.addEventListener('change', () => this.onMatchSelected()) ;
+        buttonPanel.appendChild(this.match_select_) ;
+
+        this.populateMatchSelect() ;
+
+        // Configuration list container - 1/3 of left panel height
         this.config_list_div_ = document.createElement('div') ;
-        this.config_list_div_.style.marginBottom = '20px' ;
+        this.config_list_div_.style.height = '33.33%' ;
+        this.config_list_div_.style.overflowY = 'auto' ;
+        this.config_list_div_.style.marginBottom = '10px' ;
+        this.config_list_div_.style.borderBottom = '1px solid #ccc' ;
+        this.config_list_div_.style.paddingBottom = '10px' ;
         this.left_panel_.appendChild(this.config_list_div_) ;
 
-        // Team list container
+        // Team list container - remaining 2/3 of left panel height
         this.team_list_div_ = document.createElement('div') ;
+        this.team_list_div_.style.flexGrow = '1' ;
+        this.team_list_div_.style.display = 'flex' ;
+        this.team_list_div_.style.flexDirection = 'column' ;
+        this.team_list_div_.style.overflow = 'hidden' ;
         this.left_panel_.appendChild(this.team_list_div_) ;
 
         // Chart container
@@ -98,11 +174,17 @@ export class SingleTeamView extends XeroView {
 
     private checkAll() {
         if (this.teamfldsReceived_ && this.matchfldsReceived_ && this.formulasReceived_ && 
-            this.datasetsReceived_ && this.configsReceived_ && this.teamsReceived_) {
+            this.datasetsReceived_ && this.configsReceived_ && this.teamsReceived_ && this.matchDataReceived_) {
             this.createUI() ;
             this.displayConfigs() ;
             this.displayTeams() ;
         }
+    }
+
+    private receivedMatchData(data: IPCMatchInfo[]): void {
+        this.matchdata_ = data ;
+        this.matchDataReceived_ = true ;
+        this.checkAll() ;
     }
 
     private receivedTeam(teams: IPCTeamInfo[]): void {
@@ -264,16 +346,47 @@ export class SingleTeamView extends XeroView {
     private displayTeams(): void {
         this.team_list_div_.innerHTML = '' ;
 
-        // Title
+        // Header with title and buttons
+        const header = document.createElement('div') ;
+        header.style.display = 'flex' ;
+        header.style.justifyContent = 'space-between' ;
+        header.style.alignItems = 'center' ;
+        header.style.marginBottom = '10px' ;
+
         const title = document.createElement('h3') ;
         title.innerText = 'Teams' ;
-        title.style.marginTop = '20px' ;
-        title.style.marginBottom = '10px' ;
-        this.team_list_div_.appendChild(title) ;
+        title.style.margin = '0' ;
+        header.appendChild(title) ;
+
+        // Buttons container
+        const buttonContainer = document.createElement('div') ;
+        buttonContainer.style.display = 'flex' ;
+        buttonContainer.style.gap = '5px' ;
+
+        // Select All button
+        const selectAllBtn = document.createElement('button') ;
+        selectAllBtn.innerText = 'All' ;
+        selectAllBtn.style.padding = '4px 8px' ;
+        selectAllBtn.style.fontSize = '12px' ;
+        selectAllBtn.style.cursor = 'pointer' ;
+        selectAllBtn.addEventListener('click', () => this.selectAllTeams()) ;
+        buttonContainer.appendChild(selectAllBtn) ;
+
+        // Unselect All button
+        const unselectAllBtn = document.createElement('button') ;
+        unselectAllBtn.innerText = 'None' ;
+        unselectAllBtn.style.padding = '4px 8px' ;
+        unselectAllBtn.style.fontSize = '12px' ;
+        unselectAllBtn.style.cursor = 'pointer' ;
+        unselectAllBtn.addEventListener('click', () => this.unselectAllTeams()) ;
+        buttonContainer.appendChild(unselectAllBtn) ;
+
+        header.appendChild(buttonContainer) ;
+        this.team_list_div_.appendChild(header) ;
 
         // Create scrollable container for team items
         const scrollContainer = document.createElement('div') ;
-        scrollContainer.style.maxHeight = '300px' ;
+        scrollContainer.style.flexGrow = '1' ;
         scrollContainer.style.overflowY = 'auto' ;
         scrollContainer.style.overflowX = 'hidden' ;
         scrollContainer.style.border = '1px solid #ccc' ;
@@ -294,7 +407,7 @@ export class SingleTeamView extends XeroView {
             div.appendChild(teamText) ;
 
             // Apply selection styling
-            if (team.number === this.selected_team_) {
+            if (this.selected_teams_.has(team.number)) {
                 div.style.backgroundColor = '#007acc' ;
                 div.style.color = 'white' ;
             } else {
@@ -303,21 +416,21 @@ export class SingleTeamView extends XeroView {
             }
 
             // Add hover effects for non-selected items
-            if (team.number !== this.selected_team_) {
+            if (!this.selected_teams_.has(team.number)) {
                 div.addEventListener('mouseenter', () => {
-                    if (this.selected_team_ !== team.number) {
+                    if (!this.selected_teams_.has(team.number)) {
                         div.style.backgroundColor = '#e0e0e0' ;
                     }
                 }) ;
                 div.addEventListener('mouseleave', () => {
-                    if (this.selected_team_ !== team.number) {
+                    if (!this.selected_teams_.has(team.number)) {
                         div.style.backgroundColor = '#f0f0f0' ;
                     }
                 }) ;
             }
 
-            // Add click handler to select the team
-            div.addEventListener('click', () => this.selectTeam(team.number)) ;
+            // Add click handler to toggle the team
+            div.addEventListener('click', () => this.toggleTeam(team.number)) ;
 
             scrollContainer.appendChild(div) ;
         }
@@ -325,10 +438,131 @@ export class SingleTeamView extends XeroView {
         this.team_list_div_.appendChild(scrollContainer) ;
     }
 
-    private selectTeam(teamNumber: number): void {
-        this.selected_team_ = teamNumber ;
+    private toggleTeam(teamNumber: number): void {
+        if (this.selected_teams_.has(teamNumber)) {
+            this.selected_teams_.delete(teamNumber) ;
+        } else {
+            this.selected_teams_.add(teamNumber) ;
+        }
         this.displayTeams() ;
         
+        // If a config is selected, request chart data
+        if (this.selected_config_index_ !== -1) {
+            this.requestChartData() ;
+        }
+    }
+
+    private selectAllTeams(): void {
+        this.selected_teams_.clear() ;
+        for (const team of this.teams_) {
+            this.selected_teams_.add(team.number) ;
+        }
+        this.displayTeams() ;
+        
+        // If a config is selected, request chart data
+        if (this.selected_config_index_ !== -1) {
+            this.requestChartData() ;
+        }
+    }
+
+    private unselectAllTeams(): void {
+        this.selected_teams_.clear() ;
+        this.displayTeams() ;
+        this.clearChart() ;
+    }
+
+    private selectTeam(teamNumber: number): void {
+        this.selected_teams_.clear() ;
+        this.selected_teams_.add(teamNumber) ;
+        this.displayTeams() ;
+        
+        // If a config is selected, request chart data
+        if (this.selected_config_index_ !== -1) {
+            this.requestChartData() ;
+        }
+    }
+
+    private populateMatchSelect(): void {
+        // Clear existing options
+        this.match_select_.innerHTML = '' ;
+
+        // Add default option
+        const defaultOption = document.createElement('option') ;
+        defaultOption.value = '' ;
+        defaultOption.text = '-- Select Match --' ;
+        this.match_select_.appendChild(defaultOption) ;
+
+        // Define comp_level sort order
+        const compLevelOrder: { [key: string]: number } = {
+            'qm': 1,
+            'sf': 2,
+            'f': 3
+        } ;
+
+        // Sort matches
+        const sortedMatches = [...this.matchdata_].sort((a, b) => {
+            // First by comp_level
+            const orderA = compLevelOrder[a.comp_level] || 999 ;
+            const orderB = compLevelOrder[b.comp_level] || 999 ;
+            if (orderA !== orderB) {
+                return orderA - orderB ;
+            }
+
+            // Then by set_number
+            if (a.set_number !== b.set_number) {
+                return a.set_number - b.set_number ;
+            }
+
+            // Finally by match_number
+            return a.match_number - b.match_number ;
+        }) ;
+
+        // Add option for each match
+        for (const match of sortedMatches) {
+            const option = document.createElement('option') ;
+            option.value = `${match.comp_level}-${match.match_number}-${match.set_number}` ;
+            option.text = `${match.comp_level}-${match.match_number}-${match.set_number}` ;
+            this.match_select_.appendChild(option) ;
+        }
+    }
+
+    private onMatchSelected(): void {
+        const selectedValue = this.match_select_.value ;
+        if (!selectedValue) {
+            // No match selected, do nothing
+            return ;
+        }
+
+        // Find the selected match
+        const parts = selectedValue.split('-') ;
+        const compLevel = parts[0] ;
+        const matchNumber = parseInt(parts[1]) ;
+        const setNumber = parseInt(parts[2]) ;
+
+        const match = this.matchdata_.find(m => 
+            m.comp_level === compLevel && 
+            m.match_number === matchNumber && 
+            m.set_number === setNumber
+        ) ;
+
+        if (!match) {
+            return ;
+        }
+
+        // Clear current team selections
+        this.selected_teams_.clear() ;
+
+        // Add all teams from the match
+        const teamNumbers = [match.red1, match.red2, match.red3, match.blue1, match.blue2, match.blue3] ;
+        for (const teamNumber of teamNumbers) {
+            if (teamNumber > 0) { // Only add valid team numbers
+                this.selected_teams_.add(teamNumber) ;
+            }
+        }
+
+        // Refresh the team display
+        this.displayTeams() ;
+
         // If a config is selected, request chart data
         if (this.selected_config_index_ !== -1) {
             this.requestChartData() ;
@@ -339,8 +573,8 @@ export class SingleTeamView extends XeroView {
         this.selected_config_index_ = index ;
         this.displayConfigs() ;
         
-        // If a team is selected, request chart data for this config
-        if (this.selected_team_ !== -1) {
+        // If teams are selected, request chart data for this config
+        if (this.selected_teams_.size > 0) {
             this.requestChartData() ;
         }
     }
@@ -357,7 +591,8 @@ export class SingleTeamView extends XeroView {
         const configCopy: IPCGraphConfig = {
             name: originalConfig.name,
             xlabel: originalConfig.xlabel || '',
-            ylabel: originalConfig.ylabel || '',
+            yleft: originalConfig.yleft || '',
+            yright: originalConfig.yright || '',
             title: originalConfig.title || '',
             type: originalConfig.type || 'bar',
             teams: [],
@@ -386,7 +621,8 @@ export class SingleTeamView extends XeroView {
         const newConfig: IPCGraphConfig = {
             name: 'New Configuration',
             xlabel: '',
-            ylabel: '',
+            yleft: '',
+            yright: '',
             title: '',
             type: 'bar',
             teams: [],
@@ -434,8 +670,8 @@ export class SingleTeamView extends XeroView {
             this.request('update-single-team-configs', this.configs_) ;
             this.displayConfigs() ;
 
-            // Refresh chart if this config is selected
-            if (this.selected_config_index_ !== -1 && this.selected_team_ !== -1) {
+            // Refresh chart if this config is selected and teams are selected
+            if (this.selected_config_index_ !== -1 && this.selected_teams_.size > 0) {
                 this.requestChartData() ;
             }
         }
@@ -443,87 +679,221 @@ export class SingleTeamView extends XeroView {
     }
 
     private requestChartData(): void {
-        if (this.selected_config_index_ === -1 || this.selected_team_ === -1) {
+        if (this.selected_config_index_ === -1 || this.selected_teams_.size === 0) {
             return ;
         }
 
         const config = this.configs_[this.selected_config_index_] ;
-        config.teams = [this.selected_team_] ;
-        this.request('get-chart-data', {
-            config: config
-        }) ;
+        config.teams = Array.from(this.selected_teams_) ;
+        this.request('get-chart-data', config) ;
     }
 
-    private renderChart(data: any): void {
+    private renderChart(data: IPCGraphData): void {
+        // Destroy existing chart if present
+        if (this.chart_instance_) {
+            this.chart_instance_.destroy() ;
+            this.chart_instance_ = null ;
+        }
+
         this.chart_container_.innerHTML = '' ;
 
-        // Create a simple bar chart visualization
-        const title = document.createElement('h2') ;
-        title.innerText = `Team ${this.selected_team_} - ${this.configs_[this.selected_config_index_]?.name || 'Chart'}` ;
-        title.style.marginTop = '0' ;
-        this.chart_container_.appendChild(title) ;
+        // Get the config for xlabel, ylabel, and title
+        const config = this.configs_[this.selected_config_index_] ;
 
         if (!data || !data.items || data.items.length === 0) {
             const noData = document.createElement('p') ;
             noData.innerText = 'No data available for this configuration.' ;
             noData.style.color = '#666' ;
+            noData.style.textAlign = 'center' ;
+            noData.style.marginTop = '50px' ;
             this.chart_container_.appendChild(noData) ;
             return ;
         }
 
-        // Create bar chart
-        const chartDiv = document.createElement('div') ;
-        chartDiv.style.display = 'flex' ;
-        chartDiv.style.flexDirection = 'column' ;
-        chartDiv.style.gap = '10px' ;
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas') ;
+        canvas.style.width = '100%' ;
+        canvas.style.height = '100%' ;
+        this.chart_container_.appendChild(canvas) ;
 
-        // Find max value for scaling
-        const maxValue = Math.max(...data.items.map((item: any) => item.value || 0)) ;
+        // Helper function to determine which axis an item belongs to
+        const getItemAxis = (itemName: string): 'left' | 'right' => {
+            // Check if item is in leftitems
+            if (config.leftitems.some(item => item.name === itemName)) {
+                return 'left' ;
+            }
+            // Check if item is in rightitems
+            if (config.rightitems && config.rightitems.some(item => item.name === itemName)) {
+                return 'right' ;
+            }
+            // Default to left if not found
+            return 'left' ;
+        } ;
 
-        for (const item of data.items) {
-            const barContainer = document.createElement('div') ;
-            barContainer.style.display = 'flex' ;
-            barContainer.style.alignItems = 'center' ;
-            barContainer.style.gap = '10px' ;
+        // Check if we need a right axis
+        const hasRightAxis = data.items.some(item => getItemAxis(item.name) === 'right') ;
 
-            // Label
-            const label = document.createElement('div') ;
-            label.innerText = item.label || item.field ;
-            label.style.width = '150px' ;
-            label.style.fontWeight = 'bold' ;
-            barContainer.appendChild(label) ;
+        // Define colors for different teams
+        const teamColors = [
+            'rgba(0, 122, 204, 0.8)',   // Blue
+            'rgba(255, 99, 132, 0.8)',  // Red
+            'rgba(75, 192, 192, 0.8)',  // Teal
+            'rgba(255, 206, 86, 0.8)',  // Yellow
+            'rgba(153, 102, 255, 0.8)', // Purple
+            'rgba(255, 159, 64, 0.8)',  // Orange
+            'rgba(46, 204, 113, 0.8)',  // Green
+            'rgba(231, 76, 60, 0.8)',   // Dark Red
+        ] ;
 
-            // Bar
-            const barWrapper = document.createElement('div') ;
-            barWrapper.style.flexGrow = '1' ;
-            barWrapper.style.backgroundColor = '#e0e0e0' ;
-            barWrapper.style.borderRadius = '3px' ;
-            barWrapper.style.height = '30px' ;
-            barWrapper.style.position = 'relative' ;
+        let labels: string[] = [] ;
+        let datasets: any[] = [] ;
 
-            const bar = document.createElement('div') ;
-            bar.style.height = '100%' ;
-            bar.style.backgroundColor = '#007acc' ;
-            bar.style.borderRadius = '3px' ;
-            bar.style.width = maxValue > 0 ? `${(item.value / maxValue) * 100}%` : '0%' ;
-            bar.style.transition = 'width 0.3s ease' ;
-            barWrapper.appendChild(bar) ;
-
-            // Value display
-            const value = document.createElement('div') ;
-            value.innerText = item.value?.toFixed(2) || '0' ;
-            value.style.position = 'absolute' ;
-            value.style.right = '10px' ;
-            value.style.top = '50%' ;
-            value.style.transform = 'translateY(-50%)' ;
-            value.style.fontWeight = 'bold' ;
-            barWrapper.appendChild(value) ;
-
-            barContainer.appendChild(barWrapper) ;
-            chartDiv.appendChild(barContainer) ;
+        if (this.grouping_mode_ === 'items-within-teams') {
+            // Group by team: X-axis shows teams, each item is a separate dataset
+            labels = data.teams.map(t => `Team ${t}`) ;
+            
+            // Create a dataset for each item
+            for (let itemIndex = 0; itemIndex < data.items.length; itemIndex++) {
+                const item = data.items[itemIndex] ;
+                const itemData: number[] = [] ;
+                const itemAxis = getItemAxis(item.name) ;
+                
+                // For each team, get this item's value
+                for (let teamIndex = 0; teamIndex < data.teams.length; teamIndex++) {
+                    let displayValue: number | null = null ;
+                    if (item.values && item.values.length > teamIndex) {
+                        const typedValue = item.values[teamIndex] ;
+                        if (typedValue && (typedValue.type === 'integer' || typedValue.type === 'real')) {
+                            displayValue = typedValue.value as number ;
+                        }
+                    }
+                    itemData.push(displayValue !== null ? displayValue : 0) ;
+                }
+                
+                datasets.push({
+                    label: item.name,
+                    data: itemData,
+                    backgroundColor: teamColors[itemIndex % teamColors.length],
+                    borderColor: teamColors[itemIndex % teamColors.length].replace('0.8', '1'),
+                    borderWidth: 1,
+                    yAxisID: itemAxis === 'left' ? 'y' : 'y1'
+                }) ;
+            }
+        } else {
+            // Group by item: X-axis shows items, each team is a separate dataset
+            labels = data.items.map(item => item.name) ;
+            
+            // Create a dataset for each team
+            for (let teamIndex = 0; teamIndex < data.teams.length; teamIndex++) {
+                const teamNumber = data.teams[teamIndex] ;
+                const teamColor = teamColors[teamIndex % teamColors.length] ;
+                const teamData: number[] = [] ;
+                
+                // For each item, get this team's value
+                for (const item of data.items) {
+                    let displayValue: number | null = null ;
+                    if (item.values && item.values.length > teamIndex) {
+                        const typedValue = item.values[teamIndex] ;
+                        if (typedValue && (typedValue.type === 'integer' || typedValue.type === 'real')) {
+                            displayValue = typedValue.value as number ;
+                        }
+                    }
+                    teamData.push(displayValue !== null ? displayValue : 0) ;
+                }
+                
+                // In this mode, all items in a dataset belong to the same team
+                // We need to determine axis based on the items being displayed
+                // For simplicity, we'll use 'y' and let individual items override if needed
+                datasets.push({
+                    label: `Team ${teamNumber}`,
+                    data: teamData,
+                    backgroundColor: teamColor,
+                    borderColor: teamColor.replace('0.8', '1'),
+                    borderWidth: 1,
+                    yAxisID: 'y'  // Default to left axis for teams
+                }) ;
+            }
         }
 
-        this.chart_container_.appendChild(chartDiv) ;
+        // Build scales configuration
+        const scalesConfig: any = {
+            x: {
+                title: {
+                    display: !!config?.xlabel,
+                    text: config?.xlabel || '',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    }
+                }
+            },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                beginAtZero: true,
+                title: {
+                    display: !!config?.yleft,
+                    text: config?.yleft || 'Left Axis',
+                    font: {
+                        size: 18,
+                        weight: 'bold'
+                    }
+                }
+            }
+        } ;
+
+        // Add right axis only if needed
+        if (hasRightAxis) {
+            scalesConfig.y1 = {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: config?.yright || 'Right Axis',
+                    font: {
+                        size: 18,
+                        weight: 'bold'
+                    }
+                },
+                grid: {
+                    drawOnChartArea: false  // Only draw grid lines for left axis
+                }
+            } ;
+        }
+
+        // Create Chart.js configuration
+        const chartConfig: ChartConfiguration = {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: !!config?.title,
+                        text: config?.title || `${data.config || 'Chart'}`,
+                        font: {
+                            size: 18,
+                            weight: 'bold'
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: scalesConfig
+            }
+        } ;
+
+        // Create the chart
+        this.chart_instance_ = new Chart(canvas, chartConfig) ;
     }
 
     private clearChart(): void {
@@ -537,7 +907,9 @@ export class SingleTeamView extends XeroView {
     }
 
     public setTeam(teamNumber: number): void {
-        this.selected_team_ = teamNumber ;
+        this.selected_teams_.clear() ;
+        this.selected_teams_.add(teamNumber) ;
+        this.displayTeams() ;
         if (this.selected_config_index_ !== -1) {
             this.requestChartData() ;
         }

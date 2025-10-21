@@ -154,11 +154,7 @@ export class DataSetEditor extends XeroView {
         const originalDataset = this.dsets_[index] ;
         const datasetCopy: IPCDataSet = {
             name: originalDataset.name,
-            matches: {
-                kind: originalDataset.matches.kind,
-                first: originalDataset.matches.first,
-                last: originalDataset.matches.last
-            },
+            matches: JSON.parse(JSON.stringify(originalDataset.matches)),
             formula: originalDataset.formula
         } ;
 

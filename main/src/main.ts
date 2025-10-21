@@ -189,7 +189,7 @@ app.on("ready", () => {
     ipcMain.on('update-multi-team-configs', (event, ...args) => { updateSingleTeamConfigs('update-multi-team-configs', ...args)}) ;
     ipcMain.on('get-match-configs', (event, ...args) => { getSingleTeamConfigs('get-match-configs', ...args)}) ;
     ipcMain.on('update-match-configs', (event, ...args) => { updateSingleTeamConfigs('update-match-configs', ...args)}) ;
-    ipcMain.on('get-graph-data', (event, ...args) => { getGraphData('get-graph-data', ...args)}) ;
+    ipcMain.on('get-chart-data', (event, ...args) => { getGraphData('get-graph-data', ...args)}) ;
 
     createWindow() ;
 }) ;

@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'update-multi-team-configs',      // views/multiteam/multiteamview.ts
         'get-match-configs',              // views/matchgraphs/matchgraphsview.ts
         'update-match-configs',           // views/matchgraphs/matchgraphsview.ts
+        'get-chart-data',                 // views/matchgraphs/matchgraphsview.ts
       ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -137,6 +138,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-single-team-configs',     // main/apps/sccentral.ts
         'send-multi-team-configs',      // main/apps/sccentral.ts
         'send-match-configs',           // main/apps/sccentral.ts
+        'send-chart-data',              // main/apps/sccentral.ts
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));

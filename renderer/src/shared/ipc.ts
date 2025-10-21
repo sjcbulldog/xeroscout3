@@ -229,6 +229,18 @@ export interface IPCAlliance {
     teams: [number, number, number] ;
 }
 
+export interface IPCMatchInfo {
+    comp_level: string ;
+    match_number: number ;
+    set_number: number ;
+    red1: number ;
+    red2: number ;
+    red3: number ;
+    blue1: number ;
+    blue2: number ;
+    blue3: number ;
+}
+
 export interface IPCMatchOutcome {
     winner: number ;
     loser: number ;
@@ -274,8 +286,9 @@ export interface IPCPlayoffStatus {
 //   - range: A range of matches (first is the first match to use, last is the last match to use)
 //   - all: All matches (first and last are not used)
 //
-export interface IPCMatchSet {
-    kind: "last" | "first" | "range" | "all" ;
+export interface IPCMatchSetRange {
+    kind: "last" | "first" | "range" | "all"  ;
+
     first: number ;                                 // If kind is first, this is the number of matches to use (use the first N matches)
                                                     // If kind is last, this is not used
                                                     // If kind is range, this is the first match to use (use between first and last matches)
@@ -284,6 +297,15 @@ export interface IPCMatchSet {
                                                     // If kind is last, this is the number of matches to use (use the last N matches)
                                                     // If kind is range, this is the last match to use  (use between first and last matches)
 }
+
+export interface IPCMatchSetSpecific {
+    kind: "specific" ;
+    comp_level: string ;
+    match_number : number ;
+    set_number: number ;
+}
+
+export type IPCMatchSet = IPCMatchSetRange | IPCMatchSetSpecific ;
 
 //
 // DataSet -
@@ -309,7 +331,8 @@ export interface IPCGraphItem {
 export interface IPCGraphConfig {
     name: string ;                                  // The name of the graph configuration
     xlabel: string ;                                // The label to use for the X axis
-    ylabel: string ;                                // The label to use for the Y axis
+    yleft: string ;                                 // The label to use for the Y axis
+    yright: string ;                                // The label to use for the right Y axis
     title: string ;                                 // The title to use for the graph
     type: string ;                                  // The type of the graph (e.g. line, bar, etc.)
     teams: number[] ;                               // The teams to include in the graph
@@ -319,7 +342,7 @@ export interface IPCGraphConfig {
 
 export interface IPCGraphItemData {
     name: string ;                                  // The name of the data series
-    values: IPCTypedDataValue[] ;                              // The values for the data series
+    values: IPCTypedDataValue[] ;                   // The values for the data series
 }
 
 export interface IPCGraphData {

@@ -1005,8 +1005,8 @@ export async function getGraphData(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.getGraphData(args[0] as string) ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            central.getGraphData(args[0] as IPCGraphConfig) ;
         }
     }
 }
