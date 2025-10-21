@@ -165,7 +165,7 @@ export class PicklistMgr extends Manager {
                         for(let col of cols) {
                             if (col !== 'rank' && col != 'picknotes' && col != 'nickname' && col != 'teamnumber') {
                                 try {
-                                    let data = await this.dset_mgr_.getData(ds, col, team) ;
+                                    let data = await this.data_mgr_.getData(ds, col, team) ;
                                     record[col] = data ;
                                 }
                                 catch(err) {

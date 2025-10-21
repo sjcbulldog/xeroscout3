@@ -14,12 +14,11 @@ import { BAEvent, BAMatch, BATeam } from "../extnet/badata";
 import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
-import { TeamNickNameNumber } from "../project/teammgr";
 import { ManualMatchData } from "../project/matchmgr";
 import { GraphData } from "../comms/graphifc";
 import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -462,7 +461,7 @@ export class SCCentral extends SCBase {
 			label: 'Import Graph Definitions',
 			enabled: false,
 			click: () => {
-				this.importGraphDefinitions();
+				// this.importGraphDefinitions();
 			},
 		});
 		datamenu.submenu?.append(importGraphDefns);
@@ -965,7 +964,7 @@ export class SCCentral extends SCBase {
 		this.project_?.data_mgr_?.setTeamColConfig(data);
 	}
 
-	public setTeamData(data: TeamNickNameNumber[]) {
+	public setTeamData(data: IPCTeamInfo[]) {
 		this.project_?.team_mgr_?.setTeamData(data);
 		this.setView('info');
 	}
@@ -1152,62 +1151,6 @@ export class SCCentral extends SCBase {
 			this.sendToRenderer("set-status-close-button-visible", true);
 			this.setView("info");
 		}
-	}
-
-	private async importGraphsDefnFromFile(filename: string) {
-		try {
-			let proj: Project = await Project.openEvent(this.logger_, filename, this.year_!) ;
-			let omitted: string = '' ;
-			let count = 0 ;
-
-			for(let gr of proj.graph_mgr_!.getGraphs()) {
-				if (gr.name.length > 0) {
-					if (!this.project_!.graph_mgr_!.findGraphByName(gr.name)) {
-						this.project_!.graph_mgr_!.storeGraph(gr) ;
-						count++ ;
-					}
-					else {
-						if (omitted.length > 0) {
-							omitted += ', ' ;
-						}
-						omitted += gr.name ;
-					}
-				}
-			}
-
-			let msg = 'Imported ' + count + ' graphs' ;
-			if (omitted.length > 0) {
-				msg += ' - omitted graphs ' + omitted + ' as these already exist.' ;
-			}
-			dialog.showMessageBoxSync(this.win_, {
-				title: 'Import Graph Definitions',
-				message: msg
-			}) ;
-		}
-		catch(err) {
-			let errobj = err as Error ;
-			dialog.showMessageBoxSync(this.win_, {
-				title: 'Error reading project file',
-				message: 'count not ready project file - ' + errobj.message
-			}) ;
-		}
-	}
-
-	private importGraphDefinitions() {
-		dialog.showOpenDialog(this.win_, {
-			title: 'Open event.json file for event',
-			filters: [
-				{ name: 'JSON Files', extensions: ['json'] },
-				{ name: 'All Files', extensions: ['*']}
-			],
-			properties: [
-				'openFile',
-			]
-		}).then(result => {	
-			if (!result.canceled) {
-				this.importGraphsDefnFromFile(result.filePaths[0]) ;
-			}
-		}) ;
 	}
 
 	private importBlueAllianceData() {
@@ -2318,64 +2261,6 @@ export class SCCentral extends SCBase {
 		this.sendToRenderer('send-team-list', ret) ;
 	}
 
-	public async saveTeamGraphSetup(desc: GraphConfig) {
-		this.project_?.graph_mgr_?.storeGraph(desc) ;
-	}
-
-	public async sendTeamGraphData(request: string) {
-		if (this.project_ && this.project_.isInitialized()) {
-			let labels: Array<Array<string>> = [];
-			let group: GraphData[] = [];
-
-			let ds = this.project_!.dataset_mgr_!.getDataSetByName(request.ds) ;
-			if (ds) {
-				let teamlist = this.project_!.team_mgr_!.getSortedTeamNumbers() ;
-				for (let team of teamlist) {
-					let t = this.project_.team_mgr_!.findTeamByNumber(team) ;
-
-					let oneteam: string[] = [] ;
-					if (t) {
-						oneteam.push(team.toString()) ;
-						oneteam.push(t.nickname) ;
-					}
-					else {
-						oneteam.push(team.toString());
-					}
-					
-					labels.push(oneteam) ;
-				}
-
-				for (let tdset of request.data.leftteam) {
-					let data = await this.project_!.graph_mgr_!.createTeamDataset(teamlist, tdset, 'y');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				for (let tdset of request.data.leftmatch) {
-					let data = await this.project_!.graph_mgr_!.createMatchDataset(teamlist, tdset, 'y');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				for (let tdset of request.data.rightteam) {
-					let data = await this.project_!.graph_mgr_!.createTeamDataset(teamlist, tdset, 'y2');
-					if (data) {
-						group.push(data);
-					}
-				}
-
-				for (let tdset of request.data.rightmatch) {
-					let data = await this.project_!.graph_mgr_!.createMatchDataset(teamlist, tdset, 'y2');
-					if (data) {
-						group.push(data);
-					}
-				}
-			}
-		}
-	}
-
 	private getTeamNumbersFromKeys(keys: string[]) : number[] {
 		let ret: number[] = [] ;
 
@@ -2404,19 +2289,6 @@ export class SCCentral extends SCBase {
 		data.sort((a, b) => { return this.sortCompFun(a, b) ;}) ;
 
 		this.sendToRenderer('send-match-list', data) ;
-	}
-
-	public getStoredGraphList() {
-		if (this.project_ && this.project_!.isInitialized()) {
-			this.sendToRenderer('send-stored-graph-list', this.project_!.graph_mgr_!.getGraphs()) ;
-		}
-	}
-
-	public deleteStoredGraph(name: string) {
-		if (this.project_ && this.project_!.isInitialized()) {
-			this.project_!.graph_mgr_!.deleteGraph(name) ;
-			this.getStoredGraphList() ;
-		}
 	}
 
 	//#region picklists
@@ -2576,7 +2448,7 @@ export class SCCentral extends SCBase {
 
 			let teamlist = this.project_!.team_mgr_!.getSortedTeamNumbers() ;			
 			for(let t of teamlist) {
-				let v = await this.project_!.data_mgr_!.getData(ds.matches, field, t) ;
+				let v = await this.project_!.data_mgr_!.getData(ds, field, t) ;
 				values.push(v) ;
 				teams.push(t) ;
 			}
@@ -2639,7 +2511,33 @@ export class SCCentral extends SCBase {
 	}
 
 	public async getSingleTeamConfigs() {
+		this.sendToRenderer('send-single-team-configs', this.project_?.graph_mgr_?.singleTeamConfigs);
+	}
 
+	public async updateSingleTeamConfigs(configs: IPCGraphConfig[]) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.graph_mgr_!.singleTeamConfigs = configs ;
+		}
+	}
+
+	public async getMultiTeamConfigs() {
+		this.sendToRenderer('send-multi-team-configs', this.project_?.graph_mgr_?.multiTeamConfigs);
+	}
+
+	public async updateMultiTeamConfigs(configs: IPCGraphConfig[]) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.graph_mgr_!.multiTeamConfigs = configs ;
+		}
+	}
+
+	public async getMatchConfigs() { 
+		this.sendToRenderer('send-match-configs', this.project_?.graph_mgr_?.matchConfigs);
+	}
+
+	public async updateMatchConfigs(configs: IPCGraphConfig[]) {
+		if (this.project_ && this.project_.isInitialized()) {
+			this.project_!.graph_mgr_!.matchConfigs = configs ;
+		}
 	}
 
 	private importFormulasFromFileWithPath(path: string) {
@@ -2735,4 +2633,21 @@ export class SCCentral extends SCBase {
 			this.project_.data_mgr_!.setMatchFormatFormulas(formulas)
 		}
 	}		
+
+	public getGraphData(cfgname: string) {
+		let cfg = this.project_?.graph_mgr_?.singleTeamConfigs.find(c => c.name === cfgname) ;
+		if (!cfg) {
+			cfg = this.project_?.graph_mgr_?.multiTeamConfigs.find(c => c.name === cfgname) ;
+			if (!cfg) {
+				cfg = this.project_?.graph_mgr_?.matchConfigs.find(c => c.name === cfgname) ;
+			}
+		}
+
+		if (cfg) {
+			this.project_?.graph_mgr_?.generateGraphData(cfg)
+				.then((data) => {
+					this.sendToRenderer('send-graph-data', data) ;
+				}) ;
+		}
+	}
 }

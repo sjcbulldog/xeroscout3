@@ -44,19 +44,6 @@ export class DataSetManager extends Manager {
         return ret ;
     }
 
-    public async getData(ds: IPCDataSet, field: string, team: number) : Promise <IPCTypedDataValue> {
-        let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
-            try {
-                let data = await this.datamgr_.getData(ds.matches, field, team) ;
-                resolve(data) ;
-            }
-            catch(err) {
-                reject(err) ;
-            }
-        }) ;
-        return ret; 
-    }
-
     public async getDataSetData(dsname: string) : Promise <any> {
         interface OneTeam {
             [key: string]: any; // Allows any property with a string key

@@ -6,11 +6,10 @@ import { SCCentral } from "./main/apps/sccentral";
 import { SCCoach } from "./main/apps/sccoach";
 import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventData, loadBaEventData, getTabletData, 
          setTabletData, getTeamData, setTeamData, getMatchData, setMatchData, getTeamStatus, getMatchStatus, setTabletNamePurpose, 
-         provideResult, setEventName, getMatchDB, getTeamDB, sendMatchColConfig, sendTeamColConfig, getTeamGraphData, generateRandomData,
-         getTeamList, getMatchList, getStoredGraphList, getForm, getPicklistData, getPicklistList,
-         createNewPicklist, deletePicklist, clientLog, updatePicklistNotes, getPicklistNotes, getSingleTeamData, getFormulas, deleteFormula,
-         renameFormula, updateFormula, getDataSets, updateDataSet, renameDataSet, getTeamFieldList, getMatchFieldList,
-         saveForm, getImages, importImage, getImageData, updatePicklistColumns, updatePicklistData, getPicklistColumns, getPicklistColData,
+         provideResult, setEventName, getMatchDB, getTeamDB, sendMatchColConfig, sendTeamColConfig, generateRandomData,
+         getTeamList, getForm, getFormulas, deleteFormula,
+         renameFormula, updateFormula, getDataSets, updateDataSet, getTeamFieldList, getMatchFieldList,
+         saveForm, getImageData, 
          getHintDB,
          setHintHidden,
          updateMatchDB,
@@ -24,7 +23,11 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getTeamFormatFormulas,
          setMatchFormatFormulas,
          setTeamFormatFormulas,
-         getSingleTeamConfig} from "./main/ipchandlers" ;
+         getImageNames,
+         getSingleTeamConfigs,
+         updateSingleTeamConfigs,
+         getGraphData
+} from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
@@ -155,7 +158,6 @@ app.on("ready", () => {
     ipcMain.on('update-team-db', (event, ...args) => { updateTeamDB('update-team-db', ...args)}) ;
     ipcMain.on('get-form', (event, ...args) => { getForm('get-form', ...args)});
     ipcMain.on('get-image-data', (event, ...args) => { getImageData('get-image-data', ...args)});
-    ipcMain.on('get-images', (event, ...args) => { getImages('get-images', ...args)});
     ipcMain.on('save-form', (event, ...args) => { saveForm('save-form', ...args)});
     ipcMain.on('get-match-data', (event, ...args) => { getMatchData('get-match-data', ...args)});
     ipcMain.on('get-team-status', (event, ...args) => { getTeamStatus('get-team-status', ...args)}) ;
@@ -178,6 +180,17 @@ app.on("ready", () => {
     ipcMain.on('get-team-format-formulas', (event, ...args) => { getTeamFormatFormulas('get-team-format-formulas', ...args)}) ;    
     ipcMain.on('set-match-format-formulas', (event, ...args) => { setMatchFormatFormulas('set-match-format-formulas', ...args)}) ;
     ipcMain.on('set-team-format-formulas', (event, ...args) => { setTeamFormatFormulas('set-team-format-formulas', ...args)}) ;       
+    ipcMain.on('get-image-names', (event, ...args) => { getImageNames('get-image-names', ...args)}) ;
+    ipcMain.on('get-chart-data', (event, ...args) => { getGraphData('get-chart-data', ...args)}) ;
+
+    ipcMain.on('get-single-team-configs', (event, ...args) => { getSingleTeamConfigs('get-single-team-configs', ...args)}) ;
+    ipcMain.on('update-single-team-configs', (event, ...args) => { updateSingleTeamConfigs('update-single-team-configs', ...args)}) ;
+    ipcMain.on('get-multi-team-configs', (event, ...args) => { getSingleTeamConfigs('get-multi-team-configs', ...args)}) ;
+    ipcMain.on('update-multi-team-configs', (event, ...args) => { updateSingleTeamConfigs('update-multi-team-configs', ...args)}) ;
+    ipcMain.on('get-match-configs', (event, ...args) => { getSingleTeamConfigs('get-match-configs', ...args)}) ;
+    ipcMain.on('update-match-configs', (event, ...args) => { updateSingleTeamConfigs('update-match-configs', ...args)}) ;
+    ipcMain.on('get-graph-data', (event, ...args) => { getGraphData('get-graph-data', ...args)}) ;
+
     createWindow() ;
 }) ;
 

@@ -6,10 +6,9 @@ import { Manager } from "./manager";
 import { FormulaManager } from "./formulamgr";
 import { BAMatch, BAOprData, BARankingData, BATeam } from "../extnet/badata";
 import { DataValue } from '../../shared/datavalue' ;
-import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet } from "../../shared/ipc";
+import { IPCColumnDesc, IPCTypedDataValue, IPCProjColumnsConfig, IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCMatchSet, IPCDataSet } from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataModelInfo } from "../model/datamodel";
-
 
 export class DataInfo {
     public matchdb_col_config_? : IPCProjColumnsConfig ;       // List of hidden columns in match data
@@ -130,7 +129,7 @@ export class DataManager extends Manager {
     // field.  For match fields, the data is processes over all matches to get
     // an average.
     //   
-    public getData(m: IPCMatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
+    public getData(ds: IPCDataSet | undefined, field: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let found = false ;
 
@@ -144,14 +143,14 @@ export class DataManager extends Manager {
 
             let mcols = await this.matchdb_.getColumnNames() ;
             if (mcols.includes(field)) {
-                let v = await this.getMatchData(m, field, team) ;
+                let v = await this.getMatchData(ds, field, team) ;
                 found = true ;
                 resolve(v) ;
                 return ;
             }
 
             if (this.formula_mgr_.hasFormula(field)) {
-                let v = await this.evalFormula(m, field, team) ;
+                let v = await this.evalFormula(ds, field, team) ;
                 found = true ;
                 resolve(v) ;
                 return ;
@@ -375,7 +374,7 @@ export class DataManager extends Manager {
 
     // #endregion
 
-    private getMatchData(m: IPCMatchSet, field: string, team: number) : Promise<IPCTypedDataValue> {
+    private getMatchData(ds: IPCDataSet | undefined, field: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let fields = field + ', comp_level, set_number, match_number' ;
             let teamkey = 'frc' + team ;
@@ -384,7 +383,13 @@ export class DataManager extends Manager {
                 .then((data: any[]) => {
                     if (data.length !== 0) {
                         let sorted = this.sortData(data) ;
-                        let filtered = this.filterMatchData(m, sorted) ;
+                        let filtered : any[] ;
+                        if (ds) {
+                            filtered = this.filterMatchData(ds, sorted) ;
+                        }
+                        else {
+                            filtered = sorted ;
+                        }
 
                         let value : DataValue[] = [] ;
                         for(let row of filtered) {
@@ -491,7 +496,7 @@ export class DataManager extends Manager {
         }
     }
     
-    private evalFormula(m: IPCMatchSet, name: string, team: number) : Promise<IPCTypedDataValue> {
+    private evalFormula(ds: IPCDataSet | undefined, name: string, team: number) : Promise<IPCTypedDataValue> {
         let ret = new Promise<IPCTypedDataValue>(async (resolve, reject) => {
             let formula = this.formula_mgr_.findFormula(name) ;
             if (!formula) {
@@ -515,7 +520,7 @@ export class DataManager extends Manager {
                 let vars: string[] = formula.variables() ;
                 let varvalues: Map<string, IPCTypedDataValue> = new Map() ;
                 for(let varname of vars) {
-                    let v = await this.getData(m, varname, team) ;
+                    let v = await this.getData(ds, varname, team) ;
                     if(v.type === 'error') {
                         resolve(v) ;
                         return ;
@@ -531,40 +536,40 @@ export class DataManager extends Manager {
         return ret ;
     }
 
-    private filterMatchData(m: IPCMatchSet, data: any[]) : any[] {
+    private filterMatchData(m: IPCDataSet, data: any[]) : any[] {
         let start = 0 ;
         let end = data.length - 1 ;
         let newdata : any[] = [] ;
 
-        if (m.kind == 'first') {
+        if (m.matches.kind == 'first') {
             // 
             // We want the first N entries
             //
             start = 0 ;
-            if (m.last - 1 < end) {
-                end = m.last - 1 ;
+            if (m.matches.last - 1 < end) {
+                end = m.matches.last - 1 ;
             }
         }
-        else if (m.kind == 'last') {
+        else if (m.matches.kind == 'last') {
             //
             // We want the last N entries
             //
             end = data.length - 1 ;
-            start = data.length - m.first ;
+            start = data.length - m.matches.first ;
             if (start < 0) {
                 start = 0 ;
             }
         }
-        else if (m.kind == 'all') {
+        else if (m.matches.kind == 'all') {
             start = 0 ;
             end = data.length - 1 ;
         }
-        else if (m.kind == 'range') {
+        else if (m.matches.kind == 'range') {
             //
             // We want the entries between the two values
             //
-            start = m.first ;
-            end = m.last ;
+            start = m.matches.first ;
+            end = m.matches.last ;
             if (start < 0) {
                 start = 0 ;
             }

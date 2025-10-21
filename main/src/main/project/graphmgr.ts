@@ -1,120 +1,106 @@
+import { IPCGraphConfig, IPCGraphData, IPCGraphItemData } from "../../shared/ipc";
 import { DataManager } from "./datamgr";
+import { DataSetManager } from "./datasetmgr";
 import { Manager } from "./manager";
 import winston from "winston";
+
+export class GraphInfo {
+    public single_team_configs_ : IPCGraphConfig[] = [] ;   
+    public multi_team_configs_ : IPCGraphConfig[] = [] ;
+    public match_configs_ : IPCGraphConfig[] = [] ; 
+}
 
 export class GraphManager extends Manager {
     private info_: GraphInfo ;
     private data_mgr_ : DataManager ;
+    private dataset_mgr_ : DataSetManager ;
 
-    constructor(logger: winston.Logger, writer: () => void, info: GraphInfo, data_mgr: DataManager) {
+    constructor(logger: winston.Logger, writer: () => void, info: GraphInfo, data_mgr: DataManager, dataset_mgr: DataSetManager) {
         super(logger, writer) ;
         this.info_ = info ;
         this.data_mgr_ = data_mgr ;
-    }
+        this.dataset_mgr_ = dataset_mgr ;
 
-    public getGraphs() : GraphConfig[] {
-        return this.info_.team_graph_data_
-    }
-    
-    public deleteGraph(name: string) {
-        let index = -1 ;
-
-        let i = 0 ;
-        for(let gr of this.info_.team_graph_data_) {
-            if (gr.name === name) {
-                index = i ;
-                break ;
-            }
-
-            i++ ;
+        if (this.info_.single_team_configs_ === undefined) {
+            this.info_.single_team_configs_ = [] ;
         }
 
-        if (index !== -1) {
-            this.info_.team_graph_data_.splice(index, 1) ;
+        if (this.info_.multi_team_configs_ === undefined) {
+            this.info_.multi_team_configs_ = [] ;
         }
 
+        if (this.info_.match_configs_ === undefined) {
+            this.info_.match_configs_ = [] ;
+        }
+    }
+
+    public get singleTeamConfigs() : IPCGraphConfig[] {
+        return this.info_.single_team_configs_ ;
+    }
+
+    public set singleTeamConfigs(configs: IPCGraphConfig[]) {
+        this.info_.single_team_configs_ = configs ;
         this.write() ;
-    }    
-
-    public findGraphByName(name: string) : GraphConfig | undefined {
-        for(let gr of this.info_.team_graph_data_) {
-            if (gr.name === name) {
-                return gr ;
-            }
-        }
-
-        return undefined ;
     }
 
-    public storeGraph(desc: GraphConfig) {
-        let index = -1 ;
+    public get multiTeamConfigs() : IPCGraphConfig[] {
+        return this.info_.multi_team_configs_ ;
+    }
 
-        if (desc.name.length > 0) {
-            let i = 0 ;
-            for(let gr of this.info_.team_graph_data_) {
-                if (gr.name === desc.name) {
-                    index = i ;
-                    break ;
+    public set multiTeamConfigs(configs: IPCGraphConfig[]) {
+        this.info_.multi_team_configs_ = configs ;
+        this.write() ;
+    }
+
+    public get matchConfigs() : IPCGraphConfig[] {
+        return this.info_.match_configs_ ;
+    }
+
+    public set matchConfigs(configs: IPCGraphConfig[]) {
+        this.info_.match_configs_ = configs ;
+        this.write() ;
+    }
+
+    public generateGraphData(config: IPCGraphConfig) : Promise<IPCGraphData> {
+        let ret = new Promise<IPCGraphData>(async (resolve, reject) => {
+            let data : IPCGraphData = {
+                config: config.name,
+                teams: [],
+                items: []
+            } ;
+
+            for(let team of config.teams) {
+                data.teams.push(team) ;
+            }
+
+            for(let item of config.leftitems) {
+                let one : IPCGraphItemData = {
+                    name: item.name,
+                    values: []
+                };
+                data.items.push(one) ;
+
+                for(let team of config.teams) {
+                    let ds = this.dataset_mgr_.findDataSet(item.dataset) ;
+                    let tdata = await this.data_mgr_.getData(ds, item.name, team) ;
+                    one.values.push(tdata) ;
                 }
-
-                i++ ;
             }
 
-            if (index !== -1) {
-                this.info_.team_graph_data_[index] = desc ;
+            for(let item of [...config.leftitems, ...config.rightitems]) {
+                let one : IPCGraphItemData = {
+                    name: item.name,
+                    values: []
+                };
+                data.items.push(one) ;
+                for(let team of config.teams) {
+                    let ds = this.dataset_mgr_.findDataSet(item.dataset) ;
+                    let idata = await this.data_mgr_.getData(ds, item.name, team) ;
+                    one.values.push(idata) ;
+                }   
             }
-            else {
-                this.info_.team_graph_data_.push(desc) ;
-            }
-            this.write() ;
-        }
+            resolve(data) ;
+        }) ;
+        return ret;
     }
-
-     async createTeamDataset(teams: number[], data: string, yaxis: string): Promise<any> {
-    	let ret = new Promise<any>(async (resolve, reject) => {
-    		try {
-    			let values = await this.data_mgr_!.getAllTeamData()
-    			//
-    			// Should be one record per team
-    			//
-    			let dvals = [];
-    			for (let record of values) {
-    				dvals.push(record.value(data));
-    			}
-
-    			let dset = {
-    				label: data,
-    				data: dvals,
-    				yAxisID: yaxis,
-    			};
-    			resolve(dset);
-    		} catch (err) {
-    			reject(err);
-    		}
-    	});
-    	return ret;
-    }
-
-    public createMatchDataset(teams: number[], data: string, yaxis: string): any {
-    	let ret = new Promise<any>(async (resolve, reject) => {
-    		let tdata = [];
-    		for (let team of teams) {
-    			let tkey = "frc" + team;
-    			let values = await this.data_mgr_!.getAllMatchData() ;
-    			let sum = 0.0;
-    			for (let dval of values) {
-    				sum += dval[data];
-    			}
-    			tdata.push(sum / values.length);
-    		}
-
-    		let dset = {
-    			label: data,
-    			data: tdata,
-    			yAxisID: yaxis,
-    		};
-    		resolve(dset);
-    	});
-    	return ret;
-    }    
 }

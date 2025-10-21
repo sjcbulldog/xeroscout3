@@ -9,7 +9,6 @@ export class DataSetEditor extends XeroView {
     private formulas_ : string[] = [] ;
     private dsets_ : IPCDataSet[] = [] ;
     private oldname_ : string = '' ;
-    private selected_index_ : number = -1 ; // Track selected dataset index
 
     // Class implementation goes here
     constructor(app: XeroApp) {
@@ -85,32 +84,6 @@ export class DataSetEditor extends XeroView {
             
             div.appendChild(deleteIcon) ;
             
-            // Apply selection styling if this dataset is selected
-            if (i === this.selected_index_) {
-                div.style.backgroundColor = '#007acc' ; // Blue background for selected
-                div.style.color = 'white' ; // White text for selected
-            } else {
-                div.style.backgroundColor = '' ; // Default background
-                div.style.color = '' ; // Default text color
-            }
-            
-            // Add hover effects for non-selected items
-            if (i !== this.selected_index_) {
-                div.addEventListener('mouseenter', () => {
-                    if (this.selected_index_ !== i) {
-                        div.style.backgroundColor = '#f0f0f0' ;
-                    }
-                }) ;
-                div.addEventListener('mouseleave', () => {
-                    if (this.selected_index_ !== i) {
-                        div.style.backgroundColor = '' ;
-                    }
-                }) ;
-            }
-            
-            // Add single-click handler to select the dataset (only on the name span)
-            nameSpan.addEventListener('click', () => this.selectDataSet(i)) ;
-            
             // Add double-click handler to edit the dataset (only on the name span)
             nameSpan.addEventListener('dblclick', () => this.editDataSet(i)) ;
             
@@ -120,23 +93,11 @@ export class DataSetEditor extends XeroView {
         this.addNewDataSetSentinel() ;
     }
 
-    private selectDataSet(index: number) {
-        this.selected_index_ = index ;
-        this.displayAll() ; // Refresh display to update selection styling
-    }
-
     private deleteDataSet(index: number) {
         // Confirm deletion
         if (confirm(`Are you sure you want to delete the dataset "${this.dsets_[index].name}"?`)) {
             // Remove the dataset from the array
             this.dsets_.splice(index, 1) ;
-            
-            // Adjust selected index if necessary
-            if (this.selected_index_ === index) {
-                this.selected_index_ = -1 ; // Clear selection if deleted item was selected
-            } else if (this.selected_index_ > index) {
-                this.selected_index_-- ; // Adjust selection index if it was after the deleted item
-            }
             
             // Update the backend with the modified dataset list
             this.request('update-datasets', this.dsets_) ;

@@ -1,6 +1,6 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import { XeroView } from "../xeroview.js";
-import { IPCDataSet, IPCGraphConfig, IPCGraphItem } from "../../shared/ipc.js";
+import { IPCColumnDesc, IPCDataSet, IPCFormula, IPCGraphConfig, IPCGraphData, IPCGraphItem, IPCTeamInfo } from "../../shared/ipc.js";
 import { SingleTeamConfigDialog } from "./singleteamconfigdialog.js";
 
 export class SingleTeamView extends XeroView {
@@ -8,6 +8,7 @@ export class SingleTeamView extends XeroView {
     private right_panel_!: HTMLDivElement ;
     private chart_container_!: HTMLDivElement ;
     private config_list_div_!: HTMLDivElement ;
+    private team_list_div_!: HTMLDivElement ;
     
     private dialog_: SingleTeamConfigDialog | undefined ;
     private configs_: IPCGraphConfig[] = [] ;
@@ -18,11 +19,13 @@ export class SingleTeamView extends XeroView {
     private teamflds_: string[] = [] ;  
     private matchflds_ : string[] = [] ;
     private formulas_ : string[] = [] ;
+    private teams_ : IPCTeamInfo[] = [] ;
 
     private teamfldsReceived_ : boolean = false ;
     private matchfldsReceived_ : boolean = false ;
     private formulasReceived_ : boolean = false ;    
     private datasetsReceived_ : boolean = false ;
+    private teamsReceived_ : boolean = false ;
     private configsReceived_ : boolean = false ;
 
     constructor(app: XeroApp) {
@@ -31,18 +34,21 @@ export class SingleTeamView extends XeroView {
         // Register callbacks for data from backend
         this.registerCallback('send-single-team-configs', this.receivedConfigs.bind(this)) ;
         this.registerCallback('send-datasets', this.receivedDataSets.bind(this)) ;
-        this.registerCallback('send-team-fields', this.receivedTeamFields.bind(this)) ;
-        this.registerCallback('send-match-fields', this.receivedMatchFields.bind(this)) ;
+        this.registerCallback('send-team-field-list', this.receivedTeamFields.bind(this)) ;
+        this.registerCallback('send-match-field-list', this.receivedMatchFields.bind(this)) ;
         this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;
+        this.registerCallback('send-team-list', this.receivedTeam.bind(this)) ;
+        this.registerCallback('send-team-chart-data', this.receivedChartData.bind(this)) ;
 
 
         // Request initial data
 
         this.request('get-datasets') ;
-        this.request('get-team-fields') ;
-        this.request('get-match-fields') ;
+        this.request('get-team-field-list') ;
+        this.request('get-match-field-list') ;
         this.request('get-formulas') ;
         this.request('get-single-team-configs') ;
+        this.request('get-team-list', true) ;
     }
 
     private createUI(): void {
@@ -70,7 +76,12 @@ export class SingleTeamView extends XeroView {
 
         // Configuration list container
         this.config_list_div_ = document.createElement('div') ;
+        this.config_list_div_.style.marginBottom = '20px' ;
         this.left_panel_.appendChild(this.config_list_div_) ;
+
+        // Team list container
+        this.team_list_div_ = document.createElement('div') ;
+        this.left_panel_.appendChild(this.team_list_div_) ;
 
         // Chart container
         this.chart_container_ = document.createElement('div') ;
@@ -86,10 +97,18 @@ export class SingleTeamView extends XeroView {
     }
 
     private checkAll() {
-        if (this.teamfldsReceived_ && this.matchfldsReceived_ && this.formulasReceived_ && this.datasetsReceived_ && this.configsReceived_) {
+        if (this.teamfldsReceived_ && this.matchfldsReceived_ && this.formulasReceived_ && 
+            this.datasetsReceived_ && this.configsReceived_ && this.teamsReceived_) {
             this.createUI() ;
             this.displayConfigs() ;
+            this.displayTeams() ;
         }
+    }
+
+    private receivedTeam(teams: IPCTeamInfo[]): void {
+        this.teams_ = teams ;
+        this.teamsReceived_ = true ;
+        this.checkAll() ;
     }
 
     private receivedConfigs(configs: IPCGraphConfig[]): void {
@@ -104,25 +123,25 @@ export class SingleTeamView extends XeroView {
         this.checkAll() ;
     }
 
-    private receivedTeamFields(fields: string[]): void {
-        this.teamflds_ = fields ;
+    private receivedTeamFields(fields: IPCColumnDesc[]): void {
+        this.teamflds_ = fields.map(f => f.name) ;
         this.teamfldsReceived_ = true ;
         this.checkAll() ;
     }
 
-    private receivedMatchFields(fields: string[]): void {
-        this.matchflds_ = fields ;
+    private receivedMatchFields(fields: IPCColumnDesc[]): void {
+        this.matchflds_ = fields.map(f => f.name) ;
         this.matchfldsReceived_ = true ;
         this.checkAll() ;
     }
 
-    private receivedFormulas(formulas: string[]): void {
-        this.formulas_ = formulas ;
+    private receivedFormulas(formulas: IPCFormula[]): void {
+        this.formulas_ = formulas.map(f => f.name) ;
         this.formulasReceived_ = true ;
         this.checkAll() ;
     }
 
-    private receivedChartData(data: any): void {
+    private receivedChartData(data: IPCGraphData): void {
         // This will be called when chart data is received from backend
         this.renderChart(data) ;
     }
@@ -242,6 +261,80 @@ export class SingleTeamView extends XeroView {
         this.config_list_div_.appendChild(addButton) ;
     }
 
+    private displayTeams(): void {
+        this.team_list_div_.innerHTML = '' ;
+
+        // Title
+        const title = document.createElement('h3') ;
+        title.innerText = 'Teams' ;
+        title.style.marginTop = '20px' ;
+        title.style.marginBottom = '10px' ;
+        this.team_list_div_.appendChild(title) ;
+
+        // Create scrollable container for team items
+        const scrollContainer = document.createElement('div') ;
+        scrollContainer.style.maxHeight = '300px' ;
+        scrollContainer.style.overflowY = 'auto' ;
+        scrollContainer.style.overflowX = 'hidden' ;
+        scrollContainer.style.border = '1px solid #ccc' ;
+        scrollContainer.style.borderRadius = '3px' ;
+        scrollContainer.style.padding = '5px' ;
+
+        // Display all teams
+        for (const team of this.teams_) {
+            const div = document.createElement('div') ;
+            div.style.cursor = 'pointer' ;
+            div.style.padding = '8px' ;
+            div.style.marginBottom = '5px' ;
+            div.style.borderRadius = '3px' ;
+
+            // Create text for team
+            const teamText = document.createElement('span') ;
+            teamText.innerText = `${team.number} - ${team.nickname}` ;
+            div.appendChild(teamText) ;
+
+            // Apply selection styling
+            if (team.number === this.selected_team_) {
+                div.style.backgroundColor = '#007acc' ;
+                div.style.color = 'white' ;
+            } else {
+                div.style.backgroundColor = '#f0f0f0' ;
+                div.style.color = '' ;
+            }
+
+            // Add hover effects for non-selected items
+            if (team.number !== this.selected_team_) {
+                div.addEventListener('mouseenter', () => {
+                    if (this.selected_team_ !== team.number) {
+                        div.style.backgroundColor = '#e0e0e0' ;
+                    }
+                }) ;
+                div.addEventListener('mouseleave', () => {
+                    if (this.selected_team_ !== team.number) {
+                        div.style.backgroundColor = '#f0f0f0' ;
+                    }
+                }) ;
+            }
+
+            // Add click handler to select the team
+            div.addEventListener('click', () => this.selectTeam(team.number)) ;
+
+            scrollContainer.appendChild(div) ;
+        }
+
+        this.team_list_div_.appendChild(scrollContainer) ;
+    }
+
+    private selectTeam(teamNumber: number): void {
+        this.selected_team_ = teamNumber ;
+        this.displayTeams() ;
+        
+        // If a config is selected, request chart data
+        if (this.selected_config_index_ !== -1) {
+            this.requestChartData() ;
+        }
+    }
+
     private selectConfig(index: number): void {
         this.selected_config_index_ = index ;
         this.displayConfigs() ;
@@ -267,6 +360,7 @@ export class SingleTeamView extends XeroView {
             ylabel: originalConfig.ylabel || '',
             title: originalConfig.title || '',
             type: originalConfig.type || 'bar',
+            teams: [],
             leftitems: originalConfig.leftitems.map(item => ({
                 label: item.label,
                 name: item.name,
@@ -295,6 +389,7 @@ export class SingleTeamView extends XeroView {
             ylabel: '',
             title: '',
             type: 'bar',
+            teams: [],
             leftitems: [],
             rightitems: []
         } ;
@@ -353,8 +448,8 @@ export class SingleTeamView extends XeroView {
         }
 
         const config = this.configs_[this.selected_config_index_] ;
-        this.request('get-team-chart-data', {
-            team: this.selected_team_,
+        config.teams = [this.selected_team_] ;
+        this.request('get-chart-data', {
             config: config
         }) ;
     }

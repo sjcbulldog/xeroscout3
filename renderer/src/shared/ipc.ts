@@ -295,6 +295,11 @@ export interface IPCDataSet {
     formula: string ;                               // The formula to use to filter the data set
 }
 
+export interface IPCTeamInfo {
+    number: number ;                                // The team number
+    nickname: string ;                              // The team nickname
+}
+
 export interface IPCGraphItem {
     label: string ;                                 // The label to use for the data series
     name: string ;                                  // The name of the field or expression to use for the data
@@ -307,15 +312,18 @@ export interface IPCGraphConfig {
     ylabel: string ;                                // The label to use for the Y axis
     title: string ;                                 // The title to use for the graph
     type: string ;                                  // The type of the graph (e.g. line, bar, etc.)
+    teams: number[] ;                               // The teams to include in the graph
     leftitems: IPCGraphItem[] ;                     // The items to display on the left side of the graph
     rightitems: IPCGraphItem[] ;                    // The items to display on the right side of the graph
 }
 
 export interface IPCGraphItemData {
     name: string ;                                  // The name of the data series
-    values: number[] ;                              // The values for the data series
+    values: IPCTypedDataValue[] ;                              // The values for the data series
 }
 
 export interface IPCGraphData {
+    config: string ;
+    teams: number[] ;
     items: IPCGraphItemData[] ;                      // The data items for the graph
 }

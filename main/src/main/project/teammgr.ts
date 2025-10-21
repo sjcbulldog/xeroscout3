@@ -1,14 +1,10 @@
 import winston from "winston" ;
 import { BATeam } from "../extnet/badata";
 import { Manager } from "./manager";
+import { IPCTeamInfo } from "../../shared/ipc";
 
 export class TeamData {
     public teams_ : BATeam[] = [] ;                         // The set of teams at the event
-}
-
-export interface TeamNickNameNumber {
-    number : number,
-    nickname: string
 }
 
 export class TeamManager extends Manager {
@@ -23,17 +19,11 @@ export class TeamManager extends Manager {
         return this.info_.teams_ ;
     }
 
-    public getTeamsNickNameAndNumber() : TeamNickNameNumber[] {
-        let ret: TeamNickNameNumber[] = [] ;
+    public getTeamsNickNameAndNumber() : IPCTeamInfo[] {
+        let ret: IPCTeamInfo[] = [] ;
 
         if (this.info_.teams_) {
-            for(let t of this.info_.teams_) {
-                let team : TeamNickNameNumber = {
-                    number: t.team_number,
-                    nickname: t.nickname
-                }
-                ret.push(team) ;
-            }
+            this.info_.teams_.map((t) => { ret.push({number: t.team_number, nickname: t.nickname}) ; }) ;
         }
         ret.sort((a, b) => (a.number - b.number)) ;
         return ret ;
@@ -75,7 +65,7 @@ export class TeamManager extends Manager {
         this.write() ;
     }
 
-    public setTeamData(data: TeamNickNameNumber[]) {
+    public setTeamData(data: IPCTeamInfo[]) {
         let teams: BATeam[] = [] ;
         for(let d of data) {
             let team : BATeam = {

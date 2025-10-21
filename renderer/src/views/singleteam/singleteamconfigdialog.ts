@@ -11,6 +11,9 @@ export class SingleTeamConfigDialog extends XeroDialog {
     private teamflds_: string[] = [] ;
     private matchflds_: string[] = [] ;
     private formulas_: string[] = [] ;
+    
+    // Track the type for each item index to preserve user's selection
+    private itemTypes_: Map<number, 'team-field' | 'match-field' | 'formula'> = new Map() ;
 
     constructor(config: IPCGraphConfig, datasets: IPCDataSet[], teamflds: string[], matchflds: string[], formulas: string[], isNew: boolean) {
         super('Edit Single Team Configuration') ;
@@ -98,7 +101,13 @@ export class SingleTeamConfigDialog extends XeroDialog {
         }
     }
 
-    private determineItemType(item: IPCGraphItem): 'team-field' | 'match-field' | 'expression' {
+    private determineItemType(item: IPCGraphItem, index: number): 'team-field' | 'match-field' | 'formula' {
+        // First check if we have an explicitly set type for this item
+        if (this.itemTypes_.has(index)) {
+            return this.itemTypes_.get(index)! ;
+        }
+        
+        // If not, try to auto-detect based on the item's name
         // If name is in team fields, it's a team field
         if (this.teamflds_.includes(item.name)) {
             return 'team-field' ;
@@ -107,8 +116,8 @@ export class SingleTeamConfigDialog extends XeroDialog {
         if (this.matchflds_.includes(item.name)) {
             return 'match-field' ;
         }
-        // Otherwise it's an expression
-        return 'expression' ;
+        // Otherwise it's a formula
+        return 'formula' ;
     }
 
     private createItemRow(item: IPCGraphItem, index: number): HTMLDivElement {
@@ -122,7 +131,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         row.style.borderRadius = '3px' ;
 
         // Determine current type
-        const currentType = this.determineItemType(item) ;
+        const currentType = this.determineItemType(item, index) ;
 
         // First row: Type selector and delete button
         const typeRow = document.createElement('div') ;
@@ -148,12 +157,15 @@ export class SingleTeamConfigDialog extends XeroDialog {
         typeSelect.appendChild(option) ;
 
         option = document.createElement('option') ;
-        option.value = 'expression' ;
-        option.innerText = 'Expression' ;
-        if (currentType === 'expression') option.selected = true ;
+        option.value = 'formula' ;
+        option.innerText = 'Formula' ;
+        if (currentType === 'formula') option.selected = true ;
         typeSelect.appendChild(option) ;
 
         typeSelect.addEventListener('change', () => {
+            // Store the new type in our map
+            this.itemTypes_.set(index, typeSelect.value as 'team-field' | 'match-field' | 'formula') ;
+            
             // Clear name and dataset when type changes
             this.config_.leftitems[index].name = '' ;
             if (typeSelect.value === 'team-field') {
@@ -174,6 +186,19 @@ export class SingleTeamConfigDialog extends XeroDialog {
         deleteBtn.title = 'Delete item' ;
         deleteBtn.addEventListener('click', () => {
             this.config_.leftitems.splice(index, 1) ;
+            
+            // Update the itemTypes_ map: remove the deleted index and shift all higher indices down
+            this.itemTypes_.delete(index) ;
+            const updatedTypes = new Map<number, 'team-field' | 'match-field' | 'formula'>() ;
+            for (const [key, value] of this.itemTypes_.entries()) {
+                if (key > index) {
+                    updatedTypes.set(key - 1, value) ;
+                } else if (key < index) {
+                    updatedTypes.set(key, value) ;
+                }
+            }
+            this.itemTypes_ = updatedTypes ;
+            
             this.renderItems() ;
         }) ;
         deleteBtn.addEventListener('mouseenter', () => {
@@ -189,118 +214,34 @@ export class SingleTeamConfigDialog extends XeroDialog {
         typeRow.appendChild(deleteBtn) ;
         row.appendChild(typeRow) ;
 
-        // Second row: Field selection (different for each type)
+        // Second row: Field selection dropdown + dataset dropdown
         const fieldRow = document.createElement('div') ;
         fieldRow.style.display = 'flex' ;
         fieldRow.style.gap = '10px' ;
         fieldRow.style.alignItems = 'center' ;
 
+        // Create the field/formula select dropdown
+        const fieldSelect = document.createElement('select') ;
+        fieldSelect.style.flex = '1' ;
+        fieldSelect.style.padding = '5px' ;
+
+        // Populate based on current type
+        this.populateFieldSelect(fieldSelect, currentType, item.name) ;
+
+        fieldSelect.addEventListener('change', () => {
+            this.config_.leftitems[index].name = fieldSelect.value ;
+        }) ;
+
+        fieldRow.appendChild(fieldSelect) ;
+
+        // Dataset dropdown - only enabled for expression and match-field
+        const datasetSelect = this.createDatasetSelect(item, index) ;
         if (currentType === 'team-field') {
-            // Team field: dropdown only
-            const fieldSelect = document.createElement('select') ;
-            fieldSelect.style.flex = '2' ;
-            fieldSelect.style.padding = '5px' ;
-
-            option = document.createElement('option') ;
-            option.value = '' ;
-            option.innerText = 'Select team field...' ;
-            fieldSelect.appendChild(option) ;
-
-            for (const field of this.teamflds_) {
-                option = document.createElement('option') ;
-                option.value = field ;
-                option.innerText = field ;
-                if (item.name === field) option.selected = true ;
-                fieldSelect.appendChild(option) ;
-            }
-
-            fieldSelect.addEventListener('change', () => {
-                this.config_.leftitems[index].name = fieldSelect.value ;
-            }) ;
-
-            fieldRow.appendChild(fieldSelect) ;
-
-            // No dataset for team fields - show disabled message
-            const noDatasetMsg = document.createElement('span') ;
-            noDatasetMsg.innerText = '(No dataset needed)' ;
-            noDatasetMsg.style.flex = '1' ;
-            noDatasetMsg.style.color = '#999' ;
-            noDatasetMsg.style.fontStyle = 'italic' ;
-            fieldRow.appendChild(noDatasetMsg) ;
-
-        } else if (currentType === 'match-field') {
-            // Match field: dropdown + dataset
-            const fieldSelect = document.createElement('select') ;
-            fieldSelect.style.flex = '1' ;
-            fieldSelect.style.padding = '5px' ;
-
-            option = document.createElement('option') ;
-            option.value = '' ;
-            option.innerText = 'Select match field...' ;
-            fieldSelect.appendChild(option) ;
-
-            for (const field of this.matchflds_) {
-                option = document.createElement('option') ;
-                option.value = field ;
-                option.innerText = field ;
-                if (item.name === field) option.selected = true ;
-                fieldSelect.appendChild(option) ;
-            }
-
-            fieldSelect.addEventListener('change', () => {
-                this.config_.leftitems[index].name = fieldSelect.value ;
-            }) ;
-
-            fieldRow.appendChild(fieldSelect) ;
-
-            // Dataset dropdown for match fields
-            const datasetSelect = this.createDatasetSelect(item, index) ;
-            fieldRow.appendChild(datasetSelect) ;
-
-        } else {
-            // Expression: text input/formula selector + dataset
-            const expressionInput = document.createElement('input') ;
-            expressionInput.type = 'text' ;
-            expressionInput.value = item.name ;
-            expressionInput.placeholder = 'Enter expression...' ;
-            expressionInput.style.flex = '1' ;
-            expressionInput.style.padding = '5px' ;
-            expressionInput.addEventListener('change', () => {
-                this.config_.leftitems[index].name = expressionInput.value ;
-            }) ;
-
-            // Formula selector dropdown
-            const formulaSelect = document.createElement('select') ;
-            formulaSelect.style.flex = '1' ;
-            formulaSelect.style.padding = '5px' ;
-
-            option = document.createElement('option') ;
-            option.value = '' ;
-            option.innerText = 'Or select formula...' ;
-            formulaSelect.appendChild(option) ;
-
-            for (const formula of this.formulas_) {
-                option = document.createElement('option') ;
-                option.value = formula ;
-                option.innerText = formula ;
-                formulaSelect.appendChild(option) ;
-            }
-
-            formulaSelect.addEventListener('change', () => {
-                if (formulaSelect.value) {
-                    expressionInput.value = formulaSelect.value ;
-                    this.config_.leftitems[index].name = formulaSelect.value ;
-                    formulaSelect.value = '' ;
-                }
-            }) ;
-
-            fieldRow.appendChild(expressionInput) ;
-            fieldRow.appendChild(formulaSelect) ;
-
-            // Dataset dropdown for expressions
-            const datasetSelect = this.createDatasetSelect(item, index) ;
-            fieldRow.appendChild(datasetSelect) ;
+            datasetSelect.disabled = true ;
+            datasetSelect.style.backgroundColor = '#f0f0f0' ;
+            datasetSelect.style.color = '#999' ;
         }
+        fieldRow.appendChild(datasetSelect) ;
 
         row.appendChild(fieldRow) ;
 
@@ -352,6 +293,57 @@ export class SingleTeamConfigDialog extends XeroDialog {
         return datasetSelect ;
     }
 
+    private populateFieldSelect(selectElement: HTMLSelectElement, type: 'team-field' | 'match-field' | 'formula', currentValue: string): void {
+        // Clear existing options
+        selectElement.innerHTML = '' ;
+
+        let option: HTMLOptionElement ;
+
+        if (type === 'team-field') {
+            // Populate with team fields
+            option = document.createElement('option') ;
+            option.value = '' ;
+            option.innerText = 'Select team field...' ;
+            selectElement.appendChild(option) ;
+
+            for (const field of this.teamflds_) {
+                option = document.createElement('option') ;
+                option.value = field ;
+                option.innerText = field ;
+                if (currentValue === field) option.selected = true ;
+                selectElement.appendChild(option) ;
+            }
+        } else if (type === 'match-field') {
+            // Populate with match fields
+            option = document.createElement('option') ;
+            option.value = '' ;
+            option.innerText = 'Select match field...' ;
+            selectElement.appendChild(option) ;
+
+            for (const field of this.matchflds_) {
+                option = document.createElement('option') ;
+                option.value = field ;
+                option.innerText = field ;
+                if (currentValue === field) option.selected = true ;
+                selectElement.appendChild(option) ;
+            }
+        } else {
+            // Expression - populate with formulas
+            option = document.createElement('option') ;
+            option.value = '' ;
+            option.innerText = 'Select formula or enter expression...' ;
+            selectElement.appendChild(option) ;
+
+            for (const formula of this.formulas_) {
+                option = document.createElement('option') ;
+                option.value = formula ;
+                option.innerText = formula ;
+                if (currentValue === formula) option.selected = true ;
+                selectElement.appendChild(option) ;
+            }
+        }
+    }
+
     private addPlotItem(): void {
         const newItem: IPCGraphItem = {
             label: '',
@@ -380,20 +372,21 @@ export class SingleTeamConfigDialog extends XeroDialog {
         let hasErrors = false ;
         let errorMessage = '' ;
         
-        for (const item of this.config_.leftitems) {
+        for (let i = 0; i < this.config_.leftitems.length; i++) {
+            const item = this.config_.leftitems[i] ;
             if (!item.name) {
                 hasErrors = true ;
-                errorMessage = 'All plot items must have a field or expression selected.' ;
+                errorMessage = 'All plot items must have a field or formula selected.' ;
                 break ;
             }
             
             // Determine type to check dataset requirement
-            const itemType = this.determineItemType(item) ;
+            const itemType = this.determineItemType(item, i) ;
             
             // Team fields don't need a dataset, but match fields and expressions do
-            if ((itemType === 'match-field' || itemType === 'expression') && !item.dataset) {
+            if ((itemType === 'match-field' || itemType === 'formula') && !item.dataset) {
                 hasErrors = true ;
-                errorMessage = 'Match fields and expressions must have a dataset selected.' ;
+                errorMessage = 'Match fields and formulas must have a dataset selected.' ;
                 break ;
             }
         }

@@ -119,7 +119,7 @@ export class XeroEditFormView extends XeroView {
         this.type_ = type ;
         this.registerCallback('send-form', this.receivedForm.bind(this));
 
-        this.request('get-images') ;
+        this.request('get-image-names') ;
         this.request('get-form', this.type_);
 
         let ctrlitems = [

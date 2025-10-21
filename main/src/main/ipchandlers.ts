@@ -2,10 +2,9 @@ import { scappbase } from "../main";
 import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
-import { TeamNickNameNumber } from "./project/teammgr";
 import { TabletData } from "./project/tabletmgr";
 import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCNamedDataValue, IPCProjColumnsConfig } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCProjColumnsConfig, IPCTeamInfo } from "../shared/ipc";
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
@@ -193,7 +192,7 @@ export async function setTeamData(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
-            central.setTeamData(args[0] as TeamNickNameNumber[]) ;
+            central.setTeamData(args[0] as IPCTeamInfo[]) ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});            
@@ -290,20 +289,6 @@ export async function getTeamList(cmd: string, ...args: any[]) {
             central.getTeamListAndNames() ;
         }
     } 
-}
-
-// get-stored-graph-list
-export async function getStoredGraphList(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 0) {
-            central.getStoredGraphList() ;
-        } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }            
-
-    }
 }
 
 // get-match-list
@@ -462,7 +447,7 @@ export async function getImageData(cmd: string, ...args: any[]) {
     }
 }
 
-export async function getImages(cmd: string, ...args: any[]) {
+export async function getImageNames(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 0) {
@@ -584,20 +569,6 @@ export async function sendTeamColConfig(cmd: string, ...args: any[]) {
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});     
-        }
-    } 
-}
-
-// get-team-graph-data
-export async function getTeamGraphData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.sendTeamGraphData(args[0] as string) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
 }
@@ -968,3 +939,76 @@ export async function splitterChanged(cmd: string, ...args: any[]) {
         scappbase.splitterChanged(args[0] as number) ;
     }
 }
+
+// get-single-team-configs
+export async function getSingleTeamConfigs(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        central.getSingleTeamConfigs() ;
+    }
+}
+
+// update-single-team-configs
+export async function updateSingleTeamConfigs(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'object') {       
+            central.updateSingleTeamConfigs(args[0] as IPCGraphConfig[]) ;
+        }
+    }
+}
+
+// get-multi-team-configs
+export async function getMultiTeamConfigs(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        central.getMultiTeamConfigs() ;
+    }
+}
+
+// update-multi-team-configs
+export async function updateMultiTeamConfigs(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            central.updateMultiTeamConfigs(args[0] as IPCGraphConfig[]) ;
+        }   
+    }
+}
+
+// get-match-chart-configs
+export async function getMatchChartConfigs(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        central.getMatchConfigs() ;
+    }   
+}
+
+// update-match-chart-configs
+export async function updateMatchChartConfigs(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            central.updateMatchConfigs(args[0] as IPCGraphConfig[]) ;
+        }
+    }
+}
+
+// get-team-chart-data
+export async function getGraphData(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && typeof args[0] === 'string') {
+            central.getGraphData(args[0] as string) ;
+        }
+    }
+}
+
+
