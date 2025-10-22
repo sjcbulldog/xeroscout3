@@ -19,22 +19,40 @@ export class TeamManager extends Manager {
         return this.info_.teams_ ;
     }
 
-    public getTeamsNickNameAndNumber() : IPCTeamInfo[] {
+    public getTeamsNickNameAndNumber(rank: boolean) : IPCTeamInfo[] {
         let ret: IPCTeamInfo[] = [] ;
 
-        if (this.info_.teams_) {
-            this.info_.teams_.map((t) => { ret.push({number: t.team_number, nickname: t.nickname}) ; }) ;
+        if (rank) {
+            // TODO: If BA Rank is present, sort by that
+            if (this.info_.teams_) {
+                this.info_.teams_.map((t) => { ret.push({number: t.team_number, nickname: t.nickname}) ; }) ;
+            }
+        }
+        else {
+            if (this.info_.teams_) {
+                this.info_.teams_.map((t) => { ret.push({number: t.team_number, nickname: t.nickname}) ; }) ;
+            }
         }
         ret.sort((a, b) => (a.number - b.number)) ;
         return ret ;
     }
 
-    public getSortedTeamNumbers() : number[] {
+    public getSortedTeamNumbers(rank: boolean) : number[] {
         let ret: number[] = [] ;
 
-        if (this.info_.teams_) {
-            for(let t of this.info_.teams_) {
-                ret.push(t.team_number) ;
+        if (rank) {
+            // TODO: if BA Rank is present, sort by that
+            if (this.info_.teams_) {
+                for(let t of this.info_.teams_) {
+                    ret.push(t.team_number) ;
+                }
+            }
+        }
+        else {
+            if (this.info_.teams_) {
+                for(let t of this.info_.teams_) {
+                    ret.push(t.team_number) ;
+                }
             }
         }
         ret.sort((a, b) => (a - b)) ;

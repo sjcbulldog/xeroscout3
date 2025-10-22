@@ -87,7 +87,7 @@ export class XeroPlayoffsView extends XeroView {
             this.canvas_.addEventListener('dblclick', this.dblClick.bind(this)) ;   
             this.registerCallback('send-playoff-status', this.receivePlayoffStatus.bind(this));
             this.registerCallback('send-team-list', this.receiveTeamList.bind(this)) ;
-            this.request('get-team-list') ;
+            this.request('get-team-list', { nicknames: false, rank: false}) ;
             this.request('get-playoff-status') ;                    
         }
 

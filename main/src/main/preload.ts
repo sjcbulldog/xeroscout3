@@ -70,7 +70,11 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'update-multi-team-configs',      // views/multiteam/multiteamview.ts
         'get-match-configs',              // views/matchgraphs/matchgraphsview.ts
         'update-match-configs',           // views/matchgraphs/matchgraphsview.ts
-        'get-chart-data',                 // views/matchgraphs/matchgraphsview.ts
+        'get-chart-data',                 // views/matchgraphs/matchgraphsview.ts\
+        
+        'get-picklist-configs',            // views/picklist/picklistview.ts
+        'save-picklist-config',           // views/picklist/picklistview.ts
+        'get-picklist-data',              // views/picklist/picklistview.ts
       ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -124,11 +128,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-stored-graph-list',       // main/apps/sccentral.ts
         'tablet-title',                 // main/apps/scscout.ts
         'resize-window',                // main/apps/scscout.ts
-        'send-picklist-data',           // main/apps/sccentral.ts
-        'send-picklist-list',           // main/apps/sccentral.ts
-        'send-picklist-columns',        // main/apps/sccentral.ts
-        'send-picklist-col-data',       // main/apps/sccentral.ts
-        'send-picklist-notes',          // main/apps/sccentral.ts
+
         'send-single-team-data',        // main/apps/sccentral.ts
         'send-hint-db',                 // main/apps/sccentral.ts
         'send-playoff-status',          // main/apps/sccentral.ts
@@ -139,6 +139,9 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-multi-team-configs',      // main/apps/sccentral.ts
         'send-match-configs',           // main/apps/sccentral.ts
         'send-chart-data',              // main/apps/sccentral.ts
+
+        'send-picklist-data',           // main/apps/sccentral.ts
+        'send-picklist-configs',        // main/apps/sccentral.ts
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));

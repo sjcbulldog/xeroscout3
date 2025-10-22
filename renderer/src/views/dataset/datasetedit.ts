@@ -1,5 +1,5 @@
 import { XeroApp } from "../../apps/xeroapp.js";
-import { IPCDataSet } from "../../shared/ipc.js";
+import { IPCDataSet, IPCMatchSet } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 import { EditDataSetDialog } from "./editdatasetdialog.js";
 
@@ -35,57 +35,115 @@ export class DataSetEditor extends XeroView {
         this.displayAll() ;
     }
 
-    private displayAll() : void {
+    private formatMatchesInfo(matches: IPCMatchSet): string {
+        if (matches.kind === 'all') {
+            return 'Matches: All' ;
+        } else if (matches.kind === 'first') {
+            return `Matches: First ${matches.first}` ;
+        } else if (matches.kind === 'last') {
+            return `Matches: Last ${matches.last}` ;
+        } else if (matches.kind === 'range') {
+            return `Matches: ${matches.first} - ${matches.last}` ;
+        } else if (matches.kind === 'specific') {
+            const levelMap: { [key: string]: string } = {
+                'qm': 'Qual',
+                'ef': 'Eighth',
+                'qf': 'Quarter',
+                'sf': 'Semi',
+                'f': 'Final'
+            } ;
+            const level = levelMap[matches.comp_level] || matches.comp_level ;
+            return `Match: ${level} ${matches.match_number}-${matches.set_number}` ;
+        }
+        return 'Matches: Unknown' ;
+    }
+
+    private displayAll(): void {
         this.div_.innerHTML = '' ; // Clear existing content
 
         // Display all existing datasets
         for (let i = 0; i < this.dsets_.length; i++) {
             const dataset = this.dsets_[i] ;
+            const isAllDataset = dataset.name === 'All' ;
             const div = document.createElement('div') ;
-            div.style.cursor = 'pointer' ;
+            div.style.cursor = isAllDataset ? 'default' : 'pointer' ;
             div.className = 'xero-dataset-editor-list-item' ;
             div.style.position = 'relative' ; // Enable positioning for the delete icon
             div.style.display = 'flex' ;
             div.style.alignItems = 'center' ;
             div.style.justifyContent = 'space-between' ;
+            div.style.flexDirection = 'column' ;
+            div.style.alignItems = 'stretch' ;
+            
+            // Create header row with name and delete icon
+            const headerRow = document.createElement('div') ;
+            headerRow.style.display = 'flex' ;
+            headerRow.style.alignItems = 'center' ;
+            headerRow.style.justifyContent = 'space-between' ;
             
             // Create text span for dataset name
             const nameSpan = document.createElement('span') ;
             nameSpan.innerText = dataset.name ;
             nameSpan.style.flexGrow = '1' ;
-            div.appendChild(nameSpan) ;
+            nameSpan.style.fontWeight = 'bold' ;
+            headerRow.appendChild(nameSpan) ;
             
-            // Create delete icon
-            const deleteIcon = document.createElement('span') ;
-            deleteIcon.innerHTML = '🗑️' ; // Garbage can emoji
-            deleteIcon.style.cursor = 'pointer' ;
-            deleteIcon.style.fontSize = '18px' ; // Increased from 14px
-            deleteIcon.style.fontWeight = 'bold' ; // Make it bolder
-            deleteIcon.style.filter = 'brightness(1.3) contrast(1.2)' ; // Make it brighter
-            deleteIcon.style.padding = '4px' ; // Increased padding
-            deleteIcon.style.marginLeft = '10px' ;
-            deleteIcon.title = 'Delete dataset' ;
+            // Create delete icon only if not the 'All' dataset
+            if (!isAllDataset) {
+                const deleteIcon = document.createElement('span') ;
+                deleteIcon.innerHTML = '🗑️' ; // Garbage can emoji
+                deleteIcon.style.cursor = 'pointer' ;
+                deleteIcon.style.fontSize = '18px' ; // Increased from 14px
+                deleteIcon.style.fontWeight = 'bold' ; // Make it bolder
+                deleteIcon.style.filter = 'brightness(1.3) contrast(1.2)' ; // Make it brighter
+                deleteIcon.style.padding = '4px' ; // Increased padding
+                deleteIcon.style.marginLeft = '10px' ;
+                deleteIcon.title = 'Delete dataset' ;
+                
+                // Add click handler for delete icon
+                deleteIcon.addEventListener('click', (e) => {
+                    e.stopPropagation() ; // Prevent triggering selection
+                    this.deleteDataSet(i) ;
+                }) ;
+                
+                // Add hover effect for delete icon
+                deleteIcon.addEventListener('mouseenter', () => {
+                    deleteIcon.style.backgroundColor = '#ff4444' ;
+                    deleteIcon.style.borderRadius = '3px' ;
+                }) ;
+                deleteIcon.addEventListener('mouseleave', () => {
+                    deleteIcon.style.backgroundColor = '' ;
+                    deleteIcon.style.borderRadius = '' ;
+                }) ;
+                
+                headerRow.appendChild(deleteIcon) ;
+            }
             
-            // Add click handler for delete icon
-            deleteIcon.addEventListener('click', (e) => {
-                e.stopPropagation() ; // Prevent triggering selection
-                this.deleteDataSet(i) ;
-            }) ;
+            div.appendChild(headerRow) ;
             
-            // Add hover effect for delete icon
-            deleteIcon.addEventListener('mouseenter', () => {
-                deleteIcon.style.backgroundColor = '#ff4444' ;
-                deleteIcon.style.borderRadius = '3px' ;
-            }) ;
-            deleteIcon.addEventListener('mouseleave', () => {
-                deleteIcon.style.backgroundColor = '' ;
-                deleteIcon.style.borderRadius = '' ;
-            }) ;
+            // Create matches info
+            const matchesSpan = document.createElement('div') ;
+            matchesSpan.style.fontSize = '16px' ;
+            matchesSpan.style.color = '#666' ;
+            matchesSpan.style.marginTop = '4px' ;
+            matchesSpan.innerText = this.formatMatchesInfo(dataset.matches) ;
+            div.appendChild(matchesSpan) ;
             
-            div.appendChild(deleteIcon) ;
+            // Create formula info (if present)
+            if (dataset.formula && dataset.formula.trim() !== '') {
+                const formulaSpan = document.createElement('div') ;
+                formulaSpan.style.fontSize = '16px' ;
+                formulaSpan.style.color = '#666' ;
+                formulaSpan.style.marginTop = '2px' ;
+                formulaSpan.style.fontStyle = 'italic' ;
+                formulaSpan.innerText = `Formula: ${dataset.formula}` ;
+                div.appendChild(formulaSpan) ;
+            }
             
-            // Add double-click handler to edit the dataset (only on the name span)
-            nameSpan.addEventListener('dblclick', () => this.editDataSet(i)) ;
+            // Add double-click handler to edit the dataset (only if not 'All')
+            if (!isAllDataset) {
+                div.addEventListener('dblclick', () => this.editDataSet(i)) ;
+            }
             
             this.div_.appendChild(div) ;
         }

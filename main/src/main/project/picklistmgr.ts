@@ -6,38 +6,10 @@ import { TeamManager } from './teammgr';
 import { Manager } from './manager';
 import { DataManager } from "./datamgr";
 import { FormulaManager } from "./formulamgr";
-
-export interface ProjPicklistNotes
-{
-    teamnumber: number,
-    picknotes: string
-}
-
-export interface ProjPicklistData {
-    name: string ;
-    teams: number[] ;
-}
-
-export interface ProjPickListColConfig {
-    name: string ;
-    width: number ;
-}
-
-export interface ProjPickListCols {
-    name: string ;
-    cols: ProjPickListColConfig[] ;
-}
-
-export interface PickList {
-    name: string ;
-    dataset: string ;
-    rank: number[] ;
-    notes: ProjPicklistNotes[];
-    cols: ProjPickListColConfig[] ;                            // Columns are defined by dataset, this defines the order and width
-}
+import { IPCPickListConfig, IPCPickListData, IPCPickListNotes, IPCPickListTeamData } from "../../shared/ipc";
 
 export class PickListData {
-    public picklist_ : PickList[] = [] ;                // Pick list, a list of team number
+    public picklist_ : IPCPickListConfig[] = [] ;                // Pick list, a list of team number
     public last_picklist_? : string ;                   // The last picklist used    
 }
 
@@ -57,11 +29,42 @@ export class PicklistMgr extends Manager {
         this.formula_mgr_ = formula ;
     }
 
-    public getPicklists() : PickList[] {
+    public get picklists() : IPCPickListConfig[] {
         return this.info_.picklist_ ;
     }
 
-    public findPicklistByName(name: string) : PickList | undefined {
+    public savePicklistConfig(config: IPCPickListConfig[]) {
+        this.info_.picklist_ = config ;
+        this.write() ;
+    }
+
+    public getPicklistData(name: string) : Promise<IPCPickListData> {
+        let ret = new Promise<IPCPickListData>(async (resolve, reject) => {
+            let picklist = this.findPicklistByName(name) ;
+            let result : IPCPickListData = {
+                config: picklist!,
+                data: []
+            } ;
+
+            for(let team of picklist?.teams || []) {
+                let tdata : IPCPickListTeamData = {
+                    team: team,
+                    values: []
+                } ;
+                result.data.push(tdata) ;
+
+                for(let item of picklist?.columns || []) {
+                    let ds = this.dset_mgr_.getDataSetByName(item.dataset) ;
+                    let d = await this.data_mgr_.getData(ds, item.name, team) ;
+                    tdata.values.push(d) ;
+                }
+            }       
+            resolve(result);
+        });
+        return ret;
+    }
+
+    public findPicklistByName(name: string) : IPCPickListConfig | undefined {
         for(let picklist of this.info_.picklist_) {
             if (picklist.name === name)
                 return picklist ;
@@ -70,117 +73,32 @@ export class PicklistMgr extends Manager {
         return undefined ;
     }
 
-    public setPicklistNotes(name: string, notes: ProjPicklistNotes[]) {
-        let picklist = this.findPicklistByName(name) ;
+    public setPicklistNotes(data: IPCPickListNotes) {
+        let picklist = this.findPicklistByName(data.name) ;
         if (picklist) {
-            picklist.notes = notes ;
+            for(let i = 0 ; i < data.teams.length; i++) {
+                let teamnumber = data.teams[i] ;
+                let picknotes = data.notes[i] ;
+                for(let j = 0 ; j < picklist.teams.length; j++) {
+                    if (picklist.teams[j] === teamnumber) {
+                        picklist.notes[j] = picknotes ;
+                        break ;
+                    }
+                }
+            }
         }
         this.write() ;
     }
 
-    public updatePicklistData(name: string, teams: number[]) {
-        let picklist = this.findPicklistByName(name) ;
-        if (picklist) {
-            picklist.rank = teams ;
-            this.write() ;
+    public updatePicklistConfig(config: IPCPickListConfig) {
+        let index = this.info_.picklist_.findIndex((pl) => pl.name === config.name) ;
+        if (index === -1) {
+            this.info_.picklist_.push(config) ;
         }
-    }
-
-    public updatePicklistCols(name: string, cols: ProjPickListColConfig[]) {
-        let picklist = this.findPicklistByName(name) ;
-        if (picklist) {
-            picklist.cols = cols ;
-            this.write() ;
+        else {
+            this.info_.picklist_[index] = config ;
         }
-    }
-    
-    public deletePicklist(name: string) : boolean {
-        let which = -1 ;
-        for(let i = 0 ; i < this.info_.picklist_.length; i++) {
-            if(this.info_.picklist_[i].name === name) {
-                which = i ;
-                break ;
-            }
-        }
-
-        if (which !== -1) {
-            if (which === 0 && this.info_.picklist_.length === 1) {
-                this.info_.picklist_ = [] ;
-            }
-            else {
-                this.info_.picklist_.splice(which, 1) ;
-            }
-            this.write() ;
-        }
-
-        return which !== -1 ;
-    }
-
-    public addPicklist(name: string, dataset: string) {
-        let ds = this.dset_mgr_.findDataSet(dataset) ;
-        if (ds) {
-			let teamlist = this.team_mgr_!.getSortedTeamNumbers() ;
-
-            let fields = [...this.data_mgr_.teamColumnNames, this.data_mgr_.matchColumnNames, this.formula_mgr_.formulaNames] ;
-            let picklist = {
-                name: name,
-                dataset: dataset,
-                notes: [],
-                rank: teamlist,
-                cols: []
-            }
-            this.info_.picklist_.push(picklist) ;
-            this.info_.last_picklist_ = name ;
-            this.write();
-        }
-    }
-
-    public async exportPicklist(name: string, filename: string) : Promise<void> {
-        interface MyObject {
-            [key: string]: any; // Allows any property with a string key
-        }
-
-        let ret = new Promise<void>(async (resolve, reject) => {
-            let picklist = this.findPicklistByName(name) ;
-            if (picklist) {
-                let ds = this.dset_mgr_.findDataSet(picklist.dataset) ;
-                if (ds) {
-                    let cols = ['rank', 'teamnumber', 'nickname', 'picknotes'] ;
-                    const csvStream = format({ headers: cols, }) ; 
-                    const outputStream = fs.createWriteStream(filename);
-                    csvStream.pipe(outputStream).on('end', () => { 
-                        csvStream.end() ;
-                    }) ;
-
-                    let rank = 1 ;
-                    for(let team of this.team_mgr_.getSortedTeamNumbers()) {
-                        let teamobj = this.team_mgr_.findTeamByNumber(team) ;
-                        let record : MyObject = {
-                            'rank' : rank++,
-                            'teamnumber' : team,
-                            'nickname' : teamobj?.nickname,
-                            'notes' : this.getNotesFromPicklist(picklist, team),
-                        };
-
-                        for(let col of cols) {
-                            if (col !== 'rank' && col != 'picknotes' && col != 'nickname' && col != 'teamnumber') {
-                                try {
-                                    let data = await this.data_mgr_.getData(ds, col, team) ;
-                                    record[col] = data ;
-                                }
-                                catch(err) {
-                                    record[col] = 'Error' ;
-                                }
-                            }
-                        }
-                        csvStream.write(record) ;
-                    }
-                    csvStream.end();
-                }
-                resolve() ;
-            }
-        }) ;
-        return ret;
+        this.write() ;
     }
 
     public setLastPicklistUsed(name: string) {
@@ -193,14 +111,4 @@ export class PicklistMgr extends Manager {
     public getLastPicklistUsed() : string {
         return this.info_.last_picklist_ || '' ;
     }
-
-    private getNotesFromPicklist(picklist: PickList, team: number) : string {
-        for(let notes of picklist.notes) {
-            if (notes.teamnumber === team) {
-                return notes.picknotes ;
-            }
-        }
-
-        return '' ;
-    }        
 }

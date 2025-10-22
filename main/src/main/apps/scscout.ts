@@ -42,13 +42,14 @@ export class SCScout extends SCBase {
     private static readonly showTeams: string = 'show-teams' ;
     private static readonly reverseImage: string = 'reverse' ;
 
+
     private info_ : SCScoutInfo = new SCScoutInfo() ;
 
+    private resultPromiseResolve_ ? : () => void ;
     private tablets_?: IPCTabletDefn[] ;
     private conn_?: SyncClient ;
     private current_scout_? : string ;
     private alliance_? : string ;
-    private want_cmd_ : boolean = false ;
     private next_cmd_? : string ;
     private reversed_ : boolean = false ;
     private reverseImage_: MenuItem | undefined ;
@@ -210,13 +211,27 @@ export class SCScout extends SCBase {
         this.sync_client_ = undefined ;
     }
 
-    public executeCommand(cmd: string) : void {   
+    private optionallyGetResults() : Promise<void> {
         if (this.current_scout_) {
-            this.want_cmd_ = true ;
-            this.next_cmd_ = cmd ;
-            this.sendToRenderer('request-results') ;
+            return this.getCurrentResults() ;
         }
-        else if (cmd === SCScout.syncEventLocal) {
+        else {
+            return Promise.resolve() ;
+        }
+    }
+
+    public executeCommand(cmd: string) : void {   
+        this.optionallyGetResults()
+        .then(() => {
+            this.executeCommandInternal(cmd) ;
+        })
+        .catch((err) => {
+            this.logger_.error('cannot get results before command', err) ; 
+        }) ;
+    }
+
+    private executeCommandInternal(cmd: string) : void {
+        if (cmd === SCScout.syncEventLocal) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
             this.sync_client_ = new TCPClient(this.logger_, '127.0.0.1') ;
@@ -339,7 +354,7 @@ export class SCScout extends SCBase {
             //
             // About to scout a new team, be sure that is what we want to do.
             //
-            let data: IPCScoutResult | undefined = this.getResults(team) ;
+            let data: IPCScoutResult | undefined = this.getOneScoutResults(team) ;
             if (!data) {
                 let ans = dialog.showMessageBoxSync(
                     {
@@ -381,7 +396,7 @@ export class SCScout extends SCBase {
                 //
                 // About to scout a new match, be sure that is what we want to do.
                 //
-                let data: IPCScoutResult | undefined = this.getResults(match) ;
+                let data: IPCScoutResult | undefined = this.getOneScoutResults(match) ;
                 if (!data) {
                     let ans = dialog.showMessageBoxSync(
                         {
@@ -434,10 +449,10 @@ export class SCScout extends SCBase {
         this.writeEventFile() ;
         this.logger_.silly('provideResults:' + this.current_scout_, res) ;
 
-        if (this.want_cmd_) {
-            this.current_scout_ = undefined ;
-            this.want_cmd_ = false ;
-            this.executeCommand(this.next_cmd_!) ;
+        if (this.resultPromiseResolve_) {
+            // If there is a promise waiting for results, resolve it now.
+            this.resultPromiseResolve_() ;
+            this.resultPromiseResolve_ = undefined ;
         }
     }
 
@@ -467,7 +482,7 @@ export class SCScout extends SCBase {
 
         if (good) {
             this.sendToRenderer('send-form', ret);
-            let data: IPCScoutResult | undefined = this.getResults(this.current_scout_!) ;
+            let data: IPCScoutResult | undefined = this.getOneScoutResults(this.current_scout_!) ;
             if (data) {
                 console.log('send-initial-values: ' + JSON.stringify(data.data)) ;
                 this.sendToRenderer('send-initial-values', data.data) ;
@@ -497,14 +512,14 @@ export class SCScout extends SCBase {
             this.sendToRenderer('send-match-form', ret) ;
         }
 
-        let data: any = this.getResults(this.current_scout_!) ;
+        let data: any = this.getOneScoutResults(this.current_scout_!) ;
         this.logger_.silly('sendTeamForm/send-result-values: ' + this.current_scout_, data) ;
         if (data) {
             this.sendToRenderer('send-result-values', data) ;
         }
     }
 
-    private getResults(scout: string) : IPCScoutResult | undefined {
+    private getOneScoutResults(scout: string) : IPCScoutResult | undefined {
         for(let result of this.info_.results_) {
             if (result.item === scout) {
                 return result ;
@@ -535,60 +550,74 @@ export class SCScout extends SCBase {
         this.info_.results_.push(resobj) ;
     }
 
+    private getCurrentResults() : Promise<void> {
+        let ret = new Promise<void>((resolve, reject) => {
+            this.resultPromiseResolve_ = resolve ;
+            this.sendToRenderer('request-results') ;
+        }) ;
+        return ret;
+    }
+
     private syncClient(conn: SyncClient) {
-        this.match_results_received_ = false ;
-        this.team_results_received_ = false ;
-        this.playoff_assignment_received_ = false ;
-        this.playoff_status_received_ = false ;
+        this.getCurrentResults()
+        .then(() => {
+            this.match_results_received_ = false ;
+            this.team_results_received_ = false ;
+            this.playoff_assignment_received_ = false ;
+            this.playoff_status_received_ = false ;
 
-        this.conn_ = conn ;
-        conn.connect()
-            .then(async ()=> {
-                this.logger_.info(`ScouterSync: connected to server ' ${conn.name()}'`) ;
-                let data = new Uint8Array(0) ;
+            this.conn_ = conn ;
+            conn.connect()
+                .then(async ()=> {
+                    this.logger_.info(`ScouterSync: connected to server ' ${conn.name()}'`) ;
+                    let data = new Uint8Array(0) ;
 
-                if (this.info_.tablet_ && this.info_.purpose_) {
-                    let obj = {
-                        name: this.info_.tablet_,
-                        purpose: this.info_.purpose_
-                    }
-                    data = Buffer.from(JSON.stringify(obj)) ;
-                }
-
-                this.conn_!.on('close', () => {
-                    this.conn_ = undefined ;
-                }) ;
-
-                let p: PacketObj = new PacketObj(PacketType.Hello, data) ;
-                await this.conn_!.send(p) ;
-
-                this.conn_!.on('error', (err: Error) => {
-                    let msg: string = "" ;
-                    let a: any = err as any ;
-                    if (a.errors) {
-                        for(let cerror of a.errors) {
-                            this.logger_.info('ScouterSync: error from connection \'' + conn.name() + '\' - ' + cerror.message) ;
-                            msg += cerror.message + '\n' ;
+                    if (this.info_.tablet_ && this.info_.purpose_) {
+                        let obj = {
+                            name: this.info_.tablet_,
+                            purpose: this.info_.purpose_
                         }
-                    }
-                    else {
-                        this.logger_.info('ScouterSync: error from connection \'' + conn.name() + '\' - ' + err.message) ;
-                        msg = err.message ;
+                        data = Buffer.from(JSON.stringify(obj)) ;
                     }
 
-                    this.sendToRenderer('set-status-title', 'Error Connecting To XeroScout Central') ;
-                    this.sendToRenderer('set-status-visible', true) ;
-                    this.sendToRenderer('set-status-text', msg) ;
-                    this.sendToRenderer('set-status-close-button-visible', true) ;
-                }) ;
+                    this.conn_!.on('close', () => {
+                        this.conn_ = undefined ;
+                    }) ;
 
-                this.conn_!.on('packet', (p: PacketObj) => {
-                    this.syncTablet(p) ;
+                    let p: PacketObj = new PacketObj(PacketType.Hello, data) ;
+                    await this.conn_!.send(p) ;
+
+                    this.conn_!.on('error', (err: Error) => {
+                        let msg: string = "" ;
+                        let a: any = err as any ;
+                        if (a.errors) {
+                            for(let cerror of a.errors) {
+                                this.logger_.info('ScouterSync: error from connection \'' + conn.name() + '\' - ' + cerror.message) ;
+                                msg += cerror.message + '\n' ;
+                            }
+                        }
+                        else {
+                            this.logger_.info('ScouterSync: error from connection \'' + conn.name() + '\' - ' + err.message) ;
+                            msg = err.message ;
+                        }
+
+                        this.sendToRenderer('set-status-title', 'Error Connecting To XeroScout Central') ;
+                        this.sendToRenderer('set-status-visible', true) ;
+                        this.sendToRenderer('set-status-text', msg) ;
+                        this.sendToRenderer('set-status-close-button-visible', true) ;
+                    }) ;
+
+                    this.conn_!.on('packet', (p: PacketObj) => {
+                        this.syncTablet(p) ;
+                    }) ;
+                })
+                .catch((err) => {
+                    this.logger_.error('cannot connect to central', err) ;
                 }) ;
-            })
-            .catch((err) => {
-                this.logger_.error('cannot connect to central', err) ;
-            }) ;
+        })
+        .catch((err) => {
+            this.logger_.error('cannot get results before sync', err) ;
+        }) ;
     }
 
     private uuidToFileName(uuid: string) : string {
@@ -692,7 +721,7 @@ export class SCScout extends SCBase {
             if (this.info_.purpose_ === 'match') {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
-                    if (!this.getResults(res.item)) {
+                    if (!this.getOneScoutResults(res.item)) {
                         this.addResults(res.item, res.data) ;
                     }
                 }
@@ -705,7 +734,7 @@ export class SCScout extends SCBase {
             if (this.info_.purpose_ === 'team') {
                 let obj = JSON.parse(p.payloadAsString()) ;
                 for(let res of obj) {
-                    if (!this.getResults(res.item)) {
+                    if (!this.getOneScoutResults(res.item)) {
                         this.addResults(res.item, res.data) ;
                     }
                 }
@@ -748,7 +777,7 @@ export class SCScout extends SCBase {
         for(let m of this.info_.matchlist_!) {
             let cmd: string = 'sm-' + m.comp_level + '-' + m.set_number + '-' + m.match_number + '-' + m.teamnumber ;
             if (this.info_.results_) {
-                let res: IPCScoutResult | undefined = this.getResults(cmd) ;
+                let res: IPCScoutResult | undefined = this.getOneScoutResults(cmd) ;
                 if (!res) {
                     ret.push(cmd) ;
                 }
@@ -763,7 +792,7 @@ export class SCScout extends SCBase {
         for(let t of this.info_.teamlist_!) {
             let cmd: string = 'st-' + t.team ;
             if (this.info_.results_) {
-                let res: IPCScoutResult | undefined = this.getResults(cmd) ;
+                let res: IPCScoutResult | undefined = this.getOneScoutResults(cmd) ;
                 if (!res) {
                     ret.push(cmd) ;
                 }

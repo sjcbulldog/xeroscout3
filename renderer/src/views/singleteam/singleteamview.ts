@@ -49,23 +49,27 @@ export class SingleTeamView extends XeroView {
 
         // Register callbacks for data from backend
         this.registerCallback('send-single-team-configs', this.receivedConfigs.bind(this)) ;
+        this.registerCallback('send-chart-data', this.receivedChartData.bind(this)) ;
+
         this.registerCallback('send-datasets', this.receivedDataSets.bind(this)) ;
         this.registerCallback('send-team-field-list', this.receivedTeamFields.bind(this)) ;
         this.registerCallback('send-match-field-list', this.receivedMatchFields.bind(this)) ;
         this.registerCallback('send-formulas', this.receivedFormulas.bind(this)) ;
         this.registerCallback('send-team-list', this.receivedTeam.bind(this)) ;
-        this.registerCallback('send-chart-data', this.receivedChartData.bind(this)) ;
+
         this.registerCallback('send-match-data', this.receivedMatchData.bind(this)) ;
 
 
         // Request initial data
 
+        this.request('get-single-team-configs') ;
+
         this.request('get-datasets') ;
         this.request('get-team-field-list') ;
         this.request('get-match-field-list') ;
         this.request('get-formulas') ;
-        this.request('get-single-team-configs') ;
-        this.request('get-team-list', true) ;
+        this.request('get-team-list', { nicknames: true, rank: false}) ;
+
         this.request('get-match-data') ;
     }
 

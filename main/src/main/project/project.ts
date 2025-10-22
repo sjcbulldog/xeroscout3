@@ -67,7 +67,7 @@ export class Project {
         this.formula_mgr_ = new FormulaManager(this.logger_, this.writeEventFile.bind(this), this.info_.formula_info_) ;
         this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.info_.team_db_info_, this.info_.match_db_info_, this.formula_mgr_) ;
         this.form_mgr_ = new FormManager(this.logger_, this.writeEventFile.bind(this), this.info_.form_info_, this.location_, this.data_mgr_) ;
-        this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.data_mgr_, this.team_mgr_) ;
+        this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.team_mgr_) ;
         this.picklist_mgr_ = new PicklistMgr(this.logger_, this.writeEventFile.bind(this), this.info_.picklist_info_, this.team_mgr_, this.dataset_mgr_, this.data_mgr_, this.formula_mgr_) ;
         this.tablet_mgr_ = new TabletManager(this.logger_, this.writeEventFile.bind(this), this.info_.tablet_info_, this.team_mgr_, this.match_mgr_) ;
         this.graph_mgr_ =  new GraphManager(this.logger_, this.writeEventFile.bind(this), this.info_.graph_info_, this.data_mgr_, this.dataset_mgr_) ;
@@ -627,7 +627,7 @@ export class Project {
                 if (callback) {
                     callback('Requesting EPA data for the event from \'Statbotics\' ... ') ;
                 }
-                let stats = await sb.getStatsEvent(key, this.team_mgr_!.getSortedTeamNumbers()) ;
+                let stats = await sb.getStatsEvent(key, this.team_mgr_!.getSortedTeamNumbers(false)) ;
 
                 if (callback) {
                     callback('received stats data.<br>') ;
@@ -655,7 +655,7 @@ export class Project {
                 if (callback) {
                     callback('Requesting EPA data for the year from \'Statbotics\' ... ') ;
                 }
-                let stats = await sb.getStatsYear(this.team_mgr_!.getSortedTeamNumbers()) ;
+                let stats = await sb.getStatsYear(this.team_mgr_!.getSortedTeamNumbers(false)) ;
 
                 if (callback) {
                     callback('received stats data.<br>') ;

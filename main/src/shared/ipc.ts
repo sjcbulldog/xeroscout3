@@ -317,6 +317,16 @@ export interface IPCDataSet {
     formula: string ;                               // The formula to use to filter the data set
 }
 
+export interface IPCGetTeamsOptions {
+    nicknames?: boolean ;
+    rank?: boolean ;
+}
+
+export interface IPCTeamInfo {
+    number: number ;                                // The team number
+    nickname: string ;                              // The team nickname
+}
+
 export interface IPCTeamInfo {
     number: number ;                                // The team number
     nickname: string ;                              // The team nickname
@@ -349,4 +359,27 @@ export interface IPCGraphData {
     config: string ;
     teams: number[] ;
     items: IPCDataItemData[] ;                      // The data items for the graph
+}
+
+export interface IPCPickListConfig {
+    name: string ;                                  // The name of the pick list, must be unique
+    teams: number[] ;                               // The teams in the pick list, in picklist order
+    columns: IPCDataItem[] ;                        // The data columns to display in the pick list
+    notes: string[] ;                               // The notes for each team, in order of the teams array
+}
+
+export interface IPCPickListTeamData {
+    team: number ;                                  // The team number
+    values: IPCTypedDataValue[] ;                   // The values for the data series (in order of the IPCDataItem[] in the IPCPickListConfig)
+}
+
+export interface IPCPickListNotes {
+    name: string ;
+    teams: number[] ;
+    notes: string[] ;
+}
+
+export interface IPCPickListData {
+    config: IPCPickListConfig ;                     // The picklist configuration
+    data: IPCPickListTeamData[] ;                   // The data items for the pick list, for each column
 }

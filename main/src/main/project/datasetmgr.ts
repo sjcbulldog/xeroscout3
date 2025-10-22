@@ -19,14 +19,21 @@ export class DataSetInfo {
 //
 export class DataSetManager extends Manager {
     private info_ : DataSetInfo ;
-    private datamgr_ : DataManager ;
     private team_mgr_ : TeamManager ;
 
-    constructor(logger: winston.Logger,  writer: () => void, info: DataSetInfo, datamgr: DataManager, teammgr: TeamManager ) {
+    constructor(logger: winston.Logger,  writer: () => void, info: DataSetInfo, teammgr: TeamManager ) {
         super(logger, writer) ;
         this.info_ = info ;
-        this.datamgr_ = datamgr ;
         this.team_mgr_ = teammgr ;
+
+        if (this.info_.datasets_.findIndex(ds => ds.name === 'All') === -1) {
+            this.info_.datasets_.unshift( 
+                { 
+                    name: 'All', 
+                    matches: { kind: 'all', first: -1, last: -1 },
+                    formula: ''
+                }) ;
+        }
     }
 
     public getDataSets() : IPCDataSet[] {
@@ -56,7 +63,7 @@ export class DataSetManager extends Manager {
             }
             else {
                 let allteams = [] ;
-                for(let t of this.team_mgr_.getSortedTeamNumbers()) {
+                for(let t of this.team_mgr_.getSortedTeamNumbers(false)) {
                     let teamData: OneTeam = {} ;
                     teamData['team_number'] = t ;
                     allteams.push(teamData) ;

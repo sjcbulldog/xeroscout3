@@ -113,15 +113,7 @@ export class XeroScoutFormView extends XeroView {
 
     private provideResults() {
         // This extracts the results from the current section
-        this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;
-
-        // if (this.confirm_dialog_) {
-        //     return ;
-        // }
-
-        // this.confirm_dialog_ = new ConfirmScoutDialog(this.type_) ;
-        // this.confirm_dialog_.on('closed', this.scoutDataConfirmed.bind(this)) ;
-        // this.confirm_dialog_.showCentered(this.elem.parentElement!) ;       
+        this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;     
         this.scoutDataConfirmed(true) ;   
     }
 

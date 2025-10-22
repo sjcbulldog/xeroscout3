@@ -3,8 +3,7 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
 import { TabletData } from "./project/tabletmgr";
-import { ProjPickListColConfig, ProjPicklistNotes} from "./project/picklistmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCProjColumnsConfig, IPCTeamInfo } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCTeamInfo } from "../shared/ipc";
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
@@ -283,10 +282,8 @@ export async function getTeamList(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Central) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 0) {
-            central.getTeamList() ;
-        } else if (args.length > 0) {
-            central.getTeamListAndNames() ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            central.getTeamList(args[0] as IPCGetTeamsOptions) ;
         }
     } 
 }
@@ -587,13 +584,12 @@ export async function getPicklistData(cmd: string, ...args: any[]) {
     } 
 }
 
-// get-picklist-notes picklist_name:string
-export async function getPicklistNotes(cmd: string, ...args: any[]) {
+export async function getPicklistConfigs(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Central) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.sendPicklistNotes(args[0]) ;
+        if (args.length === 0) {
+            central.sendPicklistConfigs() ;
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
@@ -601,141 +597,12 @@ export async function getPicklistNotes(cmd: string, ...args: any[]) {
     } 
 }
 
-// get-picklist-list picklist_name:string
-export async function getPicklistList(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'boolean') {
-            central.sendPicklistList(args[0] as boolean) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// create-new-picklist picklist_name:string
-export async function createNewPicklist(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && Array.isArray(args)) {
-            let data = args[0] ;
-            if (Array.isArray(data) && data.length === 2 && typeof data[0] === 'string' && typeof data[1] === 'string') {
-                central.createNewPicklist(data[0] as string, data[1] as string) ;
-            }
-            else {
-                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-            }
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// delete-picklist picklist_name:string
-export async function deletePicklist(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.deletePicklist(args[0] as string) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// update-picklist-notes { picklist_name:string, notes:ProjPicklistNotes[] }
-export async function updatePicklistNotes(cmd: string, ...args: any[]) {
+export async function savePicklistConfig(cmd: string, ...args: any[]) {
     if (scappbase && scappbase.applicationType === XeroAppType.Central) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {
-            let obj = args[0] ;
-            if (obj.hasOwnProperty('name') && obj.hasOwnProperty('notes')) {
-                central.updatePicklistNotes(obj.name as string, obj.notes as ProjPicklistNotes[]) ;
-            }
-            else {
-                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-            }
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// update-picklist-columns { picklist_name:string, columns:ProjPicklistColumns[] }
-export async function updatePicklistColumns(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            let obj = args[0] ;
-            if (obj.hasOwnProperty('name') && obj.hasOwnProperty('cols')) {
-                central.updatePicklistCols(obj.name as string, obj.cols as ProjPickListColConfig[]) ;
-            }
-            else {
-                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-            }
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// update-picklist-data { picklist_name:string, teams: teams in rank order }
-export async function updatePicklistData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            let obj = args[0] ;
-            if (obj.hasOwnProperty('name') && obj.hasOwnProperty('teams')) {
-                central.updatePicklistData(obj.name as string, obj.teams as number[]) ;
-            }
-            else {
-                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-            }
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// update-picklist-data { picklist_name:string, teams: teams in rank order }
-export async function getPicklistColumns(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'string') {
-            central.sendPicklistColumns(args[0] as string) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    } 
-}
-
-// update-picklist-data { picklist_name:string, teams: teams in rank order }
-export async function getPicklistColData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            let obj = args[0] ;
-            if (obj.hasOwnProperty('name') && obj.hasOwnProperty('field')) {
-                central.sendPicklistColData(obj.name as string, obj.field as string) ;
-            }
-            else {
-                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-            }
+            central.savePicklistConfig(args[0] as IPCPickListConfig[]) ;   
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});

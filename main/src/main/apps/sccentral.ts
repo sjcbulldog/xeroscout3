@@ -15,10 +15,11 @@ import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
-import { GraphData } from "../comms/graphifc";
-import { ProjPickListColConfig, ProjPicklistNotes } from "../project/picklistmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCMatchInfo } from "../../shared/ipc";
+import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, 
+		 IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCMatchInfo, IPCPickListConfig, 
+		 IPCGetTeamsOptions,
+		 IPCPickListData} from "../../shared/ipc";
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
@@ -496,7 +497,7 @@ export class SCCentral extends SCBase {
 			label: 'Export All Picklist Data',
 			enabled: false,
 			click: () => {
-				this.doExportPicklist();
+				// this.doExportPicklist();
 			},
 		});
 		datamenu.submenu?.append(exportPicklistData);
@@ -2224,14 +2225,15 @@ export class SCCentral extends SCBase {
 		}
 	}
 
-	public getTeamList() {
-		let ret: number[] = this.project_?.team_mgr_?.getSortedTeamNumbers()! ;
-		this.sendToRenderer('send-team-list', ret) ;
-	}
-
-	public getTeamListAndNames() {
-		let ret = this.project_?.team_mgr_?.getTeamsNickNameAndNumber() ;
-		this.sendToRenderer('send-team-list', ret) ;
+	public getTeamList(opt: IPCGetTeamsOptions) {
+		if (opt.nicknames) {
+			let ret = this.project_?.team_mgr_?.getTeamsNickNameAndNumber(opt.rank || false) ;
+			this.sendToRenderer('send-team-list', ret) ;
+		}
+		else {
+			let ret: number[] = this.project_?.team_mgr_?.getSortedTeamNumbers(opt.rank || false)! ;
+			this.sendToRenderer('send-team-list', ret) ;
+		}
 	}
 
 	private getTeamNumbersFromKeys(keys: string[]) : number[] {
@@ -2264,206 +2266,27 @@ export class SCCentral extends SCBase {
 		this.sendToRenderer('send-match-list', data) ;
 	}
 
-	//#region picklists
-	private async doExportPicklist() {
-		if (this.project_ && this.project_.isInitialized()) {
-			if (this.project_.picklist_mgr_!.getPicklists().length > 0) {
-				for(let picklist of this.project_.picklist_mgr_!.getPicklists()) {
-					let name = '' ;
-					let regex = /[A-Za-z0-9_]/;
-					for(let ch of picklist.name) {
-						if (!ch.match(regex)) {
-							name += '_' ;
-						}
-						else {
-							name += ch ;
-						}
-					}
-					let filename = path.join(this.project_.location, 'picklist-' + name + '.csv') ;
-					await this.project_!.picklist_mgr_!.exportPicklist(picklist.name, filename) ;
-				}
-				dialog.showMessageBox(this.win_, {
-					title: 'Export Picklist As CSV',
-					message: 'All picklists have been exported into the directory \'' + this.project_.location + '\'',
-				}) ;
-			}
-			else {
-				dialog.showMessageBox(this.win_, {
-					title: 'Export Picklist As CSV',
-					message: 'There are not picklist defined'
-				}) ;
-			}
-		}
+	//#region Picklist Management
+	public sendPicklistConfigs() {
+		this.sendToRenderer('send-picklist-configs', this.project_?.picklist_mgr_?.picklists) ;
 	}
 
-	public deletePicklist(name: string) {
-		if (this.project_ && this.project_.isInitialized()) {
-			if (!this.project_!.picklist_mgr_!.deletePicklist(name)) {
-				dialog.showMessageBox(this.win_, {
-					title: 'Error Deleting Picklist',
-					message: 'There was a request to delete picklist \'' + name + '\' which does not exist'
-				});
-			}
-
-			this.sendPicklistList(false) ;
-		}
+	public savePicklistConfig(config: IPCPickListConfig[]) {
+		this.project_?.picklist_mgr_!.savePicklistConfig(config) ;
 	}
 
-	public createNewPicklist(name: string, dataset: string) {
-		if (this.project_) {
-			let picklist = this.project_.picklist_mgr_!.findPicklistByName(name) ;
-			if (picklist) {
-				dialog.showMessageBox(this.win_, {
-					title: 'Error Creating New Picklist',
-					message: 'There is already a picklist named \'' + name + '\''
-				});
-			}
-			else {
-				this.project_.picklist_mgr_?.addPicklist(name, dataset) ;
-			}
-		}
-	}
-
-	public sendPicklistList(senddef: boolean) {
-		interface MyObject {
-			[key: string]: any; // Allows any property with a string key
-		}
-
-		let data: string[] = [] ;
-
-		if (this.project_ && this.project_.isInitialized()) {
-			for(let picklist of this.project_!.picklist_mgr_!.getPicklists()) {
-				data.push(picklist.name) ;
-			}
-			let obj: MyObject = {} ;
-			obj.list = data ;
-			if (senddef) {
-				obj.default = this.project_!.picklist_mgr_!.getLastPicklistUsed() ;
-			}
-
-			this.sendToRenderer('send-picklist-list', obj) ;
-		}
-	}
-
-	// TODO: this should be in the picklist manager
 	public sendPicklistData(name: string) {
-        let data : any[] = [] ;
-        if (this.project_ && this.project_.isInitialized()) {
-			if (!name) {
-				if (this.project_.picklist_mgr_!.getPicklists().length === 0) {
-					return ;
-				}
-
-				if (this.project_!.picklist_mgr_!.getLastPicklistUsed()) {
-					name = this.project_!.picklist_mgr_!.getLastPicklistUsed() ;
-				}
-				else {
-					name = this.project_!.picklist_mgr_!.getPicklists()[0].name ;
-				}
-			}
-
-			this.project_!.picklist_mgr_!.setLastPicklistUsed(name) ;
-			let picklist = this.project_!.picklist_mgr_!.findPicklistByName(name) ;
-			if (picklist) {
-				let ds = this.project_.dataset_mgr_!.getDataSetByName(picklist.dataset) ;
-				if (ds) {
-					let rank = 1 ;
-					for(let team of picklist.rank) {
-						let t = this.project_.team_mgr_?.findTeamByNumber(team) ;
-						let obj = {
-							rank: rank++,
-							teamnumber: team,
-							nickname: t ? t.nickname : team.toString(),
-						};
-						data.push(obj) ;
-					}
-				}
-			}
-        }
-		let obj = {
-			name: name,
-			data: data
-		} ;
-        this.sendToRenderer('send-picklist-data', obj) ;
-	}
-
-	public sendPicklistColumns(name: string) {
-		let data: ProjPickListColConfig[] = [] ;
-
-		if (this.project_ && this.project_.isInitialized()) {
-			let picklist = this.project_!.picklist_mgr_!.findPicklistByName(name) ;
-			if (picklist) {
-				data = picklist.cols ;
-			}
-		}
-
-		let obj = {
-			name: name,
-			cols: data
-		} ;
-		this.sendToRenderer('send-picklist-columns', obj) ;
-	}
-
-	public async sendPicklistColData(name: string, field: string) {
-		let values: DataValue[] = [] ;
-		let teams: number[] = [] ;
-
-		if (this.project_ && this.project_.isInitialized()) {
-			let picklist = this.project_!.picklist_mgr_!.findPicklistByName(name) ;
-			if (!picklist) {
-				return ;
-			}
-
-			let ds = this.project_!.dataset_mgr_!.getDataSetByName(picklist.dataset) ;
-			if (!ds) {
-				return ;
-			}
-
-			let teamlist = this.project_!.team_mgr_!.getSortedTeamNumbers() ;			
-			for(let t of teamlist) {
-				let v = await this.project_!.data_mgr_!.getData(ds, field, t) ;
-				values.push(v) ;
-				teams.push(t) ;
-			}
-
-			let data : PickListColData = {
-				field: field,
-				data: values,
-				teams: teams
-			}
-			this.sendToRenderer('send-picklist-col-data', data) ;
-		}
-	}
-
-	public async sendPicklistNotes(name: string) {
-		if (this.project_ && this.project_.isInitialized()) {
-			let picklist = this.project_?.picklist_mgr_!.findPicklistByName(name) ;
-			if (picklist) {
-				let data = {
-					name: name,
-					notes: picklist.notes
-				}
-				this.sendToRenderer('send-picklist-notes', data) ;
-			}
-		}
-	}
-
-	public updatePicklistNotes(name: string, notes: ProjPicklistNotes[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_.picklist_mgr_!.setPicklistNotes(name, notes) ;
-		}
-	}
-
-	public updatePicklistData(name: string, data: number[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.picklist_mgr_!.updatePicklistData(name, data) ;
-		}
-	}
-
-	public updatePicklistCols(name: string, cols: ProjPickListColConfig[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.picklist_mgr_!.updatePicklistCols(name, cols) ;
-		}
+		this.project_?.picklist_mgr_!.getPicklistData(name)
+		.then((data: IPCPickListData) => {
+			this.sendToRenderer('send-picklist-data', data) ;
+		})
+		.catch((err) => {
+			let errobj: Error = err as Error ;
+			dialog.showMessageBox(this.win_, {
+				title: "Picklist Data Error",
+				message: `Error getting picklist data - ${errobj.message}`
+			});
+		});
 	}
 
 	//#endregion

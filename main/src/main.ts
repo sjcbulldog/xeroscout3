@@ -26,7 +26,10 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getImageNames,
          getSingleTeamConfigs,
          updateSingleTeamConfigs,
-         getGraphData
+         getGraphData,
+         getPicklistData,
+         savePicklistConfig,
+         getPicklistConfigs
 } from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
@@ -190,6 +193,10 @@ app.on("ready", () => {
     ipcMain.on('get-match-configs', (event, ...args) => { getSingleTeamConfigs('get-match-configs', ...args)}) ;
     ipcMain.on('update-match-configs', (event, ...args) => { updateSingleTeamConfigs('update-match-configs', ...args)}) ;
     ipcMain.on('get-chart-data', (event, ...args) => { getGraphData('get-graph-data', ...args)}) ;
+
+    ipcMain.on('get-picklist-configs', (event, ...args) => { getPicklistConfigs('get-picklist-config', ...args)}) ;
+    ipcMain.on('save-picklist-config', (event, ...args) => { savePicklistConfig('save-picklist-config', ...args)}) ;
+    ipcMain.on('get-picklist-data', (event, ...args) => { getPicklistData('get-picklist-data', ...args)}) ;
 
     createWindow() ;
 }) ;
