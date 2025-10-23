@@ -210,7 +210,21 @@ export abstract class SCBase {
 	}
 
 	public static keyToTeamNumber(key: string) {
-		return +this.stripKeyString(key) ;
+		let ret: number = -1;
+		let m1 = /^frc[0-9]+$/;
+		let m2 = /^[0-9]+$/;
+		let m3 = /^frc-[0-9]+$/;
+
+		if (m1.test(key)) {
+			ret = +key.substring(3);
+		} else if (m2.test(key)) {
+			ret = +key;
+		}
+		else if (m3.test(key)) {
+			ret = +key.substring(4) ;
+		}
+
+		return ret;
 	}
 
 	public logClientMessage(obj: any) {
@@ -391,4 +405,10 @@ export abstract class SCBase {
 
 		this.sendToRenderer('xero-app-init', initData) ;
 	}
+
+	protected getIconData(iconname: string) {
+		let datafile = path.join(this.content_dir_, 'images', 'icons', iconname) ;
+		let data: string  = fs.readFileSync(datafile).toString('base64');
+		return data ;
+	}	
 }

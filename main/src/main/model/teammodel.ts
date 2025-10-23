@@ -248,7 +248,7 @@ export class TeamDataModel extends DataModel {
 
             for(let key of Object.keys(opr.oprs)) {
                 let dr = new DataRecord() ;
-                dr.addfield('team_number', DataValue.fromInteger(this.keyToTeamNumber(key))) ;
+                dr.addfield('team_number', DataValue.fromInteger(SCBase.keyToTeamNumber(key))) ;
                 dr.addfield('ba_opr', DataValue.fromReal(opr.oprs[key])) ;
                 dr.addfield('ba_dpr', DataValue.fromReal(opr.dprs[key])) ;
                 dr.addfield('ba_ccwms', DataValue.fromReal(opr.ccwms[key])) ;

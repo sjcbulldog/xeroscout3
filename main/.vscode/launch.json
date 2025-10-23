@@ -57,6 +57,13 @@
         "Debug Central",
         "Debug Scout",
       ]
+    },
+    {
+      "name": "Debug Central & Coach",
+      "configurations": [
+        "Debug Central",
+        "Debug Coach",
+      ]
     }
-  ]
+  ]  
 }

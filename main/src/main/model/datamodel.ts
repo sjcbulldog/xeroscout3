@@ -41,6 +41,11 @@ export abstract class DataModel extends EventEmitter {
         return this.table_name_ ;
     }
 
+    public getEncoded() : Uint8Array {
+        let d = fs.readFileSync(this.dbname_) ;
+        return d ;
+    }
+
     public remove() : void {
         if (fs.existsSync(this.dbname_)) {
             this.db_!.close((err) => {

@@ -73,10 +73,7 @@ export class SCCentral extends SCBase {
 	private static readonly viewMatchDB: string = 'view-match-db';
 	private static readonly viewHelp: string = 'view-help';
 	private static readonly viewAbout: string = 'view-about';
-	private static readonly viewTeamGraph: string = 'view-team-graph';
 	private static readonly viewFormulas: string = 'view-formulas';
-	private static readonly viewMultiView: string = 'view-multi-view';
-	private static readonly viewSpider: string = 'view-spider' ;
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
 
@@ -728,83 +725,83 @@ export class SCCentral extends SCBase {
 						set_number: one.set_number,
 						match_number: one.match_number,
 						played: (one.winning_alliance && one.winning_alliance.length > 0) ? true : false,
-						red1: this.keyToTeamNumber(r1),
+						red1: SCBase.keyToTeamNumber(r1),
 						redtab1: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(r1)
+							SCBase.keyToTeamNumber(r1)
 						),
 						redst1: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(r1)
+							SCBase.keyToTeamNumber(r1)
 						),
-						red2: this.keyToTeamNumber(r2),
+						red2: SCBase.keyToTeamNumber(r2),
 						redtab2: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(r2)
+							SCBase.keyToTeamNumber(r2)
 						),
 						redst2: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(r2)
+							SCBase.keyToTeamNumber(r2)
 						),
-						red3: this.keyToTeamNumber(r3),
+						red3: SCBase.keyToTeamNumber(r3),
 						redtab3: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(r3)
+							SCBase.keyToTeamNumber(r3)
 						),
 						redst3: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(r3)
+							SCBase.keyToTeamNumber(r3)
 						),
-						blue1: this.keyToTeamNumber(b1),
+						blue1: SCBase.keyToTeamNumber(b1),
 						bluetab1: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(b1)
+							SCBase.keyToTeamNumber(b1)
 						),
 						bluest1: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(b1)
+							SCBase.keyToTeamNumber(b1)
 						),
-						blue2: this.keyToTeamNumber(b2),
+						blue2: SCBase.keyToTeamNumber(b2),
 						bluetab2: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(b2)
+							SCBase.keyToTeamNumber(b2)
 						),
 						bluest2: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(b2)
+							SCBase.keyToTeamNumber(b2)
 						),
-						blue3: this.keyToTeamNumber(b3),
+						blue3: SCBase.keyToTeamNumber(b3),
 						bluetab3: this.project_!.tablet_mgr_!.findTabletForMatch(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(b3)
+							SCBase.keyToTeamNumber(b3)
 						),
 						bluest3: this.project_!.data_mgr_!.hasMatchScoutingResult(
 							one.comp_level,
 							one.set_number,
 							one.match_number,
-							this.keyToTeamNumber(b3)
+							SCBase.keyToTeamNumber(b3)
 						),
 					};
 					ret.push(obj);
@@ -848,39 +845,6 @@ export class SCCentral extends SCBase {
 		}
 
 		this.sendToRenderer('send-team-status', ret);
-	}
-
-	private keyToTeamNumber(key: string) {
-		let ret: number = -1;
-		let m1 = /^frc[0-9]+$/;
-		let m2 = /^[0-9]+$/;
-		let m3 = /^frc-[0-9]+$/;
-
-		if (m1.test(key)) {
-			ret = +key.substring(3);
-		} else if (m2.test(key)) {
-			ret = +key;
-		}
-		else if (m3.test(key)) {
-			ret = +key.substring(4) ;
-		}
-
-		return ret;
-	}
-
-	private shortenString(str: string | undefined): string | undefined {
-		let ret: string | undefined;
-		let maxlen = 40;
-
-		if (str) {
-			if (str.length > maxlen) {
-				ret = '...' + str.substring(str.length - maxlen);
-			} else {
-				ret = str;
-			}
-		}
-
-		return ret;
 	}
 
 	public sendInfoData(): void {
@@ -1062,12 +1026,12 @@ export class SCCentral extends SCBase {
 					comp_level: t.comp_level,
 					set_number: t.set_number,
 					match_number: t.match_number,
-					red1: this.keyToTeamNumber(t.alliances.red.team_keys[0]),
-					red2: this.keyToTeamNumber(t.alliances.red.team_keys[1]),
-					red3: this.keyToTeamNumber(t.alliances.red.team_keys[2]),
-					blue1: this.keyToTeamNumber(t.alliances.blue.team_keys[0]),
-					blue2: this.keyToTeamNumber(t.alliances.blue.team_keys[1]),
-					blue3: this.keyToTeamNumber(t.alliances.blue.team_keys[2]),
+					red1: SCBase.keyToTeamNumber(t.alliances.red.team_keys[0]),
+					red2: SCBase.keyToTeamNumber(t.alliances.red.team_keys[1]),
+					red3: SCBase.keyToTeamNumber(t.alliances.red.team_keys[2]),
+					blue1: SCBase.keyToTeamNumber(t.alliances.blue.team_keys[0]),
+					blue2: SCBase.keyToTeamNumber(t.alliances.blue.team_keys[1]),
+					blue3: SCBase.keyToTeamNumber(t.alliances.blue.team_keys[2]),
 				};
 				data.push(d);
 			}
@@ -1441,6 +1405,7 @@ export class SCCentral extends SCBase {
 		} else if (cmd === SCCentral.assignTablets) {
 			this.setView("assign-tablets");
 		} else if (cmd === SCCentral.viewInit) {
+			this.sendNavData();			
 			this.setView("info");
 		} else if (cmd === SCCentral.viewPicklist) {
 			this.setView('picklist') ;
@@ -1501,16 +1466,10 @@ export class SCCentral extends SCBase {
 			this.setView("match-db");
 		} else if (cmd === SCCentral.viewTeamDB) {
 			this.setView("team-db");
-		} else if (cmd === SCCentral.viewTeamGraph) {
-			this.setView("teamgraph");
 		} else if (cmd === SCCentral.viewFormulas) {
 			this.setView("formulas") ;
 		} else if (cmd === SCCentral.viewPlayoffs) {
 			this.setView("playoffs", null) ;
-		} else if (cmd === SCCentral.viewMultiView) {
-			this.setView("multiview") ;
-		} else if (cmd === SCCentral.viewSpider) {
-			this.setView("spiderview") ;
 		} else if (cmd === SCCentral.viewSingleTeamSummary) {
 			this.setView("singleteam") ;
 		}
@@ -1924,7 +1883,7 @@ export class SCCentral extends SCBase {
 	private processPacket(p: PacketObj): PacketObj | undefined {
 		let resp: PacketObj | undefined;
 
-		if (p.type_ === PacketType.Hello) {
+		if (p.type_ === PacketType.HelloFromScouter) {
 			this.synctype_ = 'data' ;
 			if (p.data_.length > 0) {
 				try {
@@ -1948,7 +1907,47 @@ export class SCCentral extends SCBase {
 				name: evname,
 			};
 			let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
-			resp = new PacketObj(PacketType.Hello, uuidbuf);
+			resp = new PacketObj(PacketType.HelloFromScouter, uuidbuf);
+		} else if (p.type_ === PacketType.HelloFromCoach) {
+			if (!this.project_) {
+				resp = new PacketObj(
+					PacketType.Error,
+					Buffer.from("no event loaded on central", "utf-8")
+				);				
+			}
+			else if (!this.project_.info!.locked_) {
+				resp = new PacketObj(
+					PacketType.Error,
+					Buffer.from("event on central is not locked", "utf-8")
+				);		
+			}
+			else {			
+				this.synctype_ = 'coach' ;
+				if (p.data_.length > 0) {
+					try {
+						let obj = JSON.parse(p.payloadAsString());
+					} catch (err) {}
+				}
+
+				let evname;
+
+				if (this.project_?.info?.frcev_?.name) {
+					evname = this.project_.info.frcev_.name;
+				} else if (this.project_?.info?.name_) {
+					evname = this.project_?.info?.name_;
+				}
+				else {
+					evname = "Unknown Event" ;
+				}
+
+				let evid = {
+					uuid: this.project_?.info?.uuid_,
+					name: evname,
+				};
+				let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
+				resp = new PacketObj(PacketType.HelloFromCoach, uuidbuf);
+			}
+
 		} else if (p.type_ === PacketType.RequestImages) {
 			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
 			let retdata : any = {} ;
@@ -1968,8 +1967,7 @@ export class SCCentral extends SCBase {
 			let msg : string = JSON.stringify(retdata) ;
 			data = Buffer.from(msg, "utf-8");
 			resp = new PacketObj(PacketType.ProvideImages, data);
-		}
-		else if (p.type_ === PacketType.RequestMatchResults) {
+		} else if (p.type_ === PacketType.RequestMatchResults) {
 			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
 			let results : IPCScoutResult[] = [] ;
 
@@ -2118,7 +2116,34 @@ export class SCCentral extends SCBase {
 					"invalid results json received by central host"
 				);
 			}
-		} else if (p.type_ === PacketType.Goodbye) {
+		} else if (p.type_ === PacketType.RequestProject) {
+			if (this.project_) {
+				let msg = JSON.stringify(this.project_.info) ;
+				resp = new PacketObj(PacketType.ProvideProject, Buffer.from(msg, "utf-8"));
+			}
+		}
+		else if (p.type_ === PacketType.RequestTeamDB) {
+			if (this.project_) {
+				let data = this.project_.data_mgr_!.getTeamDBEncoded() ;
+				resp = new PacketObj(PacketType.ProvideTeamDB, data) ;
+			}
+		}
+		else if (p.type_ === PacketType.RequestMatchDB) {
+			if (this.project_) {
+				let data = this.project_.data_mgr_!.getMatchDBEncoded() ;
+				resp = new PacketObj(PacketType.ProvideMatchDB, data) ;
+			}			
+		} else if (p.type_ === PacketType.GoodbyeFromCoach) {
+			resp = undefined;
+			let msg: string ;
+			msg = `Coach tablet has sucessfully synchronized scouting data with this host, all data transferred` ;
+
+			dialog.showMessageBox(this.win_, {
+				title: "Synchronization Complete",
+				message: msg,
+				type: "info",
+			});
+		} else if (p.type_ === PacketType.GoodbyeFromScouter) {
 			resp = undefined;
 			let msg: string ;
 			if (this.synctype_ === "initialize") {
@@ -2132,7 +2157,7 @@ export class SCCentral extends SCBase {
 				title: "Synchronization Complete",
 				message: msg,
 				type: "info",
-			});
+			});			
 		} else {
 			resp = new PacketObj(
 				PacketType.Error,
@@ -2150,29 +2175,24 @@ export class SCCentral extends SCBase {
 			this.tcpsyncserver_
 				.init()
 				.then(() => {
-					this.logger_.info(
-						"TCPSyncServer: initialization completed sucessfully"
-					);
+					this.logger_.info("TCPSyncServer: initialization completed sucessfully");
 				})
 				.catch((err) => {
 					let errobj: Error = err;
-					dialog.showErrorBox(
-						"TCP Sync",
-						"Cannot start TCP sync - " + err.message
-					);
+					dialog.showErrorBox("TCP Sync", "Cannot start TCP sync - " + err.message);
 				});
-			this.tcpsyncserver_.on("packet", (p: PacketObj) => {
-				let reply: PacketObj | undefined = this.processPacket(p);
-				if (reply) {
-					this.tcpsyncserver_!.send(reply).then(() => {
-						if (reply.type_ === PacketType.Error) {
-							this.tcpsyncserver_!.shutdownClient();
-						}
-					});
-				} else {
-					this.tcpsyncserver_?.shutdownClient();
-				}
-			});
+				this.tcpsyncserver_.on("packet", (p: PacketObj) => {
+					let reply: PacketObj | undefined = this.processPacket(p);
+					if (reply) {
+						this.tcpsyncserver_!.send(reply).then(() => {
+							if (reply.type_ === PacketType.Error) {
+								this.tcpsyncserver_!.shutdownClient();
+							}
+						});
+					} else {
+						this.tcpsyncserver_?.shutdownClient();
+					}
+				});
 
 			this.tcpsyncserver_.on("error", (err) => {
 				this.tcpsyncserver_?.shutdownClient();
@@ -2365,12 +2385,6 @@ export class SCCentral extends SCBase {
 				this.importFormulasFromFileWithPath(result.filePaths[0]) ;
 			}
 		}) ;
-	}
-
-	private getIconData(iconname: string) {
-		let datafile = path.join(this.content_dir_, 'images', 'icons', iconname) ;
-		let data: string  = fs.readFileSync(datafile).toString('base64');
-		return data ;
 	}
 
 	public sendHintDB(){

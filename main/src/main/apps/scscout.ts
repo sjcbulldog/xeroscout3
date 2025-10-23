@@ -342,15 +342,8 @@ export class SCScout extends SCBase {
     }
 
     private scoutTeam(team: string, force: boolean = false) {
-        if (this.current_scout_ && !force) {
-            //
-            // Get the result from the existing displayed
-            // team and store the result in the info for the team
-            //
-            this.sendToRenderer('request-results') ;
-        }
-        else {
-
+        this.optionallyGetResults()
+        .then(() => {
             //
             // About to scout a new team, be sure that is what we want to do.
             //
@@ -373,18 +366,15 @@ export class SCScout extends SCBase {
             this.sendToRenderer('send-nav-highlight', team) ;
             this.current_scout_ = team;
             this.setView('form-scout', 'team') ;
-        }
+        })
+        .catch((err) => {
+            this.logger_.error('cannot get results before scouting team', err) ; 
+        }) ;
     }
 
     private scoutMatch(match: string, force: boolean = false) {
-        if (this.current_scout_ && !force) {
-            //
-            // Get the result from the existing displayed
-            // match and store the result in the info for the match
-            //
-            this.sendToRenderer('request-results') ;
-        }
-        else {
+        this.optionallyGetResults()
+        .then(() => {
             this.alliance_ = this.getAllianceFromMatch(match) ;
             if (!this.alliance_) {
                 dialog.showMessageBox(this.win_, {
@@ -415,7 +405,10 @@ export class SCScout extends SCBase {
                 this.current_scout_ = match ;
                 this.setView('form-scout', 'match') ;
             }
-        }
+        })
+        .catch((err) => {
+            this.logger_.error('cannot get results before scouting match', err) ; 
+        }) ;
     }
 
     private getAllianceFromMatch(match: string) : string | undefined {
@@ -559,7 +552,7 @@ export class SCScout extends SCBase {
     }
 
     private syncClient(conn: SyncClient) {
-        this.getCurrentResults()
+        this.optionallyGetResults()
         .then(() => {
             this.match_results_received_ = false ;
             this.team_results_received_ = false ;
@@ -584,8 +577,7 @@ export class SCScout extends SCBase {
                         this.conn_ = undefined ;
                     }) ;
 
-                    let p: PacketObj = new PacketObj(PacketType.Hello, data) ;
-                    await this.conn_!.send(p) ;
+                    let p: PacketObj = new PacketObj(PacketType.HelloFromScouter, data) ;
 
                     this.conn_!.on('error', (err: Error) => {
                         let msg: string = "" ;
@@ -610,6 +602,8 @@ export class SCScout extends SCBase {
                     this.conn_!.on('packet', (p: PacketObj) => {
                         this.syncTablet(p) ;
                     }) ;
+
+                    await this.conn_!.send(p) ;
                 })
                 .catch((err) => {
                     this.logger_.error('cannot connect to central', err) ;
@@ -627,7 +621,7 @@ export class SCScout extends SCBase {
     private syncTablet(p: PacketObj) {
         let ret = true ;
 
-        if (p.type_ === PacketType.Hello) {
+        if (p.type_ === PacketType.HelloFromScouter) {
             let obj ;
 
             try {
@@ -743,11 +737,11 @@ export class SCScout extends SCBase {
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
-        else if (p.type_ === PacketType.Goodbye) {
+        else if (p.type_ === PacketType.GoodbyeFromScouter) {
             this.conn_?.close() ;
         }
         else if (p.type_ === PacketType.ReceivedResults) {
-            this.conn_?.send(new PacketObj(PacketType.Goodbye, Buffer.from(this.info_.tablet_!))) ;
+            this.conn_?.send(new PacketObj(PacketType.GoodbyeFromScouter, Buffer.from(this.info_.tablet_!))) ;
             this.conn_?.close() ;
         }
         else if (p.type_ === PacketType.Error) {

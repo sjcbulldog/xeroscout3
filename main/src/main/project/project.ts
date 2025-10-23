@@ -26,6 +26,7 @@ import { GraphManager } from './graphmgr';
 import { IPCHint, IPCScoutResults } from '../../shared/ipc';
 import { RulesEngine } from '../../shared/rulesengine';
 import { PlayoffManager } from './playoffmgr';
+import { SCBase } from '../apps/scbase';
 
 export class Project {
     private static readonly keepLotsOfBackups = true ;
@@ -166,10 +167,10 @@ export class Project {
                     for(let match of this.match_mgr_.getMatches()) {
                         for(let i = 0 ; i < 3 ; i++) {
                             let blue = 'sm-'+ match.comp_level + '-' + match.set_number + '-' + 
-                                    match.match_number + '-' + match.alliances.blue.team_keys[i] ;
+                                    match.match_number + '-' + SCBase.keyToTeamNumber(match.alliances.blue.team_keys[i]) ;
                             matches.push(blue) ;
                             let red = 'sm-'+match.comp_level + '-' + match.set_number + '-' + 
-                                    match.match_number + '-' + match.alliances.red.team_keys[i] ;
+                                    match.match_number + '-' + SCBase.keyToTeamNumber(match.alliances.red.team_keys[i]) ;
                             matches.push(red) ;
                         }
                     }

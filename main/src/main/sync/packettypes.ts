@@ -1,7 +1,7 @@
 export const PacketCompressionNone = 0 ;
 
 export enum PacketType {
-    Hello = 0x00,
+    HelloFromScouter = 0x00,
     RequestTablets = 0x01,
     Error = 0x02,
     ProvideTablets = 0x03,
@@ -25,5 +25,13 @@ export enum PacketType {
     ProvidePlayoffAssignments = 0x15,
     RequestPlayoffStatus = 0x16,
     ProvidePlayoffStatus = 0x17,    
-    Goodbye = 0x18
+    HelloFromCoach = 0x18,
+    RequestProject = 0x19,
+    ProvideProject = 0x1a,
+    RequestTeamDB = 0x1b,
+    ProvideTeamDB = 0x1c,
+    RequestMatchDB = 0x1d,
+    ProvideMatchDB = 0x1e,
+    GoodbyeFromCoach = 0xFE,
+    GoodbyeFromScouter = 0xFF
 } ;

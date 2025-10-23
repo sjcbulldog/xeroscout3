@@ -96,6 +96,14 @@ export class DataManager extends Manager {
         return ret ;
     }
 
+    public getTeamDBEncoded() : Uint8Array {
+        return this.teamdb_.getEncoded() ;
+    }
+
+    public getMatchDBEncoded() : Uint8Array {
+        return this.matchdb_.getEncoded() ;
+    }
+
     public removeDatabases() {
         this.teamdb_.remove() ;
         this.matchdb_.remove() ;
