@@ -198,19 +198,19 @@ export class XeroApp extends XeroMainProcessInterface {
 
     private registerViews() {
         this.registerView('text', XeroTextView, ['central', 'scout', 'coach']) ;
-        this.registerView('info', XeroInfoView, ['central']) ;
+        this.registerView('info', XeroInfoView, ['central', 'coach']) ;
         this.registerView('select-event', XeroSelectEvent, ['central']) ;
         this.registerView('assign-tablets', XeroAssignTablets, ['central']) ;
         this.registerView('form-edit', XeroEditFormView, ['central']) ;
         this.registerView('form-scout', XeroScoutFormView, ['central', 'scout', 'coach']) ;
-        this.registerView('team-status', XeroTeamStatus, ['central']) ;
-        this.registerView('team-db', XeroTeamDatabaseView, ['central']) ;
-        this.registerView('match-status', XeroMatchStatus, ['central']) ;
-        this.registerView('match-db', XeroMatchDatabaseView, ['central']) ;
+        this.registerView('team-status', XeroTeamStatus, ['central', 'coach']) ;
+        this.registerView('team-db', XeroTeamDatabaseView, ['central', 'coach']) ;
+        this.registerView('match-status', XeroMatchStatus, ['central', 'coach']) ;
+        this.registerView('match-db', XeroMatchDatabaseView, ['central', 'coach']) ;
         this.registerView('select-tablet', XeroSelectTablet, ['scout']) ;
-        this.registerView('sync-ipaddr', XeroSyncIPAddrView, ['scout']);
+        this.registerView('sync-ipaddr', XeroSyncIPAddrView, ['scout', 'coach']);
         this.registerView('formulas', XeroFormulasView, ['central']) ;
-        this.registerView('playoffs', XeroPlayoffsView, ['central', 'scout']) ;
+        this.registerView('playoffs', XeroPlayoffsView, ['central', 'scout', 'coach']) ;
         this.registerView('datasets', DataSetEditor, ['central']) ;
         this.registerView('edit-teams', EditTeamsView, ['central']) ;
         this.registerView('edit-matches', EditMatchesView, ['central']) ;

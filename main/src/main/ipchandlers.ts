@@ -4,17 +4,48 @@ import { SCScout } from "./apps/scscout";
 import { XeroAppType } from "./apps/scbase";
 import { TabletData } from "./project/tabletmgr";
 import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCTeamInfo } from "../shared/ipc";
+import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
+
+function isScoutType() : boolean {
+    if (!scappbase) {   
+        return false ;
+    }
+
+    return scappbase.applicationType === XeroAppType.Scouter ;
+}
+
+function isCentralType() : boolean {
+    if (!scappbase) {
+        return false ;
+    }
+    return scappbase.applicationType === XeroAppType.Central ;
+}
+
+function isCoachType() : boolean {
+    if (!scappbase) {
+        return false ;
+    }
+    return scappbase.applicationType === XeroAppType.Coach ;
+}
+
+function isCentralOrCoachType() : boolean {
+    if (!scappbase) {
+        return false ;
+    }
+    return scappbase.applicationType === XeroAppType.Central || scappbase.applicationType === XeroAppType.Coach ;
+}
+
 
 // get-info-data
 export async function getInfoData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
         if (args.length === 0) {
-            central.sendInfoData() ;
+            app.sendInfoData() ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     }
 }
@@ -33,52 +64,52 @@ export async function getNavData(cmd: string, ...args: any[]) {
 
 // get-team-field-list
 export async function getTeamFieldList(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendTeamFieldList() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }        
     }
 }
 
 // get-match-field-list
 export async function getMatchFieldList(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendMatchFieldList() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }        
     }
 }
 
 // get-formulas
 export async function getFormulas(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendFormulas() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }        
     }
 }
 
 // get-datasets
 export async function getDataSets(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendDataSets() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }        
     }
 }
@@ -161,26 +192,26 @@ export async function generateRandomData(cmd: string, ...args: any[]) {
 
 // get-team-data
 export async function getTeamData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!  .logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendTeamData() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }              
     } 
 }
 
 // get-match-data
 export async function getMatchData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendMatchData() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }            
     } 
 }
@@ -201,13 +232,13 @@ export async function setTeamData(cmd: string, ...args: any[]) {
 
 // get-match-db
 export async function getMatchDB(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendMatchDB() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }           
     } 
 }
@@ -227,13 +258,13 @@ export async function updateMatchDB(cmd: string, ...args: any[]) {
 
 // get-team-db
 export async function getTeamDB(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendTeamDB() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }           
     } 
 }
@@ -253,34 +284,34 @@ export async function updateTeamDB(cmd: string, ...args: any[]) {
 
 // get-team-status
 export async function getTeamStatus(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendTeamStatus() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }         
     } 
 }
 
 // get-match-status
 export async function getMatchStatus(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendMatchStatus() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }         
     } 
 }   
 
 // get-team-list
 export async function getTeamList(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {
             central.getTeamList(args[0] as IPCGetTeamsOptions) ;
@@ -290,13 +321,13 @@ export async function getTeamList(cmd: string, ...args: any[]) {
 
 // get-match-list
 export async function getMatchList(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.getMatchList() ;
         } else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }            
     } 
 }
@@ -415,7 +446,7 @@ export async function getForm(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 1 && typeof args[0] === 'string') {
-            if (scappbase.applicationType === XeroAppType.Central) {
+            if (isCentralOrCoachType()) {
                 let central : SCCentral = scappbase as SCCentral ;
                 central.sendForm(args[0]) ;
             } 
@@ -544,55 +575,55 @@ export async function provideResult(cmd: string, ...args: any[]) {
 
 // set-team-data data:ProjColConfig
 export async function sendMatchColConfig(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {
             central.setMatchColConfig(args[0] as IPCProjColumnsConfig) ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});     
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});     
         }
     } 
 }
 
 // set-team-col-config data:ProjColConfig
 export async function sendTeamColConfig(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {
             central.setTeamColConfig(args[0] as IPCProjColumnsConfig) ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});     
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});     
         }
     } 
 }
 
 // get-picklist-data picklist_name:string
 export async function getPicklistData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'string') {
             central.sendPicklistData(args[0]) ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
 }
 
 export async function getPicklistConfigs(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
             central.sendPicklistConfigs() ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
 }
@@ -611,8 +642,8 @@ export async function savePicklistConfig(cmd: string, ...args: any[]) {
 }
 
 export async function getSingleTeamData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {       
             let obj = args[0] ;
@@ -620,24 +651,24 @@ export async function getSingleTeamData(cmd: string, ...args: any[]) {
                 central.getSingleTeamData(obj.dataset, obj.team) ;
             }
             else {
-                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+                scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
             }
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
 }
 
 export async function getSingleTeamConfig(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {       
             central.getSingleTeamConfigs() ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
 }
@@ -669,14 +700,14 @@ export async function setHintHidden(cmd: string, ...args: any[]) {
 }
 
 export async function getPlayoffStatus(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {       
             central.sendPlayoffStatus() ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     }
 }
@@ -698,27 +729,27 @@ export async function setAllianceTeams(cmd: string, ...args: any[]) {
 }
 
 export async function getMatchFormatFormulas(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {   
             central.sendMatchFormatFormulas() ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     }    
 }
 
 export async function getTeamFormatFormulas(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {   
             central.sendTeamFormatFormulas() ;
         }
         else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     }    
 }
@@ -809,10 +840,10 @@ export async function splitterChanged(cmd: string, ...args: any[]) {
 
 // get-single-team-configs
 export async function getSingleTeamConfigs(cmd: string, ...args: any[]) {
-    if (scappbase) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        central.getSingleTeamConfigs() ;
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
+        app.getSingleTeamConfigs() ;
     }
 }
 

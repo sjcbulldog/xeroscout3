@@ -2,10 +2,10 @@ import Papa from "papaparse";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { SCBase, XeroAppType } from "./scbase";
+import { XeroAppType } from "./scbase";
 import { BlueAlliance } from "../extnet/ba";
 import { Project } from "../project/project";
-import { BrowserWindow, Data, dialog, Menu, MenuItem, protocol, shell } from "electron";
+import { BrowserWindow, dialog, Menu, MenuItem, shell } from "electron";
 import { TCPSyncServer } from "../sync/tcpserver";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
@@ -16,12 +16,7 @@ import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPCScoutResult, IPCScoutResults, IPCImageResponse, 
-		 IPCPlayoffStatus, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCMatchInfo, IPCPickListConfig, 
-		 IPCGetTeamsOptions,
-		 IPCPickListData} from "../../shared/ipc";
-import { DataRecord } from "../model/datarecord";
-import { DataValue } from "../../shared/datavalue";
+import { IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCPickListConfig } from "../../shared/ipc";
 import { UDPBroadcast } from "../sync/udpbroadcast";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 

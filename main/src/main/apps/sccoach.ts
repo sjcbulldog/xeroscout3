@@ -1,14 +1,15 @@
 import * as path from "path";
 import * as fs from "fs";
 import { BrowserWindow, dialog, Menu, MenuItem } from "electron";
-import { SCBase, XeroAppType } from "./scbase";
+import { XeroAppType } from "./scbase";
 import { SyncClient } from "../sync/syncclient";
 import { TCPClient } from "../sync/tcpclient";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
+import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
-export class SCCoach extends SCBase {
+export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
 
     private static readonly viewInit: string = 'view-init' ;
@@ -19,6 +20,9 @@ export class SCCoach extends SCBase {
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
     private static readonly viewPicklist: string = 'view-picklist' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
+    private static readonly resetTablet: string = "reset-tablet" ;    
+    private static readonly viewTeamForm: string = 'view-team-form';
+    private static readonly viewMatchForm: string = 'view-match-form';
 
     private static readonly syncEventLocal: string = "sync-event-local" ;
     private static readonly syncEventRemote: string = "sync-event-remote" ;
@@ -26,7 +30,7 @@ export class SCCoach extends SCBase {
     private static readonly syncEventIPAddr: string = "sync-event-ipaddr" ;
 
     private sync_client_? : SyncClient ;    
-    private project_? : Project ;
+    private sync_project_file_ : string = '' ;
 
     public constructor(win: BrowserWindow, args: string[]) {
         super(win, 'coach') ;
@@ -42,17 +46,29 @@ export class SCCoach extends SCBase {
         let lastevent = this.getSetting(SCCoach.lastEventLoaded) ;
         if (lastevent && typeof lastevent === 'string' && lastevent.length > 0) {
             let evfile = path.join(lastevent, 'event.json') ;
+            this.openEvent(evfile)
+            .then(() => { 
+                this.sendNavData() ;
+            })
+        }
+    }    
+
+    private openEvent(evfile: string) : Promise<void> {
+        let ret = new Promise<void>( (resolve, reject) => {
             Project.openEvent(this.logger_, evfile, 2025)
                 .then( (proj: Project) => {
-                    this.project_ = proj ;
+                    this.project = proj ;
+                    resolve() ;
                 } )
                 .catch( (err: Error) => {
-                    this.logger_.error('Error reopening last event: ' + err.message) ;
-                } ) ;   
-        }
+                    dialog.showErrorBox('Error Opening Event', 'There was an error reopening the last event:\n' + err.message) ;
+                    this.logger_.error('Error opening event: ' + err.message) ;
+                    reject(err) ;
+                } ) ;          
+        } ) ;
 
-        this.sendNavData() ;
-    }    
+        return ret ;
+    }
     
     public basePage() : string  {
         return "content/main.html"
@@ -63,8 +79,8 @@ export class SCCoach extends SCBase {
     }
 
     public close() : void {
-        if (this.project_) {
-            this.setSetting(SCCoach.lastEventLoaded, this.project_.location) ;
+        if (this.project) {
+            this.setSetting(SCCoach.lastEventLoaded, this.project.location) ;
         }
     }
 
@@ -72,7 +88,7 @@ export class SCCoach extends SCBase {
 		let treedata = [];
 		let dims = 40 ;
 
-		if (this.project_) {
+		if (this.project) {
 			treedata.push({
 				type: "icon",
 				command: SCCoach.viewInit,
@@ -82,6 +98,14 @@ export class SCCoach extends SCBase {
 				height: dims
 			});
 			treedata.push({ type: "separator", title: "Teams" });
+            treedata.push({
+                type: "icon",
+                command: SCCoach.viewTeamForm,
+                title: "Team Form",
+                icon: this.getIconData('form.png'),
+                width: dims,
+                height: dims
+            });            
             treedata.push({
                 type: "icon",
                 command: SCCoach.viewTeamStatus,
@@ -100,7 +124,14 @@ export class SCCoach extends SCBase {
             });
 
 			treedata.push({ type: "separator", title: "Match" });
-
+            treedata.push({
+                type: "icon",
+                command: SCCoach.viewMatchForm,
+                title: "MatchForm",
+                icon: this.getIconData('form.png'),
+                width: dims,
+                height: dims
+            });
             treedata.push({
                 type: "icon",
                 command: SCCoach.viewMatchStatus,
@@ -168,6 +199,33 @@ export class SCCoach extends SCBase {
         else if (cmd === SCCoach.syncEventIPAddr) {
             this.setView('sync-ipaddr') ;
         }
+        else if (cmd === SCCoach.resetTablet) {
+            this.project = undefined ;
+            this.unsetSettings(SCCoach.lastEventLoaded) ;
+            this.sendNavData() ;
+        }
+        else if (cmd === SCCoach.viewInit) {
+            this.setView('info') ;
+		} else if (cmd === SCCoach.viewTeamForm) {
+			this.setView('form-scout', 'team');
+		} else if (cmd === SCCoach.viewMatchForm) {
+			this.setView('form-scout', 'match');
+		}        
+        else if (cmd === SCCoach.viewTeamStatus) {
+            this.setView("team-status");
+        }
+        else if (cmd === SCCoach.viewTeamDB) {
+            this.setView("team-db");
+        }
+        else if (cmd === SCCoach.viewMatchStatus) {
+            this.setView("match-status");
+        }
+        else if (cmd === SCCoach.viewMatchDB) {
+            this.setView("match-db");
+        }
+        else {
+            dialog.showErrorBox('Unknown Command', `The command '${cmd}' is not recognized by SCCoach.`) ;
+        }
     }
 
     public createMenu() : Menu | null {
@@ -210,6 +268,20 @@ export class SCCoach extends SCBase {
         filemenu.submenu?.insert(4, new MenuItem({type: 'separator'}));        
 
         ret.append(filemenu) ;
+
+        let resetmenu: MenuItem = new MenuItem({
+            type: 'submenu',
+            label: 'Reset',
+            submenu: new Menu()
+        }) ;
+
+        let resetitem: MenuItem = new MenuItem( {
+            type: 'normal',
+            label: 'Reset Tablet',
+            click: () => { this.executeCommand(SCCoach.resetTablet)}
+        }) ;
+        resetmenu.submenu?.insert(0, resetitem) ;
+        ret.append(resetmenu);          
 
         return ret ;
     }    
@@ -270,22 +342,9 @@ export class SCCoach extends SCBase {
 
         switch(p.type_) {
             case PacketType.HelloFromCoach:
-                this.logger_.debug('SyncTablet: received HelloFromCoach packet') ;
-                try {
-                    obj = JSON.parse(p.payloadAsString()) ;
-                    if (this.project_ && this.project_.info?.uuid_ && obj.uuid !== this.project_.info.uuid_) {
-                        //
-                        // We have an event loaded and it does not match
-                        //
-                        this.sync_client_!!.close() ;
-                        return ;
-                    }
-                    p = new PacketObj(PacketType.RequestProject, new Uint8Array(0)) ;
-                    this.sync_client_!.send(p) ;
-                    
-                }
-                catch(err) {
-                }                
+                this.receiveHello(p) ;
+                p = new PacketObj(PacketType.RequestProject, new Uint8Array(0)) ;
+                this.sync_client_!.send(p) ;                
                 break ;
 
             case PacketType.Error:
@@ -295,50 +354,105 @@ export class SCCoach extends SCBase {
                 this.sync_client_!.send(p) ;                   
                 break ;
             case PacketType.ProvideProject:
-                this.logger_.debug('SyncTablet: received ProvideProject packet') ;
                 this.receiveProject(p) ;
                 p = new PacketObj(PacketType.RequestTeamDB, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;                
                 break ;
 
             case PacketType.ProvideTeamDB:
-                this.logger_.debug('SyncTablet: received ProvideTeamDB packet') ;
                 this.receiveTeamDB(p) ;
                 p = new PacketObj(PacketType.RequestMatchDB, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;                
                 break ;
 
             case PacketType.ProvideMatchDB:
-                this.logger_.debug('SyncTablet: received ProvideMatchDB packet') ;
                 this.receiveMatchDB(p) ;
-                p = new PacketObj(PacketType.GoodbyeFromCoach, new Uint8Array(0)) ;
+                p = new PacketObj(PacketType.RequestTeamForm, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;                 
+                break ;
+
+            case PacketType.ProvideTeamForm:
+                this.logger_.debug('SyncTablet: received ProvideTeamForm packet') ;
+                this.receiveTeamForm(p) ;
+                p = new PacketObj(PacketType.RequestMatchForm, new Uint8Array(0)) ;
+                this.sync_client_!.send(p) ;                 
+                break ;
+
+            case PacketType.ProvideMatchForm:
+                this.logger_.debug('SyncTablet: received ProvideMatchForm packet') ;
+                this.receiveMatchForm(p) ;
+                p = new PacketObj(PacketType.GoodbyeFromCoach, new Uint8Array(0)) ;
+                this.sync_client_!.send(p) ;
+                this.finishSync() ;
                 break ;
         }
     }
 
+    private finishSync() : void {
+        let evfile = path.join(this.sync_project_file_, 'event.json') ;
+        this.openEvent(evfile)
+        .then(() => {
+            let form = path.join(this.sync_project_file_, 'match.json') ;
+            this.project?.form_mgr_?.setMatchForm(form) ;
+
+            form = path.join(this.sync_project_file_, 'team.json') ;
+            this.project?.form_mgr_?.setTeamForm(form) ;
+
+            this.sync_project_file_ = '' ;
+            this.sendNavData() ;
+        }) ;
+    }
+
+    private receiveHello(p: PacketObj) : void {
+        this.logger_.debug('SyncTablet: received HelloFromCoach packet') ;
+        try {
+            let obj = JSON.parse(p.payloadAsString()) ;
+            if (this.project && this.project.info?.uuid_ && obj.uuid !== this.project.info.uuid_) {
+                //
+                // We have an event loaded and it does not match
+                //
+                this.sync_client_!!.close() ;
+                return ;
+            }
+        }
+        catch(err) {
+        }    
+    }
+
+    private receiveTeamForm(p: PacketObj) : void {
+        let str : string = p.payloadAsString() ;
+        let fname = path.join(this.sync_project_file_, 'team.json') ;
+        fs.writeFileSync(fname, str) ;
+    }
+
+    private receiveMatchForm(p: PacketObj) : void {
+        let str : string = p.payloadAsString() ;
+        let fname = path.join(this.sync_project_file_, 'match.json') ;
+        fs.writeFileSync(fname, str) ;
+    }
+
     private receiveProject(p: PacketObj) : void {
+        this.logger_.debug('SyncTablet: received ProvideProject packet') ;        
         let str : string = p.payloadAsString() ;
         let info : any = JSON.parse(str) ;
-        let pdir: string = this.getProjectDir(info) ;
+        this.sync_project_file_ = this.getProjectDir(info) ;
 
-        if (!fs.existsSync(pdir)) {
-            fs.mkdirSync(pdir, { recursive: true }) ;
+        if (!fs.existsSync(this.sync_project_file_)) {
+            fs.mkdirSync(this.sync_project_file_, { recursive: true }) ;
         }
 
-        this.project_ = new Project(this.logger_, this.getProjectDir(info), 2025) ;
-        this.project_.init(info) ;
-
-        this.project_.writeEventFile() ;
+        fs.writeFileSync(path.join(this.sync_project_file_, 'event.json'), str) ;
     }
 
     private receiveTeamDB(p: PacketObj) : void {
-        let fname = path.join(this.project_!.location, 'team.db') ;
+        this.logger_.debug('SyncTablet: received ProvideTeamDB packet') ;        
+        let fname = path.join(this.sync_project_file_, 'team.db') ;
         fs.writeFileSync(fname, p.data_) ;
     }
 
     private receiveMatchDB(p: PacketObj) : void {
-        let fname = path.join(this.project_!.location, 'match.db') ;
+        this.logger_.debug('SyncTablet: received ProvideMatchDB packet') ;        
+        let fname = path.join(this.sync_project_file_, 'match.db') ;
         fs.writeFileSync(fname, p.data_) ;        
     }
 
