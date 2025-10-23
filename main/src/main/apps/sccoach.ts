@@ -50,6 +50,8 @@ export class SCCoach extends SCBase {
                     this.logger_.error('Error reopening last event: ' + err.message) ;
                 } ) ;   
         }
+
+        this.sendNavData() ;
     }    
     
     public basePage() : string  {

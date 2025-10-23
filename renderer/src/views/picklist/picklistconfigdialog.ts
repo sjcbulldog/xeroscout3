@@ -225,6 +225,64 @@ export class PickListConfigDialog extends XeroDialog {
         labelRow.appendChild(labelInput) ;
         row.appendChild(labelRow) ;
 
+        // Decimal places row
+        const decimalsRow = document.createElement('div') ;
+        decimalsRow.style.display = 'flex' ;
+        decimalsRow.style.flexDirection = 'column' ;
+        decimalsRow.style.gap = '4px' ;
+
+        const decimalsLabel = document.createElement('label') ;
+        decimalsLabel.innerText = 'Decimal Places:' ;
+        decimalsLabel.style.fontSize = '12px' ;
+        decimalsLabel.style.fontWeight = 'bold' ;
+        decimalsRow.appendChild(decimalsLabel) ;
+
+        const decimalsInput = document.createElement('input') ;
+        decimalsInput.type = 'number' ;
+        decimalsInput.min = '0' ;
+        decimalsInput.max = '10' ;
+        decimalsInput.value = item.decimals !== undefined ? item.decimals.toString() : '2' ;
+        decimalsInput.placeholder = 'Number of decimal places' ;
+        decimalsInput.style.padding = '5px' ;
+        decimalsInput.style.width = '150px' ;
+        decimalsInput.addEventListener('input', () => {
+            const val = parseInt(decimalsInput.value) ;
+            if (!isNaN(val)) {
+                this.config_.columns[index].decimals = val ;
+            }
+        }) ;
+        decimalsRow.appendChild(decimalsInput) ;
+        row.appendChild(decimalsRow) ;
+
+        // Column width row
+        const widthRow = document.createElement('div') ;
+        widthRow.style.display = 'flex' ;
+        widthRow.style.flexDirection = 'column' ;
+        widthRow.style.gap = '4px' ;
+
+        const widthLabel = document.createElement('label') ;
+        widthLabel.innerText = 'Column Width (pixels):' ;
+        widthLabel.style.fontSize = '12px' ;
+        widthLabel.style.fontWeight = 'bold' ;
+        widthRow.appendChild(widthLabel) ;
+
+        const widthInput = document.createElement('input') ;
+        widthInput.type = 'number' ;
+        widthInput.min = '50' ;
+        widthInput.max = '1000' ;
+        widthInput.value = item.width !== undefined ? item.width.toString() : '150' ;
+        widthInput.placeholder = 'Column width in pixels' ;
+        widthInput.style.padding = '5px' ;
+        widthInput.style.width = '150px' ;
+        widthInput.addEventListener('input', () => {
+            const val = parseInt(widthInput.value) ;
+            if (!isNaN(val)) {
+                this.config_.columns[index].width = val ;
+            }
+        }) ;
+        widthRow.appendChild(widthInput) ;
+        row.appendChild(widthRow) ;
+
         // Third row: Field/Formula selection and dataset
         const fieldRow = document.createElement('div') ;
         fieldRow.style.display = 'flex' ;
@@ -297,7 +355,9 @@ export class PickListConfigDialog extends XeroDialog {
         const newItem: IPCDataItem = {
             label: '',
             name: '',
-            dataset: ''
+            dataset: '',
+            decimals: 2,
+            width: 150
         } ;
         this.config_.columns.push(newItem) ;
         this.renderItems() ;

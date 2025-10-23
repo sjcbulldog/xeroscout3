@@ -91,8 +91,11 @@ export class PickListView extends XeroView {
         // Table container
         this.table_container_ = document.createElement('div') ;
         this.table_container_.style.flexGrow = '1' ;
-        this.table_container_.style.border = '1px solid #ddd' ;
+        this.table_container_.style.border = '1px solid #dee2e6' ;
+        this.table_container_.style.borderRadius = '4px' ;
         this.table_container_.style.backgroundColor = '#fff' ;
+        this.table_container_.style.overflow = 'hidden' ;
+        this.table_container_.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)' ;
         this.right_panel_.appendChild(this.table_container_) ;
 
         container.appendChild(this.left_panel_) ;
@@ -309,6 +312,11 @@ export class PickListView extends XeroView {
             if (result && this.dialog_) {
                 this.request('save-picklist-config', this.configs_) ;
                 this.displayConfigs() ;
+
+                if (index === this.selected_config_index_) {
+                    // Refresh table if edited config is currently selected
+                    this.request('get-picklist-data', this.configs_[index].name) ;
+                }
             }
             this.dialog_ = undefined ;
         }) ;
@@ -352,22 +360,31 @@ export class PickListView extends XeroView {
             {
                 title: 'Position',
                 field: 'position',
-                width: 80,
+                width: data.config.positionWidth || 80,
                 hozAlign: 'center',
-                frozen: true
+                frozen: true,
+                headerSort: false,
+                resizable: true,
+                cssClass: 'picklist-position-column'
             },
             {
                 title: 'Team',
                 field: 'teamNumber',
-                width: 100,
+                width: data.config.teamWidth || 100,
                 hozAlign: 'center',
-                frozen: true
+                frozen: true,
+                headerSort: false,
+                resizable: true,
+                cssClass: 'picklist-team-column'
             },
             {
                 title: 'Nickname',
                 field: 'nickname',
-                width: 200,
-                frozen: true
+                width: data.config.nicknameWidth || 200,
+                frozen: true,
+                headerSort: false,
+                resizable: true,
+                cssClass: 'picklist-nickname-column'
             }
         ] ;
 
@@ -377,7 +394,10 @@ export class PickListView extends XeroView {
             columns.push({
                 title: col.label,
                 field: `col_${i}`,
-                width: 150
+                width: col.width || 150,
+                headerSort: false,
+                hozAlign: 'center',
+                resizable: true
             }) ;
         }
 
@@ -385,8 +405,10 @@ export class PickListView extends XeroView {
         columns.push({
             title: 'Notes',
             field: 'notes',
-            width: 250,
+            width: data.config.notesWidth || 250,
             editor: 'input',
+            headerSort: false,
+            resizable: true,
             cellEdited: (cell: any) => {
                 this.onNotesEdited(cell) ;
             }
@@ -413,9 +435,16 @@ export class PickListView extends XeroView {
             if (teamData) {
                 for (let j = 0; j < teamData.values.length && j < data.config.columns.length; j++) {
                     const value = teamData.values[j] ;
+                    const column = data.config.columns[j] ;
                     let displayValue = '' ;
                     if (value && value.value !== null && value.value !== undefined) {
-                        displayValue = String(value.value) ;
+                        // Format numbers with specified decimal places
+                        if (typeof value.value === 'number') {
+                            const decimals = column.decimals !== undefined ? column.decimals : 2 ;
+                            displayValue = value.value.toFixed(decimals) ;
+                        } else {
+                            displayValue = String(value.value) ;
+                        }
                     }
                     row[`col_${j}`] = displayValue ;
                 }
@@ -436,19 +465,45 @@ export class PickListView extends XeroView {
             layout: 'fitData',
             height: '100%',
             movableRows: true,
+            selectableRows: false, // Disable row selection
+            headerSort: false, // Disable column sorting to maintain custom order
             rowFormatter: (row: RowComponent) => {
-                // Add alternating row colors
+                const rowElement = row.getElement() ;
                 const data = row.getData() ;
                 const position = data.position as number ;
+                
+                // Modern alternating row colors with better contrast
                 if (position % 2 === 0) {
-                    row.getElement().style.backgroundColor = '#f9f9f9' ;
+                    rowElement.style.backgroundColor = '#f8f9fa' ;
+                } else {
+                    rowElement.style.backgroundColor = '#ffffff' ;
                 }
+                
+                // Add hover effect
+                rowElement.style.transition = 'background-color 0.2s ease' ;
+                
+                rowElement.addEventListener('mouseenter', () => {
+                    rowElement.style.backgroundColor = '#e3f2fd' ;
+                }) ;
+                
+                rowElement.addEventListener('mouseleave', () => {
+                    if (position % 2 === 0) {
+                        rowElement.style.backgroundColor = '#f8f9fa' ;
+                    } else {
+                        rowElement.style.backgroundColor = '#ffffff' ;
+                    }
+                }) ;
             }
         }) ;
 
         // Handle row reordering
         this.table_.on('rowMoved', () => {
             this.updatePositionsAfterMove() ;
+        }) ;
+
+        // Handle column resizing
+        this.table_.on('columnResized', (column: any) => {
+            this.onColumnResized(column) ;
         }) ;
     }
 
@@ -473,6 +528,39 @@ export class PickListView extends XeroView {
 
         // Save to backend
         this.request('save-picklist-config', this.configs_) ;
+    }
+
+    private onColumnResized(column: any): void {
+        if (this.selected_config_index_ < 0 || !this.configs_[this.selected_config_index_]) return ;
+
+        const field = column.getField() ;
+        const width = column.getWidth() ;
+
+        // Check for fixed columns
+        if (field === 'position') {
+            this.configs_[this.selected_config_index_].positionWidth = width ;
+            this.request('save-picklist-config', this.configs_) ;
+        } else if (field === 'teamNumber') {
+            this.configs_[this.selected_config_index_].teamWidth = width ;
+            this.request('save-picklist-config', this.configs_) ;
+        } else if (field === 'nickname') {
+            this.configs_[this.selected_config_index_].nicknameWidth = width ;
+            this.request('save-picklist-config', this.configs_) ;
+        } else if (field === 'notes') {
+            this.configs_[this.selected_config_index_].notesWidth = width ;
+            this.request('save-picklist-config', this.configs_) ;
+        } else {
+            // Check if this is a data column (col_0, col_1, etc.)
+            const match = field.match(/^col_(\d+)$/) ;
+            if (match) {
+                const colIndex = parseInt(match[1]) ;
+                if (colIndex >= 0 && colIndex < this.configs_[this.selected_config_index_].columns.length) {
+                    this.configs_[this.selected_config_index_].columns[colIndex].width = width ;
+                    // Save to backend
+                    this.request('save-picklist-config', this.configs_) ;
+                }
+            }
+        }
     }
 
     private updatePositionsAfterMove(): void {

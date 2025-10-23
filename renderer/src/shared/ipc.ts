@@ -336,6 +336,8 @@ export interface IPCDataItem {
     label: string ;                                 // The label to use for the data series
     name: string ;                                  // The name of the field or expression to use for the data
     dataset: string ;                               // The name of the data set to use to filter match or expression data
+    decimals?: number ;                             // The number of decimal places to display (optional)
+    width?: number ;                                // The column width in pixels (optional)
 }
 
 export interface IPCGraphConfig {
@@ -366,6 +368,10 @@ export interface IPCPickListConfig {
     teams: number[] ;                               // The teams in the pick list, in picklist order
     columns: IPCDataItem[] ;                        // The data columns to display in the pick list
     notes: string[] ;                               // The notes for each team, in order of the teams array
+    positionWidth?: number ;                        // The width of the Position column (optional)
+    teamWidth?: number ;                            // The width of the Team column (optional)
+    nicknameWidth?: number ;                        // The width of the Nickname column (optional)
+    notesWidth?: number ;                           // The width of the Notes column (optional)
 }
 
 export interface IPCPickListTeamData {

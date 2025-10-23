@@ -155,7 +155,24 @@ export abstract class XeroDialog extends EventEmitter {
             this.cancelButton(event) ;
         }
         else if (event.key === 'Enter' && this.process_enter_key_) {
-            this.okButton(event) ;
+            // Don't process Enter if the focus is on a text input, textarea, or select element
+            // This allows users to press Enter while editing without closing the dialog
+            const target = event.target as HTMLElement ;
+            const isTextInput = target.tagName === 'INPUT' && 
+                                (target as HTMLInputElement).type === 'text' ||
+                                (target as HTMLInputElement).type === 'number' ||
+                                (target as HTMLInputElement).type === 'email' ||
+                                (target as HTMLInputElement).type === 'password' ||
+                                (target as HTMLInputElement).type === 'search' ||
+                                (target as HTMLInputElement).type === 'tel' ||
+                                (target as HTMLInputElement).type === 'url' ;
+            const isTextArea = target.tagName === 'TEXTAREA' ;
+            const isSelect = target.tagName === 'SELECT' ;
+            
+            // Only trigger OK button if not in an input field
+            if (!isTextInput && !isTextArea && !isSelect) {
+                this.okButton(event) ;
+            }
         }
     }
 

@@ -23,14 +23,9 @@ import { IPCProjColumnsConfig, IPCDatabaseData, IPCChange, IPCFormScoutData, IPC
 import { DataRecord } from "../model/datarecord";
 import { DataValue } from "../../shared/datavalue";
 import { UDPBroadcast } from "../sync/udpbroadcast";
+import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
-export interface PickListColData {
-	field: string,
-	teams: number[],
-	data: DataValue[]
-};
-
-export class SCCentral extends SCBase {
+export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly recentFilesSetting: string = "recent-files";
 
 	private static readonly matchStatusFields: string[] = [
@@ -77,7 +72,7 @@ export class SCCentral extends SCBase {
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
 
-	private project_?: Project = undefined;
+
 	private ba_?: BlueAlliance = undefined;
 	private statbotics_?: StatBotics = undefined;
 	private baloading_: boolean;
@@ -87,8 +82,6 @@ export class SCCentral extends SCBase {
 	private menuitems_: Map<string, MenuItem> = new Map<string, MenuItem>();
 	private year_?: number;
 	private msg_?: string;
-	private color_ : string ;
-	private reversed_ : boolean ;
 	private redMenuItem_ : MenuItem | undefined ;
 	private blueMenuItem_ : MenuItem | undefined ;
 	private reverseImage_: MenuItem | undefined ;
@@ -101,8 +94,6 @@ export class SCCentral extends SCBase {
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
 
-		this.color_ = 'blue' ;
-		this.reversed_ = false ;
 		this.baloading_ = false ;
 		this.bacount_ = 0 ;
 
@@ -129,10 +120,10 @@ export class SCCentral extends SCBase {
 			Project.openEvent(this.logger_, process.argv[index + 1], this.year_!)
 			.then((p) => {
 				this.addRecent(p.location);
-				this.project_ = p;
+				this.project = p;
 				this.sendHintDB() ;
 				this.updateMenuState(true);
-				if (this.project_.info?.locked_) {
+				if (this.project.info?.locked_) {
 					this.startSyncServer();
 				}
 				this.setView("info");
@@ -152,10 +143,10 @@ export class SCCentral extends SCBase {
 					Project.openEvent(this.logger_, fpath, this.year_!)
 					.then((p) => {
 						this.addRecent(p.location);
-						this.project_ = p;
+						this.project = p;
 						this.sendHintDB() ;
 						this.updateMenuState(true);
-						if (this.project_.info?.locked_) {
+						if (this.project.info?.locked_) {
 							this.startSyncServer();
 						}
 						this.setView("info");
@@ -250,8 +241,8 @@ export class SCCentral extends SCBase {
 	public canQuit(): boolean {
 		let ret: boolean = true;
 		
-		if (this.project_ && this.project_.data_mgr_) {
-			ret = this.project_.data_mgr_.close() ;
+		if (this.project && this.project.data_mgr_) {
+			ret = this.project.data_mgr_.close() ;
 		}
 		return ret;
 	}
@@ -268,10 +259,10 @@ export class SCCentral extends SCBase {
 	}
 
 	private colorMenuItem(color: string) {
-		this.color_ = color ;
+		this.color = color ;
 
 		if (!this.updateView()) {
-			if (this.project_) {
+			if (this.project) {
 				this.setView('info') ;
 			}
 			else {
@@ -282,9 +273,9 @@ export class SCCentral extends SCBase {
 	}
 
 	private reverseImage() {
-		this.reversed_ = this.reverseImage_!.checked ;
+		this.reversed = this.reverseImage_!.checked ;
 		if (!this.updateView()) {
-			if (this.project_) {
+			if (this.project) {
 				this.setView('info') ;
 			}
 			else {
@@ -348,10 +339,10 @@ export class SCCentral extends SCBase {
 						Project.openEvent(this.logger_, evpath, this.year_!)
 							.then((p) => {
 								this.addRecent(p.location);
-								this.project_ = p;
+								this.project = p;
 								this.sendHintDB() ;
 								this.updateMenuState(true);
-								if (this.project_  && this.project_.isLocked) {
+								if (this.project  && this.project.isLocked) {
 									this.startSyncServer();
 								}
 								this.setView('info');
@@ -551,7 +542,8 @@ export class SCCentral extends SCBase {
 		return ret;
 	}
 
-	public windowCreated(): void {}
+	public windowCreated(): void {
+	}
 
 	private enableMenuItem(item: string, state: boolean) {
 		if (this.menuitems_.has(item)) {
@@ -575,33 +567,9 @@ export class SCCentral extends SCBase {
 		}
 	}
 
-	private doExportData(table: string) {
-		if (!this.project_ || !this.project_.isInitialized()) {
-			dialog.showErrorBox('Export Data', 'No event has been loaded - cannot export data');
-			return;
-		}
-
-		var fpath = dialog.showSaveDialog({
-			title: 'Select CSV Output File',
-			message: 'Select file for CSV output for table "' + table + '"',
-			filters: [
-				{
-					extensions: ['csv'],
-					name: 'CSV File',
-				},
-			],
-			properties: ['showOverwriteConfirmation'],
-		});
-
-		fpath.then((pathname) => {
-			if (!pathname.canceled) {
-				this.project_!.data_mgr_!.exportToCSV(pathname.filePath, table);
-			}
-		});
-	}
 
 	public saveForm(type: string, contents: any) {
-		this.project_!.form_mgr_!.saveForm(type, contents) ;
+		this.project!.form_mgr_!.saveForm(type, contents) ;
 	}
 
 	public importImage() {
@@ -630,417 +598,66 @@ export class SCCentral extends SCBase {
 		}) ;		
 	}
 
-	public sendForm(arg: string) {
-		let ret : IPCFormScoutData = {
-		} ;
-
-		let filename: string ;
-		let title: string ;
-		let good: boolean = true ;
-
-		if (arg === 'team') {
-			if (this.project_ && this.project_.isInitialized() && this.project_.form_mgr_!.hasForms()) {
-				filename = this.project_.form_mgr_!.getTeamFormFullPath()! ;
-				ret.title = 'Team Form' ;
-			}
-			else {
-				good = false ;
-				ret.message = 'No team form has been defined yet.' ;
-			}
-		}
-		else if (arg === 'match') {
-			if (this.project_ && this.project_.isInitialized() && this.project_.form_mgr_!.hasForms()) {
-				filename = this.project_.form_mgr_!.getMatchFormFullPath()! ;
-				ret.title = 'Match Form' ;
-			}
-			else {
-				good = false ;
-				ret.message = 'No match form has been defined yet.' ;
-			}
-		}
-		else {
-			good = false;
-			ret.message = 'Internal request for invalid form type' ;
-		}
-
-		if (good) {
-			let jsonobj = this.project_!.form_mgr_!.getForm(arg) ;
-			if (jsonobj instanceof Error) {
-				let errobj = jsonobj as Error;
-				ret.message = errobj.message;
-			} else if (!jsonobj) {
-				ret.message = `No ${arg} form has been set` ;
-			}
-			else {
-				ret.form = jsonobj ;
-				ret.color = this.color_ ;
-				ret.reversed = this.reversed_ ;
-				this.sendToRenderer('send-form', ret);				
-			}
-		} else {
-			ret.message = `No ${arg} form has been set`;
-		}
-	}
-
-	public async sendMatchStatus() {
-		interface data {
-			comp_level: string;
-			set_number: number;
-			match_number: number;
-			played: boolean;
-			red1: number;
-			redtab1: string;
-			redst1: string;
-			red2: number;
-			redtab2: string;
-			redst2: string;
-			red3: number;
-			redtab3: string;
-			redst3: string;
-			blue1: number;
-			bluetab1: string;
-			bluest1: string;
-			blue2: number;
-			bluetab2: string;
-			bluest2: string;
-			blue3: number;
-			bluetab3: string;
-			bluest3: string;
-		}
-
-		try {
-			let ret: data[] = [];
-
-			if (this.project_ && this.project_.isInitialized() && this.project_.match_mgr_!.hasMatches()) {
-				for (let one of this.project_.match_mgr_!.getMatches()) {
-					let r1 = one.alliances.red.team_keys[0];
-					let r2 = one.alliances.red.team_keys[1];
-					let r3 = one.alliances.red.team_keys[2];
-					let b1 = one.alliances.blue.team_keys[0];
-					let b2 = one.alliances.blue.team_keys[1];
-					let b3 = one.alliances.blue.team_keys[2];
-
-					let obj = {
-						comp_level: one.comp_level,
-						set_number: one.set_number,
-						match_number: one.match_number,
-						played: (one.winning_alliance && one.winning_alliance.length > 0) ? true : false,
-						red1: SCBase.keyToTeamNumber(r1),
-						redtab1: this.project_!.tablet_mgr_!.findTabletForMatch(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(r1)
-						),
-						redst1: this.project_!.data_mgr_!.hasMatchScoutingResult(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(r1)
-						),
-						red2: SCBase.keyToTeamNumber(r2),
-						redtab2: this.project_!.tablet_mgr_!.findTabletForMatch(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(r2)
-						),
-						redst2: this.project_!.data_mgr_!.hasMatchScoutingResult(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(r2)
-						),
-						red3: SCBase.keyToTeamNumber(r3),
-						redtab3: this.project_!.tablet_mgr_!.findTabletForMatch(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(r3)
-						),
-						redst3: this.project_!.data_mgr_!.hasMatchScoutingResult(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(r3)
-						),
-						blue1: SCBase.keyToTeamNumber(b1),
-						bluetab1: this.project_!.tablet_mgr_!.findTabletForMatch(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(b1)
-						),
-						bluest1: this.project_!.data_mgr_!.hasMatchScoutingResult(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(b1)
-						),
-						blue2: SCBase.keyToTeamNumber(b2),
-						bluetab2: this.project_!.tablet_mgr_!.findTabletForMatch(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(b2)
-						),
-						bluest2: this.project_!.data_mgr_!.hasMatchScoutingResult(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(b2)
-						),
-						blue3: SCBase.keyToTeamNumber(b3),
-						bluetab3: this.project_!.tablet_mgr_!.findTabletForMatch(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(b3)
-						),
-						bluest3: this.project_!.data_mgr_!.hasMatchScoutingResult(
-							one.comp_level,
-							one.set_number,
-							one.match_number,
-							SCBase.keyToTeamNumber(b3)
-						),
-					};
-					ret.push(obj);
-				}
-				this.sendToRenderer('send-match-status', ret);
-			}
-		} catch (err) {
-			let errobj: Error = err as Error;
-			dialog.showErrorBox(
-				'Error',
-				'Error retreiving match data - ' + errobj.message
-			);
-		}
-	}
-
-	public sendTeamStatus() {
-		interface data {
-			number: number;
-			status: string;
-			tablet: string;
-			teamname: string;
-		}
-
-		let ret: data[] = [];
-
-		if (this.project_ && this.project_.tablet_mgr_!.hasTeamAssignments()) {
-			for (let t of this.project_.tablet_mgr_!.getTeamAssignments()) {
-				let status: string = this.project_.data_mgr_!.hasTeamScoutingResults(t.team)
-					? 'Y'
-					: 'N';
-				let team: BATeam | undefined = this.project_.team_mgr_!.findTeamByNumber(t.team);
-				if (team) {
-					ret.push({
-						number: t.team,
-						status: status,
-						tablet: t.tablet,
-						teamname: team.nickname,
-					});
-				}
-			}
-		}
-
-		this.sendToRenderer('send-team-status', ret);
-	}
-
-	public sendInfoData(): void {
-		if (this.project_ && this.project_.isInitialized()) {
-			let obj = {
-				location_: this.project_.location,
-				bakey_: this.project_.info!.frcev_?.key,
-				name_: this.project_.info!.frcev_
-					? this.project_.info!.frcev_.name
-					: this.project_.info!.name_,
-				teamform_: this.project_.form_mgr_?.getTeamFormFullPath(),
-				matchform_: this.project_.form_mgr_?.getMatchFormFullPath(),
-				tablets_: this.project_.tablet_mgr_?.getTablets(),
-				tablets_valid_: this.project_.tablet_mgr_!.areTabletsValid(),
-				teams_: this.project_.team_mgr_!.getTeams(),
-				matches_: this.project_.match_mgr_!.getMatches(),
-				locked_: this.project_.info?.locked_,
-				uuid_: this.project_.info?.uuid_,
-				importicon: this.getIconData('import.png'),
-				createicon: this.getIconData('create.png'),
-				editicon: this.getIconData('edit.png')
-			};
-			this.sendToRenderer('send-info-data', obj);
-		}
-	}
 
 	public renameFormula(oldname: string, newname: string) : void {
-		this.project_?.formula_mgr_?.renameFormula(oldname, newname) ;
+		this.project?.formula_mgr_?.renameFormula(oldname, newname) ;
 	}	
 
 	public updateFormula(name: string, desc: string, exprstr: string) : void {
-		this.project_?.formula_mgr_?.addFormula(name, desc, exprstr) ;
+		this.project?.formula_mgr_?.addFormula(name, desc, exprstr) ;
 	}	
 
 	public deleteFormula(name: string) : void {
-		this.project_?.formula_mgr_?.deleteFormula(name) ;
+		this.project?.formula_mgr_?.deleteFormula(name) ;
 	}
 
-	public sendFormulas() : void {
-		this.sendToRenderer('send-formulas', this.project_?.formula_mgr_?.getFormulas()) ;
-	}
-	
-	public sendTeamFieldList() : void {
-		this.sendToRenderer('send-team-field-list', this.project_!.data_mgr_!.teamColumnDescriptors) ;
-	}
-
-	public sendMatchFieldList() : void {
-		this.sendToRenderer('send-match-field-list', this.project_?.data_mgr_?.matchColumnDescriptors) ;
-	}
-
-	public sendDataSets() : void {
-		this.sendToRenderer('send-datasets', this.project_?.dataset_mgr_?.getDataSets()) ;
-	}
 
 	public renameDataSet(oldname: string, newname: string) : void {
-		this.project_?.dataset_mgr_?.renameDataSet(oldname, newname) ;
+		this.project?.dataset_mgr_?.renameDataSet(oldname, newname) ;
 		this.sendDataSets() ;
 	}
 
 	public updateDataSet(ds: IPCDataSet[]) : void {
-		this.project_?.dataset_mgr_?.updateDataSet(ds) ;
+		this.project?.dataset_mgr_?.updateDataSet(ds) ;
 	}
 
 	public sendTabletData(): void {
-		if (this.project_) {
-			this.sendToRenderer('send-tablet-data', this.project_.tablet_mgr_!.getTablets());
+		if (this.project) {
+			this.sendToRenderer('send-tablet-data', this.project.tablet_mgr_!.getTablets());
 		}
 	}
 
 	public setTabletData(data: TabletData[]) {
-		if (this.project_) {
-			this.project_?.tablet_mgr_?.setTabletData(data);
+		if (this.project) {
+			this.project?.tablet_mgr_?.setTabletData(data);
 			this.setView('info') ;
 		}
 	}
 
-	public setMatchColConfig(data: IPCProjColumnsConfig) {
-		this.project_?.data_mgr_?.setMatchColConfig(data);
-	}
-
-	public setTeamColConfig(data:IPCProjColumnsConfig) {
-		this.project_?.data_mgr_?.setTeamColConfig(data);
-	}
-
 	public setTeamData(data: IPCTeamInfo[]) {
-		this.project_?.team_mgr_?.setTeamData(data);
+		this.project?.team_mgr_?.setTeamData(data);
 		this.setView('info');
 	}
 
 	public setEventName(data: any) {
-		this.project_?.setEventName(data);
-	}
-
-	public sendTeamData(): void {
-		this.sendToRenderer('send-team-data', this.project_?.team_mgr_!.getTeams());
+		this.project?.setEventName(data);
 	}
 
 	public setMatchData(data: ManualMatchData[]) {
-		this.project_?.match_mgr_?.setMatchData(data);
+		this.project?.match_mgr_?.setMatchData(data);
 		this.setView('info') ;
 	}
 
-	public sendMatchDB(): void {
-		if (this.project_ && this.project_.match_mgr_!.hasMatches()) {
-			let cols = this.project_.data_mgr_?.matchColumnDescriptors ;
-			this.project_!.data_mgr_!.getAllMatchData()
-				.then((data) => {
-					let dataobj : IPCDatabaseData = {
-						column_configurations: this.project_!.data_mgr_!.getMatchColConfig()!,
-						column_definitions: cols!,
-						keycols: ['comp_level', 'set_number', 'match_number', 'team_key'],
-						data: this.convertDataForDisplay(data),
-					};
-					this.sendToRenderer('send-match-db', dataobj);
-				})
-				.catch((err) => {
-					this.logger_.error(
-						'error getting data from database for send-match-db',
-						err
-					);					
-				});
-		}
-	}
-
 	public updateMatchDB(changes: IPCChange[]) {
-		this.project_!.data_mgr_!.updateMatchDB(changes);
-	}
-
-	private convertDataForDisplay(data: DataRecord[]) {
-		let ret: any[] = [];
-		for (let d of data) {
-			let obj: any = {};
-			for (let key of d.keys()) {
-				let value: any = d.value(key);
-				obj[key] = value;
-			}
-			ret.push(obj);
-		}
-		return ret;
-	}
-
-	public sendTeamDB(): void {
-		if (this.project_ && this.project_.team_mgr_!.hasTeams()) {
-			let cols = this.project_.data_mgr_?.teamColumnDescriptors ;
-			this.project_?.data_mgr_!.getAllTeamData()
-				.then((data) => {
-					let dataobj = {
-						column_configurations: this.project_!.data_mgr_!.getTeamColConfig()!,
-						column_definitions: cols!,
-						keycols: ['team_number'],
-						data: this.convertDataForDisplay(data),
-					};
-					this.sendToRenderer('send-team-db', dataobj);
-				})
-				.catch((err) => {
-					this.logger_.error(
-						'error getting data from database for send-team-db',
-						err
-					);
-				});
-		}
+		this.project?.data_mgr_?.updateMatchDB(changes);
 	}
 
 	public updateTeamDB(changes: IPCChange[]) {
-		this.project_!.data_mgr_!.updateTeamDB(changes);
-	}
-
-	public sendMatchData(): void {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.sendMatchDataInternal(this.project_.match_mgr_!.getMatches());
-		}
-	}
-
-	private sendMatchDataInternal(matches: BAMatch[] | undefined): void {
-		let data : IPCMatchInfo[] = [];
-		if (matches) {
-			for (let t of matches) {
-				let d : IPCMatchInfo = {
-					comp_level: t.comp_level,
-					set_number: t.set_number,
-					match_number: t.match_number,
-					red1: SCBase.keyToTeamNumber(t.alliances.red.team_keys[0]),
-					red2: SCBase.keyToTeamNumber(t.alliances.red.team_keys[1]),
-					red3: SCBase.keyToTeamNumber(t.alliances.red.team_keys[2]),
-					blue1: SCBase.keyToTeamNumber(t.alliances.blue.team_keys[0]),
-					blue2: SCBase.keyToTeamNumber(t.alliances.blue.team_keys[1]),
-					blue3: SCBase.keyToTeamNumber(t.alliances.blue.team_keys[2]),
-				};
-				data.push(d);
-			}
-		}
-		this.sendToRenderer('send-match-data', data, this.project_?.team_mgr_!.getTeams());
+		this.project?.data_mgr_?.updateTeamDB(changes);
 	}
 
 	public sendEventData(): void {
-		if (this.project_ && this.isBAAvailable()) {
+		if (this.project && this.isBAAvailable()) {
 			this.ba_?.getEvents()
 				.then((frcevs: BAEvent[]) => {
 					this.baevents_ = frcevs;
@@ -1090,7 +707,7 @@ export class SCCentral extends SCBase {
 			this.msg_ = "";
 
 			try {
-				await this.project_!.loadBAEvent(
+				await this.project!.loadBAEvent(
 					this.ba_!,
 					this.statbotics_!,
 					fev,
@@ -1119,7 +736,7 @@ export class SCCentral extends SCBase {
 	}
 
 	private importBlueAllianceData() {
-		if (!this.project_) {
+		if (!this.project) {
 			let html = "Must create or open a project to import data.";
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title", "Error Importing Match Data");
@@ -1137,13 +754,13 @@ export class SCCentral extends SCBase {
 			return;
 		}
 
-		let fev: BAEvent | undefined = this.project_?.info?.frcev_;
+		let fev: BAEvent | undefined = this.project?.info?.frcev_;
 		if (fev) {
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title","Loading match data") ;
 			this.msg_ = "";
 			this.sendToRenderer("set-status-html","Requesting match data from the Blue Alliance ...");
-			this.project_!.loadExternalBAData(
+			this.project!.loadExternalBAData(
 				this.ba_!,
 				fev,
 				(text) => {
@@ -1153,12 +770,12 @@ export class SCCentral extends SCBase {
 			.then(() => {
 				this.appendStatusText("All data loaded");
 				this.sendToRenderer("set-status-close-button-visible", true);
-				this.project_!.writeEventFile() ;
+				this.project!.writeEventFile() ;
 			})
 			.catch((err) => {
 				this.appendStatusText("<br><br>Error loading data - " + err.message);
 				this.sendToRenderer("set-status-close-button-visible", true);
-				this.project_!.writeEventFile() ;				
+				this.project!.writeEventFile() ;				
 			});
 		} else {
 			let html = "The event is not a blue alliance event";
@@ -1170,7 +787,7 @@ export class SCCentral extends SCBase {
 	}	
 
 	private importStatboticsData() {
-		if (!this.project_) {
+		if (!this.project) {
 			let html = "Must create or open a project to import data.";
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title", "Error Importing Match Data");
@@ -1188,7 +805,7 @@ export class SCCentral extends SCBase {
 			return;
 		}
 
-		let fev: BAEvent | undefined = this.project_?.info?.frcev_;
+		let fev: BAEvent | undefined = this.project?.info?.frcev_;
 		if (fev) {
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer(
@@ -1200,7 +817,7 @@ export class SCCentral extends SCBase {
 				"set-status-html",
 				"Requesting match data from the Blue Alliance ..."
 			);
-			this.project_!.loadExternalSTData(
+			this.project!.loadExternalSTData(
 				this.statbotics_!,
 				fev,
 				(text) => {
@@ -1243,10 +860,6 @@ export class SCCentral extends SCBase {
 		return this.ba_ !== undefined && !this.baloading_;
 	}
 
-	public isScoutingTablet(): boolean {
-		return false;
-	}
-
 	public sendNavData(): void {
 		let treedata = [];
 		let dims = 40 ;
@@ -1260,7 +873,7 @@ export class SCCentral extends SCBase {
 			width: dims,
 			height: dims
 		});
-		if (this.project_) {
+		if (this.project) {
 			treedata.push({
 				type: "icon",
 				command: SCCentral.viewInit,
@@ -1270,7 +883,7 @@ export class SCCentral extends SCBase {
 				height: dims
 			});
 			treedata.push({ type: "separator", title: "Teams" });
-			if (this.project_.form_mgr_?.hasTeamForm()) {
+			if (this.project.form_mgr_?.hasTeamForm()) {
 				treedata.push({
 					type: "icon",
 					command: SCCentral.viewTeamForm,
@@ -1280,7 +893,7 @@ export class SCCentral extends SCBase {
 					height: dims
 				});
 			}
-			if (this.project_.info?.locked_) {
+			if (this.project.info?.locked_) {
 				treedata.push({
 					type: "icon",
 					command: SCCentral.viewTeamStatus,
@@ -1301,7 +914,7 @@ export class SCCentral extends SCBase {
 
 			treedata.push({ type: "separator", title: "Match" });
 
-			if (this.project_.form_mgr_?.hasMatchForm()) {			
+			if (this.project.form_mgr_?.hasMatchForm()) {			
 				treedata.push({
 					type: "icon",
 					command: SCCentral.viewMatchForm,
@@ -1311,7 +924,7 @@ export class SCCentral extends SCBase {
 					height: dims
 				});
 			}
-			if (this.project_.info?.locked_) {
+			if (this.project.info?.locked_) {
 				treedata.push({
 					type: "icon",
 					command: SCCentral.viewMatchStatus,
@@ -1341,7 +954,7 @@ export class SCCentral extends SCBase {
 
 			treedata.push({ type: "separator", title: "Analysis" });
 			
-			if (this.project_.info?.locked_) {
+			if (this.project.info?.locked_) {
 				treedata.push({
 					type: 'icon',
 					command: SCCentral.viewFormulas,
@@ -1415,7 +1028,7 @@ export class SCCentral extends SCBase {
 			this.sendToRenderer("set-status-title","Locking event");
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer('set-status-text', 'Locking event ...') ;
-			this.project_!.lockEvent()
+			this.project!.lockEvent()
 				.then(() => {
 					this.startSyncServer();
 					this.setView("info");
@@ -1443,7 +1056,7 @@ export class SCCentral extends SCBase {
 		} else if (cmd === SCCentral.viewMatchForm) {
 			this.setFormView('match');
 		} else if (cmd === SCCentral.viewTeamStatus) {
-			if (!this.project_?.tablet_mgr_?.hasTeamAssignments()) {
+			if (!this.project?.tablet_mgr_?.hasTeamAssignments()) {
 				this.sendToRenderer(
 					"update-main-window-view",
 					"empty",
@@ -1453,7 +1066,7 @@ export class SCCentral extends SCBase {
 				this.setView("team-status");
 			}
 		} else if (cmd === SCCentral.viewMatchStatus) {
-			if (!this.project_?.tablet_mgr_?.hasMatchAssignments()) {
+			if (!this.project?.tablet_mgr_?.hasMatchAssignments()) {
 				this.sendToRenderer(
 					"update-main-window-view",
 					"empty",
@@ -1474,15 +1087,15 @@ export class SCCentral extends SCBase {
 			this.setView("singleteam") ;
 		}
 		else if (cmd === SCCentral.createMatchForm) {
-			if (this.project_ && this.project_.form_mgr_) {
-				if (this.project_.form_mgr_.createMatchForm()) {
+			if (this.project && this.project.form_mgr_) {
+				if (this.project.form_mgr_.createMatchForm()) {
 					this.executeCommand(SCCentral.editMatchForm) ;
 				}
 			}
 		}
 		else if (cmd === SCCentral.createTeamForm) {
-			if (this.project_ && this.project_.form_mgr_) {
-				if (this.project_.form_mgr_.createTeamForm()) {
+			if (this.project && this.project.form_mgr_) {
+				if (this.project.form_mgr_.createTeamForm()) {
 					this.executeCommand(SCCentral.editTeamForm) ;
 				}
 			}
@@ -1715,7 +1328,7 @@ export class SCCentral extends SCBase {
 						Project.createEvent(this.logger_, pathname.filePaths[0], year)
 							.then((p) => {
 								this.addRecent(p.location);
-								this.project_ = p;
+								this.project = p;
 								this.sendHintDB() ;
 								this.updateMenuState(true);
 								this.setView("info");
@@ -1781,7 +1394,7 @@ export class SCCentral extends SCBase {
 					dialog.showErrorBox("Error", 'Error processing team form file: ' + result.join(', '));
 				}
 				else {
-					let result = this.project_!.setTeamForm(pathname.filePaths[0]);
+					let result = this.project!.setTeamForm(pathname.filePaths[0]);
 					if (result instanceof Error) {
 						dialog.showErrorBox("Error", 'Error processing team form file: ' + result.message);
 					}
@@ -1818,7 +1431,7 @@ export class SCCentral extends SCBase {
 					dialog.showErrorBox("Error", 'Error processing match form file: ' + result.join(', '));
 				}
 				else {
-					let result = this.project_!.setMatchForm(pathname.filePaths[0]);
+					let result = this.project!.setMatchForm(pathname.filePaths[0]);
 					if (result instanceof Error) {
 						dialog.showErrorBox("Error", 'Error processing match form file: ' + result.message);
 					}
@@ -1832,9 +1445,9 @@ export class SCCentral extends SCBase {
 	}
 
 	private closeEvent() {
-		if (this.project_) {
-			this.project_.closeEvent();
-			this.project_ = undefined;
+		if (this.project) {
+			this.project.closeEvent();
+			this.project = undefined;
 			this.updateMenuState(false);
 			this.sendNavData();
 			this.setView("empty");
@@ -1860,10 +1473,10 @@ export class SCCentral extends SCBase {
 					Project.openEvent(this.logger_, pathname.filePaths[0], year)
 						.then((p) => {
 							this.addRecent(p.location);
-							this.project_ = p;
+							this.project = p;
 							this.sendHintDB() ;
 							this.updateMenuState(true);
-							if (this.project_.info?.locked_) {
+							if (this.project.info?.locked_) {
 								this.startSyncServer();
 							}
 							this.setView("info");
@@ -1893,29 +1506,29 @@ export class SCCentral extends SCBase {
 
 			let evname;
 
-			if (this.project_?.info?.frcev_?.name) {
-				evname = this.project_.info.frcev_.name;
-			} else if (this.project_?.info?.name_) {
-				evname = this.project_?.info?.name_;
+			if (this.project?.info?.frcev_?.name) {
+				evname = this.project.info.frcev_.name;
+			} else if (this.project?.info?.name_) {
+				evname = this.project?.info?.name_;
 			}
 			else {
 				evname = "Unknown Event" ;
 			}
 
 			let evid = {
-				uuid: this.project_?.info?.uuid_,
+				uuid: this.project?.info?.uuid_,
 				name: evname,
 			};
 			let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
 			resp = new PacketObj(PacketType.HelloFromScouter, uuidbuf);
 		} else if (p.type_ === PacketType.HelloFromCoach) {
-			if (!this.project_) {
+			if (!this.project) {
 				resp = new PacketObj(
 					PacketType.Error,
 					Buffer.from("no event loaded on central", "utf-8")
 				);				
 			}
-			else if (!this.project_.info!.locked_) {
+			else if (!this.project	.info!.locked_) {
 				resp = new PacketObj(
 					PacketType.Error,
 					Buffer.from("event on central is not locked", "utf-8")
@@ -1931,17 +1544,17 @@ export class SCCentral extends SCBase {
 
 				let evname;
 
-				if (this.project_?.info?.frcev_?.name) {
-					evname = this.project_.info.frcev_.name;
-				} else if (this.project_?.info?.name_) {
-					evname = this.project_?.info?.name_;
+				if (this.project?.info?.frcev_?.name) {
+					evname = this.project.info.frcev_.name;
+				} else if (this.project?.info?.name_) {
+					evname = this.project?.info?.name_;
 				}
 				else {
 					evname = "Unknown Event" ;
 				}
 
 				let evid = {
-					uuid: this.project_?.info?.uuid_,
+					uuid: this.project?.info?.uuid_,
 					name: evname,
 				};
 				let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
@@ -1972,7 +1585,7 @@ export class SCCentral extends SCBase {
 			let results : IPCScoutResult[] = [] ;
 
 			for(let match of obj) {
-				let one = this.project_!.data_mgr_!.getMatchResult(match) ;
+				let one = this.project!.data_mgr_!.getMatchResult(match) ;
 				if (one) {
 					results.push(one) ;
 				}
@@ -1984,7 +1597,7 @@ export class SCCentral extends SCBase {
 			let results : IPCScoutResult[] = [] ;
 
 			for(let team of obj) {
-				let one = this.project_!.data_mgr_!.getTeamResult(team) ;
+				let one = this.project!.data_mgr_!.getTeamResult(team) ;
 				if (one) {
 					results.push(one) ;
 				}
@@ -1994,10 +1607,10 @@ export class SCCentral extends SCBase {
 		} else if (p.type_ === PacketType.RequestTablets) {
 			this.synctype_ = "initialize" ;
 			let data: Uint8Array = new Uint8Array(0);
-			if (this.project_ && this.project_.tablet_mgr_?.areTabletsValid()) {
+			if (this.project && this.project.tablet_mgr_?.areTabletsValid()) {
 				let tablets: any[] = [];
 
-				for (let t of this.project_?.tablet_mgr_!.getTablets()) {
+				for (let t of this.project?.tablet_mgr_!.getTablets()) {
 					if (!t.assigned) {
 						tablets.push({ name: t.name, purpose: t.purpose });
 					}
@@ -2008,8 +1621,8 @@ export class SCCentral extends SCBase {
 			}
 			resp = new PacketObj(PacketType.ProvideTablets, data);
 		} else if (p.type_ === PacketType.RequestTeamForm) {
-			if (this.project_?.form_mgr_?.hasForms()) {
-				let jsonstr = fs.readFileSync(this.project_!.form_mgr_!.getTeamFormFullPath()!).toString();
+			if (this.project?.form_mgr_?.hasForms()) {
+				let jsonstr = fs.readFileSync(this.project!.form_mgr_!.getTeamFormFullPath()!).toString();
 				resp = new PacketObj(
 					PacketType.ProvideTeamForm,
 					Buffer.from(jsonstr, "utf8")
@@ -2025,8 +1638,8 @@ export class SCCentral extends SCBase {
 				);
 			}
 		} else if (p.type_ === PacketType.RequestMatchForm) {
-			if (this.project_?.form_mgr_?.hasForms()) {
-				let jsonstr = fs.readFileSync(this.project_!.form_mgr_.getMatchFormFullPath()!).toString();
+			if (this.project?.form_mgr_?.hasForms()) {
+				let jsonstr = fs.readFileSync(this.project!.form_mgr_.getMatchFormFullPath()!).toString();
 				resp = new PacketObj(
 					PacketType.ProvideMatchForm,
 					Buffer.from(jsonstr, "utf8")
@@ -2042,8 +1655,8 @@ export class SCCentral extends SCBase {
 				);
 			}
 		} else if (p.type_ === PacketType.RequestTeamList) {
-			if (this.project_?.tablet_mgr_?.hasTeamAssignments()) {
-				let str = JSON.stringify(this.project_?.tablet_mgr_?.getTeamAssignments());
+			if (this.project?.tablet_mgr_?.hasTeamAssignments()) {
+				let str = JSON.stringify(this.project?.tablet_mgr_?.getTeamAssignments());
 				resp = new PacketObj(PacketType.ProvideTeamList, Buffer.from(str));
 			} else {
 				resp = new PacketObj(
@@ -2059,24 +1672,24 @@ export class SCCentral extends SCBase {
 				);
 			}
 		} else if (p.type_ === PacketType.RequestPlayoffAssignments) {
-			if (this.project_?.tablet_mgr_?.hasPlayoffAssignments()) {
-				let str = JSON.stringify(this.project_?.tablet_mgr_?.getPlayoffAssignments());
+			if (this.project?.tablet_mgr_?.hasPlayoffAssignments()) {
+				let str = JSON.stringify(this.project?.tablet_mgr_?.getPlayoffAssignments());
 				resp = new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));
 			} else {
 				let str = JSON.stringify(null) ;
 				resp = new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));				
 			}
 		} else if (p.type_ === PacketType.RequestPlayoffStatus) {
-			if (this.project_?.playoff_mgr_?.hasPlayoffStatus()) {
-				let str = JSON.stringify(this.project_?.playoff_mgr_?.info) ;
+			if (this.project?.playoff_mgr_?.hasPlayoffStatus()) {
+				let str = JSON.stringify(this.project?.playoff_mgr_?.info) ;
 				resp = new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
 			} else {
 				let str = JSON.stringify(null) ;
 				resp = new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
 			}
 		} else if (p.type_ === PacketType.RequestMatchList) {
-			if (this.project_?.tablet_mgr_?.hasMatchAssignments()) {
-				let str = JSON.stringify(this.project_?.tablet_mgr_?.getMatchAssignments());
+			if (this.project?.tablet_mgr_?.hasMatchAssignments()) {
+				let str = JSON.stringify(this.project?.tablet_mgr_?.getMatchAssignments());
 				resp = new PacketObj(PacketType.ProvideMatchList, Buffer.from(str));
 			} else {
 				let str = JSON.stringify([]) ;
@@ -2085,9 +1698,9 @@ export class SCCentral extends SCBase {
 		} else if (p.type_ === PacketType.ProvideResults) {
 			try {
 				let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
-				this.project_!.data_mgr_?.processResults(obj)
+				this.project!.data_mgr_?.processResults(obj)
 					.then((count) => {
-						if (this.project_!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
+						if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
 							this.setView("team-status");
 						} else {
 							this.setView("match-status");
@@ -2117,20 +1730,20 @@ export class SCCentral extends SCBase {
 				);
 			}
 		} else if (p.type_ === PacketType.RequestProject) {
-			if (this.project_) {
-				let msg = JSON.stringify(this.project_.info) ;
+			if (this.project) {
+				let msg = JSON.stringify(this.project.info) ;
 				resp = new PacketObj(PacketType.ProvideProject, Buffer.from(msg, "utf-8"));
 			}
 		}
 		else if (p.type_ === PacketType.RequestTeamDB) {
-			if (this.project_) {
-				let data = this.project_.data_mgr_!.getTeamDBEncoded() ;
+			if (this.project) {
+				let data = this.project.data_mgr_!.getTeamDBEncoded() ;
 				resp = new PacketObj(PacketType.ProvideTeamDB, data) ;
 			}
 		}
 		else if (p.type_ === PacketType.RequestMatchDB) {
-			if (this.project_) {
-				let data = this.project_.data_mgr_!.getMatchDBEncoded() ;
+			if (this.project) {
+				let data = this.project.data_mgr_!.getMatchDBEncoded() ;
 				resp = new PacketObj(PacketType.ProvideMatchDB, data) ;
 			}			
 		} else if (p.type_ === PacketType.GoodbyeFromCoach) {
@@ -2211,7 +1824,7 @@ export class SCCentral extends SCBase {
 
 	public generateRandomData() {
 		if (this.lastview_ && this.lastview_ === 'info') {
-			if (this.project_ && this.project_.isInitialized() && this.project_.isLocked) {
+			if (this.project && this.project.isInitialized() && this.project.isLocked) {
 				let ans = dialog.showMessageBoxSync(
 					{
 					  title: 'Generate Random Data',
@@ -2222,7 +1835,7 @@ export class SCCentral extends SCBase {
 				if (ans === 1) {
 					return ;
 				}
-				this.project_!.generateRandomData()
+				this.project!.generateRandomData()
 					.then(() => {
 						dialog.showMessageBox(this.win_, {
 							title: "Random Data",
@@ -2245,123 +1858,22 @@ export class SCCentral extends SCBase {
 		}
 	}
 
-	public getTeamList(opt: IPCGetTeamsOptions) {
-		if (opt.nicknames) {
-			let ret = this.project_?.team_mgr_?.getTeamsNickNameAndNumber(opt.rank || false) ;
-			this.sendToRenderer('send-team-list', ret) ;
-		}
-		else {
-			let ret: number[] = this.project_?.team_mgr_?.getSortedTeamNumbers(opt.rank || false)! ;
-			this.sendToRenderer('send-team-list', ret) ;
-		}
-	}
-
-	private getTeamNumbersFromKeys(keys: string[]) : number[] {
-		let ret: number[] = [] ;
-
-		for(let key of keys) {
-			ret.push(+key.substring(3)) ;
-		}
-
-		return ret;
-	}
-
-	public getMatchList() {
-		let data = [] ;
-
-		for(let match of this.project_!.match_mgr_!.getMatches()) {
-			let one = {
-				comp_level: match.comp_level,
-				set_number: match.set_number,
-				match_number: match.match_number,
-				red: this.getTeamNumbersFromKeys(match.alliances.red.team_keys),
-				blue: this.getTeamNumbersFromKeys(match.alliances.blue.team_keys),
-			}
-
-			data.push(one) ;
-		}
-		
-		data.sort((a, b) => { return this.sortCompFun(a, b) ;}) ;
-
-		this.sendToRenderer('send-match-list', data) ;
-	}
-
-	//#region Picklist Management
-	public sendPicklistConfigs() {
-		this.sendToRenderer('send-picklist-configs', this.project_?.picklist_mgr_?.picklists) ;
-	}
-
 	public savePicklistConfig(config: IPCPickListConfig[]) {
-		this.project_?.picklist_mgr_!.savePicklistConfig(config) ;
-	}
-
-	public sendPicklistData(name: string) {
-		this.project_?.picklist_mgr_!.getPicklistData(name)
-		.then((data: IPCPickListData) => {
-			this.sendToRenderer('send-picklist-data', data) ;
-		})
-		.catch((err) => {
-			let errobj: Error = err as Error ;
-			dialog.showMessageBox(this.win_, {
-				title: "Picklist Data Error",
-				message: `Error getting picklist data - ${errobj.message}`
-			});
-		});
-	}
-
-	//#endregion
-
-	public async getSingleTeamData(ds: string, team: number) {
-		interface MyObject {
-			[key: string]: any; // Allows any property with a string key
-		}
-		let retdata : MyObject = {} ;
-
-		if (this.project_ && this.project_.isInitialized()) {
-			retdata.matches = this.project_.match_mgr_!.getMatchResults(+team) ;
-			retdata.teamdata = await this.project_.dataset_mgr_!.getDataSetData(ds) ;
-			retdata.videoicon = this.getIconData('video.png') ;
-		}
-
-		this.sendToRenderer('send-single-team-data', retdata) ;
-	}
-
-	public async getSingleTeamConfigs() {
-		this.sendToRenderer('send-single-team-configs', this.project_?.graph_mgr_?.singleTeamConfigs);
+		this.project?.picklist_mgr_!.savePicklistConfig(config) ;
 	}
 
 	public async updateSingleTeamConfigs(configs: IPCGraphConfig[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.graph_mgr_!.singleTeamConfigs = configs ;
-		}
-	}
-
-	public async getMultiTeamConfigs() {
-		this.sendToRenderer('send-multi-team-configs', this.project_?.graph_mgr_?.multiTeamConfigs);
-	}
-
-	public async updateMultiTeamConfigs(configs: IPCGraphConfig[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.graph_mgr_!.multiTeamConfigs = configs ;
-		}
-	}
-
-	public async getMatchConfigs() { 
-		this.sendToRenderer('send-match-configs', this.project_?.graph_mgr_?.matchConfigs);
-	}
-
-	public async updateMatchConfigs(configs: IPCGraphConfig[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.graph_mgr_!.matchConfigs = configs ;
+		if (this.project && this.project.isInitialized()) {
+			this.project!.graph_mgr_!.singleTeamConfigs = configs ;
 		}
 	}
 
 	private importFormulasFromFileWithPath(path: string) {
-		if (this.project_ && this.project_.isInitialized()) {
+		if (this.project && this.project.isInitialized()) {
 			try {
 				let data = fs.readFileSync(path, 'utf-8') ;
 				const obj = JSON.parse(data) ;
-				this.project_!.formula_mgr_!.importFormulas(obj) ;
+				this.project!.formula_mgr_!.importFormulas(obj) ;
 			}
 			catch(err) {
 				let errobj = err as Error ;
@@ -2388,68 +1900,28 @@ export class SCCentral extends SCBase {
 	}
 
 	public sendHintDB(){
-		if (this.project_ && this.project_.isInitialized()) {
-			let db = this.project_!.getHintDb(this.content_dir_) ;
+		if (this.project && this.project.isInitialized()) {
+			let db = this.project!.getHintDb(this.content_dir_) ;
 			this.sendToRenderer('send-hint-db', db) ;
 		}
 	}
 
 	public setHintHidden(id: string) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.setHintHidden(id) ;
+		if (this.project && this.project.isInitialized()) {
+			this.project!.setHintHidden(id) ;
 		}
 	}
 
-	public sendPlayoffStatus() {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.sendToRenderer('send-playoff-status', this.project_!.playoff_mgr_!.info) ;
-		}
-	}
-
-	public setAllianceTeams(alliance: number, teams: number[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.playoff_mgr_!.setAllianceTeams(alliance, teams) ;
-			this.sendPlayoffStatus() ;
-		}
-	}
-
-	public setPlayoffMatchOutcome(match: number, winner: number, loser: number) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_!.playoff_mgr_!.setPlayoffMatchOutcome(match, winner, loser) ;
-			this.sendPlayoffStatus() ;
-		}
-	}
-
-	public sendMatchFormatFormulas() {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.sendToRenderer('send-match-format-formulas', this.project_.info!.data_info_.match_formulas_) ;			
-		}
-	}
-
-	public sendTeamFormatFormulas() {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.sendToRenderer('send-team-format-formulas', this.project_.info!.data_info_.team_formulas_) ;			
-		}
-	}	
 
 	public setTeamFormatFormulas(formulas: IPCCheckDBViewFormula[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_.data_mgr_!.setTeamFormatFormulas(formulas)
+		if (this.project && this.project.isInitialized()) {
+			this.project.data_mgr_!.setTeamFormatFormulas(formulas)
 		}
 	}	
 	
 	public setMatchFormatFormulas(formulas: IPCCheckDBViewFormula[]) {
-		if (this.project_ && this.project_.isInitialized()) {
-			this.project_.data_mgr_!.setMatchFormatFormulas(formulas)
+		if (this.project && this.project.isInitialized()) {
+			this.project.data_mgr_!.setMatchFormatFormulas(formulas)
 		}
 	}		
-
-	public getGraphData(cfg: IPCGraphConfig) {
-		if (cfg) {
-			this.project_?.graph_mgr_?.generateGraphData(cfg)
-				.then((data) => {
-					this.sendToRenderer('send-chart-data', data) ;
-				}) ;
-		}
-	}
 }

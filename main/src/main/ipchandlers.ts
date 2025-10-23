@@ -827,46 +827,6 @@ export async function updateSingleTeamConfigs(cmd: string, ...args: any[]) {
     }
 }
 
-// get-multi-team-configs
-export async function getMultiTeamConfigs(cmd: string, ...args: any[]) {
-    if (scappbase) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        central.getMultiTeamConfigs() ;
-    }
-}
-
-// update-multi-team-configs
-export async function updateMultiTeamConfigs(cmd: string, ...args: any[]) {
-    if (scappbase) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            central.updateMultiTeamConfigs(args[0] as IPCGraphConfig[]) ;
-        }   
-    }
-}
-
-// get-match-chart-configs
-export async function getMatchChartConfigs(cmd: string, ...args: any[]) {
-    if (scappbase) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        central.getMatchConfigs() ;
-    }   
-}
-
-// update-match-chart-configs
-export async function updateMatchChartConfigs(cmd: string, ...args: any[]) {
-    if (scappbase) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            central.updateMatchConfigs(args[0] as IPCGraphConfig[]) ;
-        }
-    }
-}
-
 // get-team-chart-data
 export async function getGraphData(cmd: string, ...args: any[]) {
     if (scappbase) {
