@@ -1,7 +1,6 @@
 import EventEmitter from "events";
 import { XeroPoint } from "../shared/xerogeom.js";
 
-
 export class XeroPopup extends EventEmitter {
     private popup_ : HTMLDivElement  ;
     private popup_div_ : HTMLDivElement ;

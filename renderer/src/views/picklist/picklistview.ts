@@ -158,8 +158,6 @@ export class PickListView extends XeroView {
     private displayConfigs(): void {
         this.config_list_div_.innerHTML = '' ;
 
-        const isCoach = this.app.appType === 'coach' ;
-
         // Header with title and buttons
         const header = document.createElement('div') ;
         header.style.display = 'flex' ;
@@ -172,25 +170,23 @@ export class PickListView extends XeroView {
         title.style.margin = '0' ;
         header.appendChild(title) ;
 
-        // Buttons container - only show for non-coach users
-        if (!isCoach) {
-            const buttonContainer = document.createElement('div') ;
-            buttonContainer.style.display = 'flex' ;
-            buttonContainer.style.gap = '5px' ;
+        // Buttons container - show add button for all users
+        const buttonContainer = document.createElement('div') ;
+        buttonContainer.style.display = 'flex' ;
+        buttonContainer.style.gap = '5px' ;
 
-            // Add button
-            const addBtn = document.createElement('button') ;
-            addBtn.innerText = '+' ;
-            addBtn.style.padding = '4px 10px' ;
-            addBtn.style.fontSize = '16px' ;
-            addBtn.style.fontWeight = 'bold' ;
-            addBtn.style.cursor = 'pointer' ;
-            addBtn.title = 'Add new pick list' ;
-            addBtn.addEventListener('click', () => this.addConfig()) ;
-            buttonContainer.appendChild(addBtn) ;
+        // Add button
+        const addBtn = document.createElement('button') ;
+        addBtn.innerText = '+' ;
+        addBtn.style.padding = '4px 10px' ;
+        addBtn.style.fontSize = '16px' ;
+        addBtn.style.fontWeight = 'bold' ;
+        addBtn.style.cursor = 'pointer' ;
+        addBtn.title = 'Add new pick list' ;
+        addBtn.addEventListener('click', () => this.addConfig()) ;
+        buttonContainer.appendChild(addBtn) ;
 
-            header.appendChild(buttonContainer) ;
-        }
+        header.appendChild(buttonContainer) ;
 
         this.config_list_div_.appendChild(header) ;
 
@@ -216,8 +212,9 @@ export class PickListView extends XeroView {
             nameSpan.innerText = config.name ;
             div.appendChild(nameSpan) ;
 
-            // Action buttons container - only show for non-coach users
-            if (!isCoach) {
+            // Action buttons container - only show if owner matches current app type
+            const canModify = config.owner === this.app.appType ;
+            if (canModify) {
                 const actions = document.createElement('div') ;
                 actions.style.display = 'flex' ;
                 actions.style.gap = '5px' ;
@@ -296,7 +293,8 @@ export class PickListView extends XeroView {
             name: 'New Pick List',
             teams: this.teams_.map(t => t.number),
             columns: [],
-            notes: []
+            notes: [],
+            owner: this.app.appType
         } ;
 
         this.dialog_ = new PickListConfigDialog(newConfig, this.datasets_, this.teamflds_, this.matchflds_, this.formulas_, true) ;

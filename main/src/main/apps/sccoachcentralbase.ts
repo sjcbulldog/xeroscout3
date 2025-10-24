@@ -76,12 +76,8 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }    
 
 	public savePicklistConfig(config: IPCPickListConfig[]) {
-        if (this.applicationType === 'coach') {
-            this.project!.picklist_mgr_!.coachesPicklists = config ;
-        }
-        else {
-            this.project!.picklist_mgr_!.centralPicklists = config ;
-        }
+        this.project!.picklist_mgr_!.coachesPicklists = config.filter(c => c.owner === 'coach') ;
+		this.project!.picklist_mgr_!.centralPicklists = config.filter(c => c.owner === 'central') ;
 	}
 
 	public sendPicklistData(name: string) {
@@ -119,13 +115,9 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
 
 	public async updateSingleTeamConfigs(configs: IPCGraphConfig[]) {
 		if (this.project && this.project.isInitialized()) {
-            if (this.applicationType === 'coach') {
-			    this.project!.graph_mgr_!.coachConfigs = configs ;
-            }
-            else {
-                this.project!.graph_mgr_!.singleTeamConfigs = configs ;
-            }
-		}
+            this.project!.graph_mgr_!.coachConfigs = configs.filter(c => c.owner === 'coach') ;
+            this.project!.graph_mgr_!.singleTeamConfigs = configs.filter(c => c.owner === 'central') ;
+        }
 	}    
 
 

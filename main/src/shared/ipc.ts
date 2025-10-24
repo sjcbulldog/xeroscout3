@@ -373,6 +373,7 @@ export interface IPCPickListConfig {
     teamWidth?: number ;                            // The width of the Team column (optional)
     nicknameWidth?: number ;                        // The width of the Nickname column (optional)
     notesWidth?: number ;                           // The width of the Notes column (optional)
+    owner: IPCAppType ;                             // The owner of the pick list configuration
 }
 
 export interface IPCPickListTeamData {

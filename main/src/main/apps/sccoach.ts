@@ -351,6 +351,25 @@ export class SCCoach extends SCCoachCentralBaseApp {
         switch(p.type_) {
             case PacketType.HelloFromCoach:
                 this.receiveHello(p) ;
+                let configs = this.project?.graph_mgr_?.coachConfigs || [] ;
+                str = JSON.stringify(configs) ;
+                data = new Uint8Array(Buffer.from(str)) ;
+                p = new PacketObj(PacketType.ProvideCoachGraphs, data) ;
+                this.sync_client_!.send(p) ;
+                break ;
+
+            case PacketType.ReceivedCoachGraphcs:
+                this.logger_.debug('SyncTablet: received ReceivedCoachGraphcs packet') ;
+                let picklists = this.project?.picklist_mgr_?.coachesPicklists || [] ;
+                str = JSON.stringify(picklists) ;
+                data = new Uint8Array(Buffer.from(str)) ;
+                p = new PacketObj(PacketType.ProvideCoachPickLists, data) ;
+                this.sync_client_!.send(p) ;
+                break ;
+                
+                
+            case PacketType.ReceivedCoachPickLists:
+                this.logger_.debug('SyncTablet: received ReceivedCoachPickLists packet') ;
                 p = new PacketObj(PacketType.RequestProject, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;                
                 break ;
@@ -389,26 +408,9 @@ export class SCCoach extends SCCoachCentralBaseApp {
             case PacketType.ProvideMatchForm:
                 this.logger_.debug('SyncTablet: received ProvideMatchForm packet') ;
                 this.receiveMatchForm(p) ;
-                let configs = this.project?.graph_mgr_?.coachConfigs || [] ;
-                str = JSON.stringify(configs) ;
-                data = new Uint8Array(Buffer.from(str)) ;
-                p = new PacketObj(PacketType.ProvideCoachGraphs, data) ;
-                this.sync_client_!.send(p) ;
-                break ;
-
-            case PacketType.ReceivedCoachGraphcs:
-                this.logger_.debug('SyncTablet: received ReceivedCoachGraphcs packet') ;
-                let picklists = this.project?.picklist_mgr_?.coachesPicklists || [] ;
-                str = JSON.stringify(picklists) ;
-                data = new Uint8Array(Buffer.from(str)) ;
-                p = new PacketObj(PacketType.ProvideCoachPickLists, data) ;
-                this.sync_client_!.send(p) ;
-                break ;
-
-            case PacketType.ReceivedCoachPickLists:
                 p = new PacketObj(PacketType.GoodbyeFromCoach, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;
-                this.finishSync() ;
+                this.finishSync() ;                
                 break ;
         }
     }
@@ -433,6 +435,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
         try {
             let obj = JSON.parse(p.payloadAsString()) ;
             if (this.project && this.project.info?.uuid_ && obj.uuid !== this.project.info.uuid_) {
+                alert('The connected event does not match the currently loaded event.');
                 //
                 // We have an event loaded and it does not match
                 //

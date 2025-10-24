@@ -11,6 +11,7 @@
     "renderer": "npm run build-renderer && npm run copyfiles",
     "compile": "tsc",
     "main": "npm run renderer && npm run compile",
+    "build" : "npm run main",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },

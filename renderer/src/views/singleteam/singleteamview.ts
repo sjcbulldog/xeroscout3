@@ -236,8 +236,6 @@ export class SingleTeamView extends XeroView {
     private displayConfigs(): void {
         this.config_list_div_.innerHTML = '' ;
 
-        const isCoach = this.app.appType === 'coach' ;
-
         // Title
         const title = document.createElement('h3') ;
         title.innerText = 'Configurations' ;
@@ -264,8 +262,9 @@ export class SingleTeamView extends XeroView {
             nameSpan.style.flexGrow = '1' ;
             div.appendChild(nameSpan) ;
 
-            // Create delete icon - only for non-coach users
-            if (!isCoach) {
+            // Create delete icon - only if the owner matches the current app type
+            const canDelete = config.owner === this.app.appType ;
+            if (canDelete) {
                 const deleteIcon = document.createElement('span') ;
                 deleteIcon.innerHTML = '🗑️' ;
                 deleteIcon.style.cursor = 'pointer' ;
@@ -321,8 +320,9 @@ export class SingleTeamView extends XeroView {
             // Add single-click handler to select the config
             nameSpan.addEventListener('click', () => this.selectConfig(i)) ;
 
-            // Add double-click handler to edit the config - only for non-coach users
-            if (!isCoach) {
+            // Add double-click handler to edit the config - only if owner matches the current app type
+            const canEdit = config.owner === this.app.appType ;
+            if (canEdit) {
                 nameSpan.addEventListener('dblclick', () => this.editConfig(i)) ;
             }
 
