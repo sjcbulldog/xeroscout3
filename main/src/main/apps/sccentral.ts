@@ -2,7 +2,6 @@ import Papa from "papaparse";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { XeroAppType } from "./scbase";
 import { BlueAlliance } from "../extnet/ba";
 import { Project } from "../project/project";
 import { BrowserWindow, dialog, Menu, MenuItem, shell } from "electron";
@@ -16,7 +15,7 @@ import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCPickListConfig } from "../../shared/ipc";
+import { IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCPickListConfig, IPCAppType } from "../../shared/ipc";
 import { UDPBroadcast } from "../sync/udpbroadcast";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
@@ -85,6 +84,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private synctype_ : string = 'data' ;
 	private team_number_ : number =  1425 ;
 	private udp_broadcast_ : UDPBroadcast | undefined = undefined ;
+	private packetHandlers_ : Map<PacketType, (obj: PacketObj) => PacketObj | undefined> = new Map<PacketType, (obj: PacketObj) => PacketObj | undefined>() ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
@@ -105,6 +105,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 		this.statbotics_ = new StatBotics(this.year_);
 		this.tryConnectBlueAlliance() ;
+		this.initPacketHandlers() ;
 	}
 
 	public mainWindowLoaded(): void {
@@ -222,8 +223,8 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			});		
 	}
 
-	public get applicationType(): XeroAppType {
-		return XeroAppType.Central;
+	public get applicationType(): IPCAppType {
+		return 'central';
 	}
 
 	public basePage(): string {
@@ -1488,11 +1489,101 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			});
 	}
 
-	private processPacket(p: PacketObj): PacketObj | undefined {
-		let resp: PacketObj | undefined;
+	// #region Sync Server Packet Processing
 
-		if (p.type_ === PacketType.HelloFromScouter) {
-			this.synctype_ = 'data' ;
+	private initPacketHandlers() { 
+		this.packetHandlers_.set(PacketType.HelloFromScouter, this.handleRequestHelloFromScouter.bind(this)) ;
+		this.packetHandlers_.set(PacketType.HelloFromCoach, this.handleRequestHelloFromCoach.bind(this)) ;
+		this.packetHandlers_.set(PacketType.RequestImages, this.handleRequestRequestImages.bind(this)) ;
+		this.packetHandlers_.set(PacketType.RequestMatchResults, this.handleRequestMatchResults.bind(this));
+		this.packetHandlers_.set(PacketType.RequestTeamResults, this.handleRequestTeamResults.bind(this));
+		this.packetHandlers_.set(PacketType.RequestTablets, this.handleRequestTablets.bind(this));
+		this.packetHandlers_.set(PacketType.RequestTeamForm, this.handleRequestTeamForm.bind(this));
+		this.packetHandlers_.set(PacketType.RequestMatchForm, this.handleRequestMatchForm.bind(this));
+		this.packetHandlers_.set(PacketType.RequestTeamList, this.handleRequestTeamList.bind(this));
+		this.packetHandlers_.set(PacketType.RequestPlayoffAssignments, this.handleRequestPlayoffAssignments.bind(this));
+		this.packetHandlers_.set(PacketType.RequestPlayoffStatus, this.handleRequestPlayoffStatus.bind(this));
+		this.packetHandlers_.set(PacketType.RequestMatchList, this.handleRequestMatchList.bind(this));
+		this.packetHandlers_.set(PacketType.ProvideResults, this.handleProvideResults.bind(this));
+		this.packetHandlers_.set(PacketType.RequestProject, this.handleRequestProject.bind(this));
+		this.packetHandlers_.set(PacketType.RequestTeamDB, this.handleRequestTeamDB.bind(this));
+		this.packetHandlers_.set(PacketType.RequestMatchDB, this.handleRequestMatchDB.bind(this));
+		this.packetHandlers_.set(PacketType.GoodbyeFromCoach, this.handleGoodbyeFromCoach.bind(this));
+		this.packetHandlers_.set(PacketType.GoodbyeFromScouter, this.handleGoodbyeFromScouter.bind(this));
+		this.packetHandlers_.set(PacketType.ProvideCoachGraphs, this.handleProvideCoachGraphs.bind(this));
+		this.packetHandlers_.set(PacketType.ProvideCoachPickLists, this.handleProvideCoachPickLists.bind(this));
+	}
+
+	private processPacket(p: PacketObj): PacketObj | undefined {
+		const handler = this.packetHandlers_.get(p.type_);
+		if (handler) {
+			return handler.call(this, p);
+		}
+		
+		// Handle unknown packet types
+		dialog.showErrorBox("Internal Error #4", "Invalid packet type received");
+		return new PacketObj(
+			PacketType.Error,
+			Buffer.from("internal error #4 - invalid packet type received")
+		);
+	}
+
+	private handleProvideCoachGraphs(p: PacketObj): PacketObj {
+		let obj = JSON.parse(p.payloadAsString()) ;
+		this.project!.graph_mgr_!.coachConfigs = obj ;
+		return new PacketObj(PacketType.ReceivedCoachGraphcs, Buffer.from("OK", "utf-8"));
+	}
+
+	private handleProvideCoachPickLists(p: PacketObj): PacketObj {
+		let obj = JSON.parse(p.payloadAsString()) ;
+		this.project!.picklist_mgr_!.coachesPicklists = obj ;
+		return new PacketObj(PacketType.ReceivedCoachPickLists, Buffer.from("OK", "utf-8"));
+	}
+
+	private handleRequestHelloFromScouter(p: PacketObj): PacketObj {
+		this.synctype_ = 'data' ;
+		if (p.data_.length > 0) {
+			try {
+				let obj = JSON.parse(p.payloadAsString());
+			} catch (err) {}
+		}
+
+		let evname;
+
+		if (this.project?.info?.frcev_?.name) {
+			evname = this.project.info.frcev_.name;
+		} else if (this.project?.info?.name_) {
+			evname = this.project?.info?.name_;
+		}
+		else {
+			evname = "Unknown Event" ;
+		}
+
+		let evid = {
+			uuid: this.project?.info?.uuid_,
+			name: evname,
+		};
+		let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
+		return new PacketObj(PacketType.HelloFromScouter, uuidbuf);
+	}
+
+	private handleRequestHelloFromCoach(p: PacketObj): PacketObj {
+		let resp: PacketObj ;
+
+		if (!this.project) {
+			resp = new PacketObj(
+				PacketType.Error,
+				Buffer.from("no event loaded on central", "utf-8")
+			);				
+		}
+		else if (!this.project	.info!.locked_) {
+			resp = new PacketObj(
+				PacketType.Error,
+				Buffer.from("event on central is not locked", "utf-8")
+			);		
+		}
+		else {			
+			this.synctype_ = 'coach' ;
 			if (p.data_.length > 0) {
 				try {
 					let obj = JSON.parse(p.payloadAsString());
@@ -1515,266 +1606,251 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				name: evname,
 			};
 			let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
-			resp = new PacketObj(PacketType.HelloFromScouter, uuidbuf);
-		} else if (p.type_ === PacketType.HelloFromCoach) {
-			if (!this.project) {
-				resp = new PacketObj(
-					PacketType.Error,
-					Buffer.from("no event loaded on central", "utf-8")
-				);				
-			}
-			else if (!this.project	.info!.locked_) {
-				resp = new PacketObj(
-					PacketType.Error,
-					Buffer.from("event on central is not locked", "utf-8")
-				);		
-			}
-			else {			
-				this.synctype_ = 'coach' ;
-				if (p.data_.length > 0) {
-					try {
-						let obj = JSON.parse(p.payloadAsString());
-					} catch (err) {}
-				}
+			resp = new PacketObj(PacketType.HelloFromCoach, uuidbuf);
+		}
 
-				let evname;
+		return resp ;
+	}
 
-				if (this.project?.info?.frcev_?.name) {
-					evname = this.project.info.frcev_.name;
-				} else if (this.project?.info?.name_) {
-					evname = this.project?.info?.name_;
-				}
-				else {
-					evname = "Unknown Event" ;
-				}
+	private handleRequestRequestImages(p: PacketObj): PacketObj {
+		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		let retdata : any = {} ;
 
-				let evid = {
-					uuid: this.project?.info?.uuid_,
-					name: evname,
-				};
-				let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
-				resp = new PacketObj(PacketType.HelloFromCoach, uuidbuf);
+		for(let img of obj) {
+			let path = this.image_mgr_.getImage(img) ;
+			let imdata = Buffer.from('') ;
+			if (path) {
+				let imdata2 = fs.readFileSync(path) ;
+				imdata = Buffer.from(imdata2) ;
 			}
 
-		} else if (p.type_ === PacketType.RequestImages) {
-			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
-			let retdata : any = {} ;
+			retdata[img] = imdata.toString('base64') ;
+		}
 
-			for(let img of obj) {
-				let path = this.image_mgr_.getImage(img) ;
-				let imdata = Buffer.from('') ;
-				if (path) {
-					let imdata2 = fs.readFileSync(path) ;
-					imdata = Buffer.from(imdata2) ;
+		let data: Uint8Array = new Uint8Array(0);
+		let msg : string = JSON.stringify(retdata) ;
+		data = Buffer.from(msg, "utf-8");
+		return new PacketObj(PacketType.ProvideImages, data);
+	}	
+
+	private handleRequestMatchResults(p: PacketObj): PacketObj {
+		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		let results : IPCScoutResult[] = [] ;
+
+		for(let match of obj) {
+			let one = this.project!.data_mgr_!.getMatchResult(match) ;
+			if (one) {
+				results.push(one) ;
+			}
+		}
+		let msg: string = JSON.stringify(results) ;
+		return new PacketObj(PacketType.ProvideMatchResults, Buffer.from(msg, "utf-8"));
+	}
+
+	private handleRequestTeamResults(p: PacketObj): PacketObj {
+		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		let results : IPCScoutResult[] = [] ;
+
+		for(let team of obj) {
+			let one = this.project!.data_mgr_!.getTeamResult(team) ;
+			if (one) {
+				results.push(one) ;
+			}
+		}
+		let msg: string = JSON.stringify(results) ;
+		return new PacketObj(PacketType.ProvideTeamResults, Buffer.from(msg, "utf-8"));
+	}
+
+	private handleRequestTablets(p: PacketObj): PacketObj {
+		this.synctype_ = "initialize" ;
+		let data: Uint8Array = new Uint8Array(0);
+		if (this.project && this.project.tablet_mgr_?.areTabletsValid()) {
+			let tablets: any[] = [];
+
+			for (let t of this.project?.tablet_mgr_!.getTablets()) {
+				if (!t.assigned) {
+					tablets.push({ name: t.name, purpose: t.purpose });
 				}
-
-				retdata[img] = imdata.toString('base64') ;
 			}
 
-			let data: Uint8Array = new Uint8Array(0);
-			let msg : string = JSON.stringify(retdata) ;
+			let msg: string = JSON.stringify(tablets);
 			data = Buffer.from(msg, "utf-8");
-			resp = new PacketObj(PacketType.ProvideImages, data);
-		} else if (p.type_ === PacketType.RequestMatchResults) {
-			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
-			let results : IPCScoutResult[] = [] ;
-
-			for(let match of obj) {
-				let one = this.project!.data_mgr_!.getMatchResult(match) ;
-				if (one) {
-					results.push(one) ;
-				}
-			}
-			let msg: string = JSON.stringify(results) ;
-			resp = new PacketObj(PacketType.ProvideMatchResults, Buffer.from(msg, "utf-8"));
-		} else if (p.type_ === PacketType.RequestTeamResults) {
-			let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
-			let results : IPCScoutResult[] = [] ;
-
-			for(let team of obj) {
-				let one = this.project!.data_mgr_!.getTeamResult(team) ;
-				if (one) {
-					results.push(one) ;
-				}
-			}
-			let msg: string = JSON.stringify(results) ;
-			resp = new PacketObj(PacketType.ProvideTeamResults, Buffer.from(msg, "utf-8"));
-		} else if (p.type_ === PacketType.RequestTablets) {
-			this.synctype_ = "initialize" ;
-			let data: Uint8Array = new Uint8Array(0);
-			if (this.project && this.project.tablet_mgr_?.areTabletsValid()) {
-				let tablets: any[] = [];
-
-				for (let t of this.project?.tablet_mgr_!.getTablets()) {
-					if (!t.assigned) {
-						tablets.push({ name: t.name, purpose: t.purpose });
-					}
-				}
-
-				let msg: string = JSON.stringify(tablets);
-				data = Buffer.from(msg, "utf-8");
-			}
-			resp = new PacketObj(PacketType.ProvideTablets, data);
-		} else if (p.type_ === PacketType.RequestTeamForm) {
-			if (this.project?.form_mgr_?.hasForms()) {
-				let jsonstr = fs.readFileSync(this.project!.form_mgr_!.getTeamFormFullPath()!).toString();
-				resp = new PacketObj(
-					PacketType.ProvideTeamForm,
-					Buffer.from(jsonstr, "utf8")
-				);
-			} else {
-				resp = new PacketObj(
-					PacketType.Error,
-					Buffer.from("internal error #1 - no team form", "utf-8")
-				);
-				dialog.showErrorBox(
-					"Internal Error #1",
-					"No team form is defined but event is locked"
-				);
-			}
-		} else if (p.type_ === PacketType.RequestMatchForm) {
-			if (this.project?.form_mgr_?.hasForms()) {
-				let jsonstr = fs.readFileSync(this.project!.form_mgr_.getMatchFormFullPath()!).toString();
-				resp = new PacketObj(
-					PacketType.ProvideMatchForm,
-					Buffer.from(jsonstr, "utf8")
-				);
-			} else {
-				resp = new PacketObj(
-					PacketType.Error,
-					Buffer.from("internal error #1 - no match form", "utf-8")
-				);
-				dialog.showErrorBox(
-					"Internal Error #1",
-					"No match form is defined but event is locked"
-				);
-			}
-		} else if (p.type_ === PacketType.RequestTeamList) {
-			if (this.project?.tablet_mgr_?.hasTeamAssignments()) {
-				let str = JSON.stringify(this.project?.tablet_mgr_?.getTeamAssignments());
-				resp = new PacketObj(PacketType.ProvideTeamList, Buffer.from(str));
-			} else {
-				resp = new PacketObj(
-					PacketType.Error,
-					Buffer.from(
-						"internal error #2 - no team list generated for a locked event",
-						"utf-8"
-					)
-				);
-				dialog.showErrorBox(
-					"Internal Error #2",
-					"No team list has been generated for a locked event"
-				);
-			}
-		} else if (p.type_ === PacketType.RequestPlayoffAssignments) {
-			if (this.project?.tablet_mgr_?.hasPlayoffAssignments()) {
-				let str = JSON.stringify(this.project?.tablet_mgr_?.getPlayoffAssignments());
-				resp = new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));
-			} else {
-				let str = JSON.stringify(null) ;
-				resp = new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));				
-			}
-		} else if (p.type_ === PacketType.RequestPlayoffStatus) {
-			if (this.project?.playoff_mgr_?.hasPlayoffStatus()) {
-				let str = JSON.stringify(this.project?.playoff_mgr_?.info) ;
-				resp = new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
-			} else {
-				let str = JSON.stringify(null) ;
-				resp = new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
-			}
-		} else if (p.type_ === PacketType.RequestMatchList) {
-			if (this.project?.tablet_mgr_?.hasMatchAssignments()) {
-				let str = JSON.stringify(this.project?.tablet_mgr_?.getMatchAssignments());
-				resp = new PacketObj(PacketType.ProvideMatchList, Buffer.from(str));
-			} else {
-				let str = JSON.stringify([]) ;
-				resp = new PacketObj(PacketType.ProvideMatchList, Buffer.from(str));
-			}
-		} else if (p.type_ === PacketType.ProvideResults) {
-			try {
-				let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
-				this.project!.data_mgr_?.processResults(obj)
-					.then((count) => {
-						if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
-							this.setView("team-status");
-						} else {
-							this.setView("match-status");
-						}
-					})
-					.catch((err) => {
-						let errobj: Error = err as Error;
-						dialog.showErrorBox(
-							"Internal Error #3",
-							"Error processing results: " + errobj.message
-						);
-					}) ;
-				resp = new PacketObj(PacketType.ReceivedResults);
-
-
-			} catch (err) {
-				resp = new PacketObj(
-					PacketType.Error,
-					Buffer.from(
-						"internal error #5 - invalid results json received by central host",
-						"utf-8"
-					)
-				);
-				dialog.showErrorBox(
-					"Internal Error #5",
-					"invalid results json received by central host"
-				);
-			}
-		} else if (p.type_ === PacketType.RequestProject) {
-			if (this.project) {
-				let msg = JSON.stringify(this.project.info) ;
-				resp = new PacketObj(PacketType.ProvideProject, Buffer.from(msg, "utf-8"));
-			}
 		}
-		else if (p.type_ === PacketType.RequestTeamDB) {
-			if (this.project) {
-				let data = this.project.data_mgr_!.getTeamDBEncoded() ;
-				resp = new PacketObj(PacketType.ProvideTeamDB, data) ;
-			}
-		}
-		else if (p.type_ === PacketType.RequestMatchDB) {
-			if (this.project) {
-				let data = this.project.data_mgr_!.getMatchDBEncoded() ;
-				resp = new PacketObj(PacketType.ProvideMatchDB, data) ;
-			}			
-		} else if (p.type_ === PacketType.GoodbyeFromCoach) {
-			resp = undefined;
-			let msg: string ;
-			msg = `Coach tablet has sucessfully synchronized scouting data with this host, all data transferred` ;
+		return new PacketObj(PacketType.ProvideTablets, data);
+	}
 
-			dialog.showMessageBox(this.win_, {
-				title: "Synchronization Complete",
-				message: msg,
-				type: "info",
-			});
-		} else if (p.type_ === PacketType.GoodbyeFromScouter) {
-			resp = undefined;
-			let msg: string ;
-			if (this.synctype_ === "initialize") {
-				msg = "Tablet '" + p.payloadAsString() + "' has sucessfully completed synchronization and is ready to use";
-			}
-			else {
-				msg = `Tablet '${p.payloadAsString()}' has sucessfully synchronized scouting data with this host, new records added` ;
-			}
-
-			dialog.showMessageBox(this.win_, {
-				title: "Synchronization Complete",
-				message: msg,
-				type: "info",
-			});			
-		} else {
-			resp = new PacketObj(
-				PacketType.Error,
-				Buffer.from("internal error #4 - invalid packet type received")
+	private handleRequestTeamForm(p: PacketObj): PacketObj {
+		if (this.project?.form_mgr_?.hasForms()) {
+			let jsonstr = fs.readFileSync(this.project!.form_mgr_!.getTeamFormFullPath()!).toString();
+			return new PacketObj(
+				PacketType.ProvideTeamForm,
+				Buffer.from(jsonstr, "utf8")
 			);
-			dialog.showErrorBox("Internal Error #4", "Invalid packet type received");
+		} else {
+			dialog.showErrorBox(
+				"Internal Error #1",
+				"No team form is defined but event is locked"
+			);
+			return new PacketObj(
+				PacketType.Error,
+				Buffer.from("internal error #1 - no team form", "utf-8")
+			);
+		}
+	}
+
+	private handleRequestMatchForm(p: PacketObj): PacketObj {
+		if (this.project?.form_mgr_?.hasForms()) {
+			let jsonstr = fs.readFileSync(this.project!.form_mgr_.getMatchFormFullPath()!).toString();
+			return new PacketObj(
+				PacketType.ProvideMatchForm,
+				Buffer.from(jsonstr, "utf8")
+			);
+		} else {
+			dialog.showErrorBox(
+				"Internal Error #1",
+				"No match form is defined but event is locked"
+			);
+			return new PacketObj(
+				PacketType.Error,
+				Buffer.from("internal error #1 - no match form", "utf-8")
+			);
+		}
+	}
+
+	private handleRequestTeamList(p: PacketObj): PacketObj {
+		if (this.project?.tablet_mgr_?.hasTeamAssignments()) {
+			let str = JSON.stringify(this.project?.tablet_mgr_?.getTeamAssignments());
+			return new PacketObj(PacketType.ProvideTeamList, Buffer.from(str));
+		} else {
+			dialog.showErrorBox(
+				"Internal Error #2",
+				"No team list has been generated for a locked event"
+			);
+			return new PacketObj(
+				PacketType.Error,
+				Buffer.from(
+					"internal error #2 - no team list generated for a locked event",
+					"utf-8"
+				)
+			);
+		}
+	}
+
+	private handleRequestPlayoffAssignments(p: PacketObj): PacketObj {
+		if (this.project?.tablet_mgr_?.hasPlayoffAssignments()) {
+			let str = JSON.stringify(this.project?.tablet_mgr_?.getPlayoffAssignments());
+			return new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));
+		} else {
+			let str = JSON.stringify(null) ;
+			return new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));				
+		}
+	}
+
+	private handleRequestPlayoffStatus(p: PacketObj): PacketObj {
+		if (this.project?.playoff_mgr_?.hasPlayoffStatus()) {
+			let str = JSON.stringify(this.project?.playoff_mgr_?.info) ;
+			return new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
+		} else {
+			let str = JSON.stringify(null) ;
+			return new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
+		}
+	}
+
+	private handleRequestMatchList(p: PacketObj): PacketObj {
+		if (this.project?.tablet_mgr_?.hasMatchAssignments()) {
+			let str = JSON.stringify(this.project?.tablet_mgr_?.getMatchAssignments());
+			return new PacketObj(PacketType.ProvideMatchList, Buffer.from(str));
+		} else {
+			let str = JSON.stringify([]) ;
+			return new PacketObj(PacketType.ProvideMatchList, Buffer.from(str));
+		}
+	}
+
+	private handleProvideResults(p: PacketObj): PacketObj {
+		try {
+			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
+			this.project!.data_mgr_?.processResults(obj)
+				.then((count) => {
+					if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
+						this.setView("team-status");
+					} else {
+						this.setView("match-status");
+					}
+				})
+				.catch((err) => {
+					let errobj: Error = err as Error;
+					dialog.showErrorBox(
+						"Internal Error #3",
+						"Error processing results: " + errobj.message
+					);
+				}) ;
+			return new PacketObj(PacketType.ReceivedResults);
+		} catch (err) {
+			dialog.showErrorBox(
+				"Internal Error #5",
+				"invalid results json received by central host"
+			);
+			return new PacketObj(
+				PacketType.Error,
+				Buffer.from(
+					"internal error #5 - invalid results json received by central host",
+					"utf-8"
+				)
+			);
+		}
+	}
+
+	private handleRequestProject(p: PacketObj): PacketObj | undefined {
+		if (this.project) {
+			let msg = JSON.stringify(this.project.info) ;
+			return new PacketObj(PacketType.ProvideProject, Buffer.from(msg, "utf-8"));
+		}
+		return undefined;
+	}
+
+	private handleRequestTeamDB(p: PacketObj): PacketObj | undefined {
+		if (this.project) {
+			let data = this.project.data_mgr_!.getTeamDBEncoded() ;
+			return new PacketObj(PacketType.ProvideTeamDB, data) ;
+		}
+		return undefined;
+	}
+
+	private handleRequestMatchDB(p: PacketObj): PacketObj | undefined {
+		if (this.project) {
+			let data = this.project.data_mgr_!.getMatchDBEncoded() ;
+			return new PacketObj(PacketType.ProvideMatchDB, data) ;
+		}
+		return undefined;
+	}
+
+	private handleGoodbyeFromCoach(p: PacketObj): PacketObj | undefined {
+		let msg: string ;
+		msg = `Coach tablet has sucessfully synchronized scouting data with this host, all data transferred` ;
+
+		dialog.showMessageBox(this.win_, {
+			title: "Synchronization Complete",
+			message: msg,
+			type: "info",
+		});
+		return undefined;
+	}
+
+	private handleGoodbyeFromScouter(p: PacketObj): PacketObj | undefined {
+		let msg: string ;
+		if (this.synctype_ === "initialize") {
+			msg = "Tablet '" + p.payloadAsString() + "' has sucessfully completed synchronization and is ready to use";
+		}
+		else {
+			msg = `Tablet '${p.payloadAsString()}' has sucessfully synchronized scouting data with this host, new records added` ;
 		}
 
-		return resp;
+		dialog.showMessageBox(this.win_, {
+			title: "Synchronization Complete",
+			message: msg,
+			type: "info",
+		});
+		return undefined;
 	}
 
 	private startSyncServer() {
@@ -1816,6 +1892,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			this.udp_broadcast_.start() ;
 		}
 	}
+	// #endregion
 
 	public generateRandomData() {
 		if (this.lastview_ && this.lastview_ === 'info') {
@@ -1850,16 +1927,6 @@ export class SCCentral extends SCCoachCentralBaseApp {
 					message: "You can only generate data for an opened and locked project",
 				});
 			}
-		}
-	}
-
-	public savePicklistConfig(config: IPCPickListConfig[]) {
-		this.project?.picklist_mgr_!.savePicklistConfig(config) ;
-	}
-
-	public async updateSingleTeamConfigs(configs: IPCGraphConfig[]) {
-		if (this.project && this.project.isInitialized()) {
-			this.project!.graph_mgr_!.singleTeamConfigs = configs ;
 		}
 	}
 

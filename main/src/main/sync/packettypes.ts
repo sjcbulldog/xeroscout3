@@ -32,6 +32,10 @@ export enum PacketType {
     ProvideTeamDB = 0x1c,
     RequestMatchDB = 0x1d,
     ProvideMatchDB = 0x1e,
+    ProvideCoachGraphs = 0x1f,
+    ReceivedCoachGraphcs = 0x20,
+    ProvideCoachPickLists = 0x21,
+    ReceivedCoachPickLists = 0x22,
     GoodbyeFromCoach = 0xFE,
     GoodbyeFromScouter = 0xFF
 } ;

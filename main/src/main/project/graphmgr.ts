@@ -6,8 +6,7 @@ import winston from "winston";
 
 export class GraphInfo {
     public single_team_configs_ : IPCGraphConfig[] = [] ;   
-    public multi_team_configs_ : IPCGraphConfig[] = [] ;
-    public match_configs_ : IPCGraphConfig[] = [] ; 
+    public coach_configs_ : IPCGraphConfig[] = [] ;
 }
 
 export class GraphManager extends Manager {
@@ -25,12 +24,8 @@ export class GraphManager extends Manager {
             this.info_.single_team_configs_ = [] ;
         }
 
-        if (this.info_.multi_team_configs_ === undefined) {
-            this.info_.multi_team_configs_ = [] ;
-        }
-
-        if (this.info_.match_configs_ === undefined) {
-            this.info_.match_configs_ = [] ;
+        if (this.info_.coach_configs_ === undefined) {
+            this.info_.coach_configs_ = [] ;
         }
     }
 
@@ -43,21 +38,16 @@ export class GraphManager extends Manager {
         this.write() ;
     }
 
-    public get multiTeamConfigs() : IPCGraphConfig[] {
-        return this.info_.multi_team_configs_ ;
+    public get allConfigs() : IPCGraphConfig[] {
+        return [...this.info_.single_team_configs_, ...this.info_.coach_configs_] ;
     }
 
-    public set multiTeamConfigs(configs: IPCGraphConfig[]) {
-        this.info_.multi_team_configs_ = configs ;
-        this.write() ;
+    public get coachConfigs() : IPCGraphConfig[] {
+        return this.info_.coach_configs_ ;
     }
 
-    public get matchConfigs() : IPCGraphConfig[] {
-        return this.info_.match_configs_ ;
-    }
-
-    public set matchConfigs(configs: IPCGraphConfig[]) {
-        this.info_.match_configs_ = configs ;
+    public set coachConfigs(configs: IPCGraphConfig[]) {
+        this.info_.coach_configs_ = configs ;
         this.write() ;
     }
 

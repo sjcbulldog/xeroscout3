@@ -9,8 +9,8 @@ import { FormulaManager } from "./formulamgr";
 import { IPCPickListConfig, IPCPickListData, IPCPickListNotes, IPCPickListTeamData } from "../../shared/ipc";
 
 export class PickListData {
-    public picklist_ : IPCPickListConfig[] = [] ;                // Pick list, a list of team number
-    public last_picklist_? : string ;                   // The last picklist used    
+    public picklist_ : IPCPickListConfig[] = [] ;           // Pick list, a list of team number
+    public coaches_picklist_ : IPCPickListConfig[] = [] ;   // Coach pick list
 }
 
 export class PicklistMgr extends Manager {
@@ -27,15 +27,36 @@ export class PicklistMgr extends Manager {
         this.info_ = info ;
         this.data_mgr_ = data ;
         this.formula_mgr_ = formula ;
+
+        if (this.info_.picklist_ === undefined) {
+            this.info_.picklist_ = [] ;
+        }
+
+        if (this.info_.coaches_picklist_ === undefined) {
+            this.info_.coaches_picklist_ = [] ;
+        }
     }
 
-    public get picklists() : IPCPickListConfig[] {
+    public get centralPicklists() : IPCPickListConfig[] {
         return this.info_.picklist_ ;
     }
 
-    public savePicklistConfig(config: IPCPickListConfig[]) {
+    public set centralPicklists(config: IPCPickListConfig[]) {
         this.info_.picklist_ = config ;
         this.write() ;
+    }
+
+    public get coachesPicklists() : IPCPickListConfig[] {
+        return this.info_.coaches_picklist_ ;
+    }
+
+    public set coachesPicklists(config: IPCPickListConfig[]) {
+        this.info_.coaches_picklist_ = config ;
+        this.write() ;
+    }
+
+    public get allPicklists() : IPCPickListConfig[] {
+        return [...this.info_.picklist_, ...this.info_.coaches_picklist_] ;
     }
 
     public getPicklistData(name: string) : Promise<IPCPickListData> {
@@ -99,16 +120,5 @@ export class PicklistMgr extends Manager {
             this.info_.picklist_[index] = config ;
         }
         this.write() ;
-    }
-
-    public setLastPicklistUsed(name: string) {
-        if (!this.info_.last_picklist_ || this.info_.last_picklist_ !== name) {
-            this.info_.last_picklist_ = name ;
-            this.write() ;
-        }
-    }
-
-    public getLastPicklistUsed() : string {
-        return this.info_.last_picklist_ || '' ;
     }
 }

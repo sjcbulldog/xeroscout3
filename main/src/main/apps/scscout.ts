@@ -1,14 +1,14 @@
 import * as path from 'path' ;
 import * as fs from 'fs' ;
 import { BrowserWindow, dialog, Menu, MenuItem } from "electron";
-import { SCBase, XeroAppType } from "./scbase";
+import { SCBase } from "./scbase";
 import { SyncClient } from "../sync/syncclient";
 import { TCPClient } from "../sync/tcpclient";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr";
 import { kMatchAlliances } from '../../shared/playoffs';
-import { IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
+import { IPCAppType, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -77,8 +77,8 @@ export class SCScout extends SCBase {
         }
     }
 
-    public get applicationType() : XeroAppType { 
-        return XeroAppType.Scouter ;
+    public get applicationType() : IPCAppType { 
+        return 'scout' ;
     }
     
     public basePage() : string  {

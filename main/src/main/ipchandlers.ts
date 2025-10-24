@@ -1,7 +1,6 @@
 import { scappbase } from "../main";
 import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
-import { XeroAppType } from "./apps/scbase";
 import { TabletData } from "./project/tabletmgr";
 import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
@@ -11,28 +10,28 @@ function isScoutType() : boolean {
         return false ;
     }
 
-    return scappbase.applicationType === XeroAppType.Scouter ;
+    return scappbase.applicationType === 'scout' ;
 }
 
 function isCentralType() : boolean {
     if (!scappbase) {
         return false ;
     }
-    return scappbase.applicationType === XeroAppType.Central ;
+    return scappbase.applicationType === 'central' ;
 }
 
 function isCoachType() : boolean {
     if (!scappbase) {
         return false ;
     }
-    return scappbase.applicationType === XeroAppType.Coach ;
+    return scappbase.applicationType === 'coach' ;
 }
 
 function isCentralOrCoachType() : boolean {
     if (!scappbase) {
         return false ;
     }
-    return scappbase.applicationType === XeroAppType.Central || scappbase.applicationType === XeroAppType.Coach ;
+    return scappbase.applicationType === 'central' || scappbase.applicationType === 'coach' ;
 }
 
 
@@ -116,7 +115,7 @@ export async function getDataSets(cmd: string, ...args: any[]) {
 
 // rename-dataset
 export async function renameDataSet(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -132,7 +131,7 @@ export async function renameDataSet(cmd: string, ...args: any[]) {
 
 // update-dataset
 export async function updateDataSet(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1) {
@@ -145,7 +144,7 @@ export async function updateDataSet(cmd: string, ...args: any[]) {
 
 // get-event-data
 export async function getSelectEventData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
@@ -162,7 +161,7 @@ export async function getTabletData(cmd: string, ...args: any[]) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
 
         if (args.length === 0) {
-            if (scappbase.applicationType === XeroAppType.Central) {
+            if (isCentralType()) {
                 let central : SCCentral = scappbase as SCCentral ;
                 central.sendTabletData() ;
             }
@@ -179,7 +178,7 @@ export async function getTabletData(cmd: string, ...args: any[]) {
 
 // generate-random-data
 export async function generateRandomData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 0) {
@@ -218,7 +217,7 @@ export async function getMatchData(cmd: string, ...args: any[]) {
 
 // set-team-data
 export async function setTeamData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -245,7 +244,7 @@ export async function getMatchDB(cmd: string, ...args: any[]) {
 
 // update-match-db
 export async function updateMatchDB(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -271,7 +270,7 @@ export async function getTeamDB(cmd: string, ...args: any[]) {
 
 // update-team-db
 export async function updateTeamDB(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -334,7 +333,7 @@ export async function getMatchList(cmd: string, ...args: any[]) {
 
 // load-ba-event-data evkey:string
 export async function loadBaEventData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'string') {
@@ -361,7 +360,7 @@ export async function executeCommand(cmd: string, ...args: any[]) {
 
 // set-tablet-data data:TabletData[]
 export async function setTabletData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1) {
@@ -375,7 +374,7 @@ export async function setTabletData(cmd: string, ...args: any[]) {
 
 // delete-formula formula_name:string
 export async function deleteFormula(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'string') {
@@ -389,7 +388,7 @@ export async function deleteFormula(cmd: string, ...args: any[]) {
 
 // update-formula [formula_name:string, formula:string]
 export async function updateFormula(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -409,7 +408,7 @@ export async function updateFormula(cmd: string, ...args: any[]) {
 
 // rename-formula [old_name:string, new_name:string]
 export async function renameFormula(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -429,7 +428,7 @@ export async function renameFormula(cmd: string, ...args: any[]) {
 
 // set-event-name event_name:string
 export async function setEventName(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'string') {
@@ -450,7 +449,7 @@ export async function getForm(cmd: string, ...args: any[]) {
                 let central : SCCentral = scappbase as SCCentral ;
                 central.sendForm(args[0]) ;
             } 
-            else if (scappbase.applicationType === XeroAppType.Scouter) {
+            else if (isScoutType()) {
                 let scout: SCScout = scappbase as SCScout ;
                 scout.sendForm(args[0]) ;
             }
@@ -479,7 +478,7 @@ export async function getImageNames(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 0) {
-            if (scappbase.applicationType === XeroAppType.Central) {
+            if (isCentralType()) {
                 scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
                 let central : SCCentral = scappbase as SCCentral ;
                 central.sendImages() ;
@@ -495,7 +494,7 @@ export async function importImage(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 0) {
-            if (scappbase.applicationType === XeroAppType.Central) {
+            if (isCentralType()) {
                 scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
                 let central : SCCentral = scappbase as SCCentral ;
                 central.importImage() ;
@@ -512,7 +511,7 @@ export async function saveForm(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 1 && typeof args[0] === 'object') {
-            if (scappbase.applicationType === XeroAppType.Central) {
+            if (isCentralType()) {
                 scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
                 let central : SCCentral = scappbase as SCCentral ;
                 let obj = args[0] as any ;
@@ -527,7 +526,7 @@ export async function saveForm(cmd: string, ...args: any[]) {
 
 // set-match-data data:object[]
 export async function setMatchData(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -541,7 +540,7 @@ export async function setMatchData(cmd: string, ...args: any[]) {
 
 // set-tablet-name-purpose { name: string, purpose: string }
 export async function setTabletNamePurpose(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
+    if (scappbase && isScoutType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scout : SCScout = scappbase as SCScout ;       
         if (args.length === 1 && typeof args[0] === 'object') {
@@ -561,7 +560,7 @@ export async function setTabletNamePurpose(cmd: string, ...args: any[]) {
 
 // provide-result data:object[]
 export async function provideResult(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
+    if (scappbase && isScoutType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scout : SCScout = scappbase as SCScout ;
         if (args.length === 1 && typeof args[0] === 'object') {
@@ -629,7 +628,7 @@ export async function getPicklistConfigs(cmd: string, ...args: any[]) {
 }
 
 export async function savePicklistConfig(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {
@@ -663,7 +662,7 @@ export async function getSingleTeamData(cmd: string, ...args: any[]) {
 export async function getSingleTeamConfig(cmd: string, ...args: any[]) {
     if (isCentralOrCoachType()) {
         scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
+        let central : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
         if (args.length === 1 && typeof args[0] === 'object') {       
             central.getSingleTeamConfigs() ;
         }
@@ -674,7 +673,7 @@ export async function getSingleTeamConfig(cmd: string, ...args: any[]) {
 }
 
 export async function getHintDB(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         if (args.length === 0) {
             let central : SCCentral = scappbase as SCCentral ;
@@ -687,7 +686,7 @@ export async function getHintDB(cmd: string, ...args: any[]) {
 }
 
 export async function setHintHidden(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'string') {       
@@ -713,7 +712,7 @@ export async function getPlayoffStatus(cmd: string, ...args: any[]) {
 }
 
 export async function setAllianceTeams(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {       
@@ -755,7 +754,7 @@ export async function getTeamFormatFormulas(cmd: string, ...args: any[]) {
 }
 
 export async function setTeamFormatFormulas(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1) {   
@@ -768,7 +767,7 @@ export async function setTeamFormatFormulas(cmd: string, ...args: any[]) {
 }
 
 export async function setMatchFormatFormulas(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1) {   
@@ -781,7 +780,7 @@ export async function setMatchFormatFormulas(cmd: string, ...args: any[]) {
 }
 
 export async function setPlayoffMatchOutcome(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Central) {
+    if (scappbase && isCentralType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {       
@@ -794,7 +793,7 @@ export async function setPlayoffMatchOutcome(cmd: string, ...args: any[]) {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     }
-    else if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
+    else if (scappbase && isScoutType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scout : SCScout = scappbase as SCScout ;
         if (args.length === 1 && typeof args[0] === 'object') {       
@@ -810,7 +809,7 @@ export async function setPlayoffMatchOutcome(cmd: string, ...args: any[]) {
 }
 
 export async function syncIPAddr(cmd: string, ...args: any[]) {
-    if (scappbase && scappbase.applicationType === XeroAppType.Scouter) {
+    if (scappbase && isScoutType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scouter : SCScout = scappbase as SCScout ;
         if (args.length === 1 && typeof args[0] === 'object') {

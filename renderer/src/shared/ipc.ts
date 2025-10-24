@@ -348,8 +348,9 @@ export interface IPCGraphConfig {
     title: string ;                                 // The title to use for the graph
     type: string ;                                  // The type of the graph (e.g. line, bar, etc.)
     teams: number[] ;                               // The teams to include in the graph
-    leftitems: IPCDataItem[] ;                     // The items to display on the left side of the graph
-    rightitems: IPCDataItem[] ;                    // The items to display on the right side of the graph
+    leftitems: IPCDataItem[] ;                      // The items to display on the left side of the graph
+    rightitems: IPCDataItem[] ;                     // The items to display on the right side of the graph
+    owner: IPCAppType ;                             // The owner of the graph configuration
 }
 
 export interface IPCDataItemData {

@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog } from "electron";
 import { SCBase } from "./scbase";
-import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCPickListData, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCPickListConfig, IPCPickListData, IPCProjColumnsConfig } from "../../shared/ipc";
 import { Project } from "../project/project";
 import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
@@ -72,8 +72,17 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }
 
     public sendPicklistConfigs() {
-        this.sendToRenderer('send-picklist-configs', this.project_?.picklist_mgr_?.picklists) ;
+        this.sendToRenderer('send-picklist-configs', this.project_?.picklist_mgr_?.allPicklists) ;
     }    
+
+	public savePicklistConfig(config: IPCPickListConfig[]) {
+        if (this.applicationType === 'coach') {
+            this.project!.picklist_mgr_!.coachesPicklists = config ;
+        }
+        else {
+            this.project!.picklist_mgr_!.centralPicklists = config ;
+        }
+	}
 
 	public sendPicklistData(name: string) {
 		this.project_?.picklist_mgr_!.getPicklistData(name)
@@ -105,8 +114,19 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }
 
     public async getSingleTeamConfigs() {
-        this.sendToRenderer('send-single-team-configs', this.project_?.graph_mgr_?.singleTeamConfigs);
+        this.sendToRenderer('send-single-team-configs', this.project_?.graph_mgr_?.allConfigs);
     }    
+
+	public async updateSingleTeamConfigs(configs: IPCGraphConfig[]) {
+		if (this.project && this.project.isInitialized()) {
+            if (this.applicationType === 'coach') {
+			    this.project!.graph_mgr_!.coachConfigs = configs ;
+            }
+            else {
+                this.project!.graph_mgr_!.singleTeamConfigs = configs ;
+            }
+		}
+	}    
 
 
 	public sendPlayoffStatus() {

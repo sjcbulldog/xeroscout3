@@ -17,7 +17,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
     private formulas_: string[] = [] ;
     
     // Track the type for each item index to preserve user's selection
-    private itemTypes_: Map<number, 'team-field' | 'match-field' | 'formula'> = new Map() ;
+    private itemTypes_: Map<number, 'team-field' | 'formula'> = new Map() ;
     // Track which axis (left or right) for each item
     private itemAxis_: Map<number, 'left' | 'right'> = new Map() ;
 
@@ -175,7 +175,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         }
     }
 
-    private determineItemType(item: IPCDataItem, index: number): 'team-field' | 'match-field' | 'formula' {
+    private determineItemType(item: IPCDataItem, index: number): 'team-field' | 'formula' {
         // First check if we have an explicitly set type for this item
         if (this.itemTypes_.has(index)) {
             return this.itemTypes_.get(index)! ;
@@ -185,10 +185,6 @@ export class SingleTeamConfigDialog extends XeroDialog {
         // If name is in team fields, it's a team field
         if (this.teamflds_.includes(item.name)) {
             return 'team-field' ;
-        }
-        // If name is in match fields, it's a match field
-        if (this.matchflds_.includes(item.name)) {
-            return 'match-field' ;
         }
         // Otherwise it's a formula
         return 'formula' ;
@@ -227,12 +223,6 @@ export class SingleTeamConfigDialog extends XeroDialog {
         typeSelect.appendChild(option) ;
 
         option = document.createElement('option') ;
-        option.value = 'match-field' ;
-        option.innerText = 'Match Field' ;
-        if (currentType === 'match-field') option.selected = true ;
-        typeSelect.appendChild(option) ;
-
-        option = document.createElement('option') ;
         option.value = 'formula' ;
         option.innerText = 'Formula' ;
         if (currentType === 'formula') option.selected = true ;
@@ -240,7 +230,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
 
         typeSelect.addEventListener('change', () => {
             // Store the new type in our map
-            this.itemTypes_.set(index, typeSelect.value as 'team-field' | 'match-field' | 'formula') ;
+            this.itemTypes_.set(index, typeSelect.value as 'team-field' | 'formula') ;
             
             // Clear name and dataset when type changes
             this.config_.leftitems[index].name = '' ;
@@ -288,7 +278,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
             // Update the itemTypes_ map: remove the deleted index and shift all higher indices down
             this.itemTypes_.delete(index) ;
             this.itemAxis_.delete(index) ;
-            const updatedTypes = new Map<number, 'team-field' | 'match-field' | 'formula'>() ;
+            const updatedTypes = new Map<number, 'team-field' | 'formula'>() ;
             const updatedAxis = new Map<number, 'left' | 'right'>() ;
             for (const [key, value] of this.itemTypes_.entries()) {
                 if (key > index) {
@@ -343,7 +333,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
 
         fieldRow.appendChild(fieldSelect) ;
 
-        // Dataset dropdown - only enabled for expression and match-field
+        // Dataset dropdown - only enabled for formulas
         const datasetSelect = this.createDatasetSelect(item, index) ;
         if (currentType === 'team-field') {
             datasetSelect.disabled = true ;
@@ -402,7 +392,7 @@ export class SingleTeamConfigDialog extends XeroDialog {
         return datasetSelect ;
     }
 
-    private populateFieldSelect(selectElement: HTMLSelectElement, type: 'team-field' | 'match-field' | 'formula', currentValue: string): void {
+    private populateFieldSelect(selectElement: HTMLSelectElement, type: 'team-field' | 'formula', currentValue: string): void {
         // Clear existing options
         selectElement.innerHTML = '' ;
 
@@ -416,20 +406,6 @@ export class SingleTeamConfigDialog extends XeroDialog {
             selectElement.appendChild(option) ;
 
             for (const field of this.teamflds_) {
-                option = document.createElement('option') ;
-                option.value = field ;
-                option.innerText = field ;
-                if (currentValue === field) option.selected = true ;
-                selectElement.appendChild(option) ;
-            }
-        } else if (type === 'match-field') {
-            // Populate with match fields
-            option = document.createElement('option') ;
-            option.value = '' ;
-            option.innerText = 'Select match field...' ;
-            selectElement.appendChild(option) ;
-
-            for (const field of this.matchflds_) {
                 option = document.createElement('option') ;
                 option.value = field ;
                 option.innerText = field ;
@@ -504,10 +480,10 @@ export class SingleTeamConfigDialog extends XeroDialog {
             // Determine type to check dataset requirement
             const itemType = this.determineItemType(item, i) ;
             
-            // Team fields don't need a dataset, but match fields and expressions do
-            if ((itemType === 'match-field' || itemType === 'formula') && !item.dataset) {
+            // Team fields don't need a dataset, but formulas do
+            if (itemType === 'formula' && !item.dataset) {
                 hasErrors = true ;
-                errorMessage = 'Match fields and formulas must have a dataset selected.' ;
+                errorMessage = 'Formulas must have a dataset selected.' ;
                 break ;
             }
         }

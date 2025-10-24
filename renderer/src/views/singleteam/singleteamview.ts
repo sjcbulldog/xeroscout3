@@ -329,31 +329,29 @@ export class SingleTeamView extends XeroView {
             this.config_list_div_.appendChild(div) ;
         }
 
-        // Add "New Configuration" button - only for non-coach users
-        if (!isCoach) {
-            const addButton = document.createElement('div') ;
-            addButton.style.cursor = 'pointer' ;
-            addButton.style.padding = '8px' ;
-            addButton.style.marginTop = '10px' ;
-            addButton.style.marginBottom = '5px' ;
-            addButton.style.borderRadius = '3px' ;
+        // Add "New Configuration" button
+        const addButton = document.createElement('div') ;
+        addButton.style.cursor = 'pointer' ;
+        addButton.style.padding = '8px' ;
+        addButton.style.marginTop = '10px' ;
+        addButton.style.marginBottom = '5px' ;
+        addButton.style.borderRadius = '3px' ;
+        addButton.style.backgroundColor = '#f0f0f0' ;
+        addButton.style.fontStyle = 'italic' ;
+        addButton.style.color = '#666' ;
+        addButton.style.borderTop = '1px solid #ccc' ;
+        addButton.style.paddingTop = '10px' ;
+        addButton.innerText = 'Add New Configuration' ;
+
+        addButton.addEventListener('click', this.addNewConfig.bind(this)) ;
+        addButton.addEventListener('mouseenter', () => {
+            addButton.style.backgroundColor = '#e0e0e0' ;
+        }) ;
+        addButton.addEventListener('mouseleave', () => {
             addButton.style.backgroundColor = '#f0f0f0' ;
-            addButton.style.fontStyle = 'italic' ;
-            addButton.style.color = '#666' ;
-            addButton.style.borderTop = '1px solid #ccc' ;
-            addButton.style.paddingTop = '10px' ;
-            addButton.innerText = 'Add New Configuration' ;
+        }) ;
 
-            addButton.addEventListener('click', this.addNewConfig.bind(this)) ;
-            addButton.addEventListener('mouseenter', () => {
-                addButton.style.backgroundColor = '#e0e0e0' ;
-            }) ;
-            addButton.addEventListener('mouseleave', () => {
-                addButton.style.backgroundColor = '#f0f0f0' ;
-            }) ;
-
-            this.config_list_div_.appendChild(addButton) ;
-        }
+        this.config_list_div_.appendChild(addButton) ;
     }
 
     private displayTeams(): void {
@@ -629,7 +627,8 @@ export class SingleTeamView extends XeroView {
                 label: item.label,
                 name: item.name,
                 dataset: item.dataset
-            })) || []
+            })) || [],
+            owner: originalConfig.owner || this.app.appType
         } ;
 
         this.dialog_ = new SingleTeamConfigDialog(configCopy, this.datasets_, this.teamflds_, this.matchflds_, this.formulas_, false) ;
@@ -651,7 +650,8 @@ export class SingleTeamView extends XeroView {
             type: 'bar',
             teams: [],
             leftitems: [],
-            rightitems: []
+            rightitems: [],
+            owner: this.app.appType
         } ;
 
         this.dialog_ = new SingleTeamConfigDialog(newConfig, this.datasets_, this.teamflds_, this.matchflds_, this.formulas_, true) ;

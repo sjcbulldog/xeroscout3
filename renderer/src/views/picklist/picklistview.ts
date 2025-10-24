@@ -1,5 +1,6 @@
 import { XeroApp } from "../../apps/xeroapp.js";
-import { IPCPickListConfig, IPCTeamInfo, IPCPickListData, IPCDataSet, IPCColumnDesc, IPCFormula, IPCPickListTeamData } from "../../shared/ipc.js";
+import { DataValue } from "../../shared/datavalue.js";
+import { IPCPickListConfig, IPCTeamInfo, IPCPickListData, IPCDataSet, IPCColumnDesc, IPCFormula, IPCPickListTeamData, IPCDataItem } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 import { PickListConfigDialog } from "./picklistconfigdialog.js";
 import { TabulatorFull as Tabulator, ColumnDefinition, RowComponent } from 'tabulator-tables';
@@ -404,7 +405,8 @@ export class PickListView extends XeroView {
                 width: col.width || 150,
                 headerSort: false,
                 hozAlign: 'center',
-                resizable: true
+                resizable: true,
+                headerMenu: undefined as any // Allow moving this column
             }) ;
         }
 
@@ -416,6 +418,7 @@ export class PickListView extends XeroView {
             editor: 'input',
             headerSort: false,
             resizable: true,
+            frozen: true, // Keep notes column frozen on the right
             cellEdited: (cell: any) => {
                 this.onNotesEdited(cell) ;
             }
@@ -446,11 +449,11 @@ export class PickListView extends XeroView {
                     let displayValue = '' ;
                     if (value && value.value !== null && value.value !== undefined) {
                         // Format numbers with specified decimal places
-                        if (typeof value.value === 'number') {
+                        if (value.type === 'real') {
                             const decimals = column.decimals !== undefined ? column.decimals : 2 ;
-                            displayValue = value.value.toFixed(decimals) ;
+                            displayValue = DataValue.toReal(value).toFixed(decimals) ;
                         } else {
-                            displayValue = String(value.value) ;
+                            displayValue = DataValue.toDisplayString(value) ;
                         }
                     }
                     row[`col_${j}`] = displayValue ;
@@ -472,6 +475,7 @@ export class PickListView extends XeroView {
             layout: 'fitData',
             height: '100%',
             movableRows: true,
+            movableColumns: true, // Enable column reordering
             selectableRows: false, // Disable row selection
             headerSort: false, // Disable column sorting to maintain custom order
             rowFormatter: (row: RowComponent) => {
@@ -506,6 +510,11 @@ export class PickListView extends XeroView {
         // Handle row reordering
         this.table_.on('rowMoved', () => {
             this.updatePositionsAfterMove() ;
+        }) ;
+
+        // Handle column reordering
+        this.table_.on('columnMoved', (column: any, columns: any[]) => {
+            this.onColumnMoved(columns) ;
         }) ;
 
         // Handle column resizing
@@ -567,6 +576,47 @@ export class PickListView extends XeroView {
                     this.request('save-picklist-config', this.configs_) ;
                 }
             }
+        }
+    }
+
+    private onColumnMoved(columns: any[]): void {
+        if (this.selected_config_index_ < 0 || !this.configs_[this.selected_config_index_]) return ;
+
+        // Get the current column order from Tabulator
+        // We need to extract only the data columns (col_0, col_1, etc.) and determine their new order
+        const dataColumnFields: string[] = [] ;
+        
+        for (const col of columns) {
+            const field = col.getField() ;
+            // Only process data columns (col_0, col_1, etc.), skip fixed columns
+            if (field && field.startsWith('col_')) {
+                dataColumnFields.push(field) ;
+            }
+        }
+
+        // Create a mapping from old column field names to their original indices
+        const oldIndexMap = new Map<string, number>() ;
+        for (let i = 0; i < this.configs_[this.selected_config_index_].columns.length; i++) {
+            oldIndexMap.set(`col_${i}`, i) ;
+        }
+
+        // Build the new column order based on the field order
+        const newColumns: IPCDataItem[] = [] ;
+        for (const field of dataColumnFields) {
+            const oldIndex = oldIndexMap.get(field) ;
+            if (oldIndex !== undefined && oldIndex < this.configs_[this.selected_config_index_].columns.length) {
+                newColumns.push(this.configs_[this.selected_config_index_].columns[oldIndex]) ;
+            }
+        }
+
+        // Update the config with the new column order
+        if (newColumns.length > 0) {
+            this.configs_[this.selected_config_index_].columns = newColumns ;
+            // Save to backend
+            this.request('save-picklist-config', this.configs_) ;
+            
+            // Refresh the table to update field names to match new indices
+            this.request('get-picklist-data', { name: this.configs_[this.selected_config_index_].name }) ;
         }
     }
 

@@ -1,13 +1,13 @@
 import * as path from "path";
 import * as fs from "fs";
 import { BrowserWindow, dialog, Menu, MenuItem } from "electron";
-import { XeroAppType } from "./scbase";
 import { SyncClient } from "../sync/syncclient";
 import { TCPClient } from "../sync/tcpclient";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
+import { IPCAppType } from "../../shared/ipc";
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
@@ -36,8 +36,8 @@ export class SCCoach extends SCCoachCentralBaseApp {
         super(win, 'coach') ;
     }
 
-    public get applicationType() : XeroAppType { 
-        return XeroAppType.Coach ;
+    public get applicationType() : IPCAppType { 
+        return 'coach' ;
     }
 
 	public mainWindowLoaded(): void {
@@ -345,6 +345,8 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
     private syncTablet(p: PacketObj) : void {
         let obj : any ;
+        let str: string ;
+        let data: Uint8Array ;
 
         switch(p.type_) {
             case PacketType.HelloFromCoach:
@@ -387,6 +389,23 @@ export class SCCoach extends SCCoachCentralBaseApp {
             case PacketType.ProvideMatchForm:
                 this.logger_.debug('SyncTablet: received ProvideMatchForm packet') ;
                 this.receiveMatchForm(p) ;
+                let configs = this.project?.graph_mgr_?.coachConfigs || [] ;
+                str = JSON.stringify(configs) ;
+                data = new Uint8Array(Buffer.from(str)) ;
+                p = new PacketObj(PacketType.ProvideCoachGraphs, data) ;
+                this.sync_client_!.send(p) ;
+                break ;
+
+            case PacketType.ReceivedCoachGraphcs:
+                this.logger_.debug('SyncTablet: received ReceivedCoachGraphcs packet') ;
+                let picklists = this.project?.picklist_mgr_?.coachesPicklists || [] ;
+                str = JSON.stringify(picklists) ;
+                data = new Uint8Array(Buffer.from(str)) ;
+                p = new PacketObj(PacketType.ProvideCoachPickLists, data) ;
+                this.sync_client_!.send(p) ;
+                break ;
+
+            case PacketType.ReceivedCoachPickLists:
                 p = new PacketObj(PacketType.GoodbyeFromCoach, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;
                 this.finishSync() ;

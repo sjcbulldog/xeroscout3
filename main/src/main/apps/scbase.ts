@@ -8,13 +8,6 @@ import settings from "electron-settings";
 import { ImageManager } from "../imagemgr";
 import { IPCAppInit, IPCAppType, IPCImageResponse, IPCSetView } from "../../shared/ipc";
 
-export enum XeroAppType {
-	None,
-	Central,
-	Scouter,
-	Coach,
-}
-
 export interface XeroVersion {
 	major: number;
 	minor: number;
@@ -268,8 +261,8 @@ export abstract class SCBase {
 		);
 	}
 
-	public get applicationType(): XeroAppType {
-		return XeroAppType.None;
+	public get applicationType(): IPCAppType {
+		throw new Error("Method not implemented - must be overridden in subclass.");
 	}
 
 	public mainWindowLoaded() : void {
