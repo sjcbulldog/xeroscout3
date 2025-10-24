@@ -395,7 +395,7 @@ export class PickListConfigDialog extends XeroDialog {
         }
 
         if (hasErrors) {
-            alert(errorMessage) ;
+            this.showAlert(errorMessage) ;
             return ;
         }
 

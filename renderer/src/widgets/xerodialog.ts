@@ -80,6 +80,18 @@ export abstract class XeroDialog extends EventEmitter {
         this.topbar_!.addEventListener('mousedown', this.mouseDown.bind(this)) ;
     }
 
+    protected showAlert(message: string, title?: string) {
+        let elem = document.activeElement as HTMLElement ;
+
+        // Wrapper for alert that automatically restores focus
+        alert(message) ;
+
+        // Use setTimeout to ensure alert is fully dismissed before restoring focus
+        setTimeout(() => {
+            elem.focus() ;
+        }, 0) ;
+    }
+
     private prePlaceInit() {
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-form-edit-dialog' ;
