@@ -98,6 +98,7 @@ export class DatabaseView extends XeroView {
 
     private createColumnDescs() : ColumnDefinition[] {
         let cols: ColumnDefinition[] = [] ;
+        const isCoach = this.app.appType === 'coach' ;
 
         for (let i = 0; i < this.col_cfgs_!.columns.length; i++) {
             let colcfg = this.col_cfgs_!.columns[i] ;
@@ -118,7 +119,7 @@ export class DatabaseView extends XeroView {
                 col_desc.width = colcfg.width ;
             }
 
-            if (desc.editable) {
+            if (desc.editable && !isCoach) {
                 col_desc.editable = true ;
                 if (desc.type === 'string') {
                     if (desc.choices && desc.choices.length > 0) {

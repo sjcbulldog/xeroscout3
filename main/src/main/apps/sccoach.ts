@@ -223,6 +223,12 @@ export class SCCoach extends SCCoachCentralBaseApp {
         else if (cmd === SCCoach.viewMatchDB) {
             this.setView("match-db");
         }
+        else if (cmd === SCCoach.viewSingleTeamSummary) {
+            this.setView("singleteam");
+        }
+        else if (cmd === SCCoach.viewPicklist) {
+            this.setView("picklist");
+        }
         else {
             dialog.showErrorBox('Unknown Command', `The command '${cmd}' is not recognized by SCCoach.`) ;
         }

@@ -65,6 +65,10 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('tablet-title', this.setTabletTitle.bind(this)) ;
     }
 
+    public get appType() : IPCAppType {
+        return this.type_! ;
+    }
+
     private init(init: IPCAppInit) {
         let logger_ = XeroLogger.getInstance() ;
         logger_.debug(`XeroApp init called with type ${init.type}`) ;

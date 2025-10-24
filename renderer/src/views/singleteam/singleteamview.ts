@@ -236,6 +236,8 @@ export class SingleTeamView extends XeroView {
     private displayConfigs(): void {
         this.config_list_div_.innerHTML = '' ;
 
+        const isCoach = this.app.appType === 'coach' ;
+
         // Title
         const title = document.createElement('h3') ;
         title.innerText = 'Configurations' ;
@@ -262,34 +264,36 @@ export class SingleTeamView extends XeroView {
             nameSpan.style.flexGrow = '1' ;
             div.appendChild(nameSpan) ;
 
-            // Create delete icon
-            const deleteIcon = document.createElement('span') ;
-            deleteIcon.innerHTML = '🗑️' ;
-            deleteIcon.style.cursor = 'pointer' ;
-            deleteIcon.style.fontSize = '18px' ;
-            deleteIcon.style.fontWeight = 'bold' ;
-            deleteIcon.style.filter = 'brightness(1.3) contrast(1.2)' ;
-            deleteIcon.style.padding = '4px' ;
-            deleteIcon.style.marginLeft = '10px' ;
-            deleteIcon.title = 'Delete configuration' ;
+            // Create delete icon - only for non-coach users
+            if (!isCoach) {
+                const deleteIcon = document.createElement('span') ;
+                deleteIcon.innerHTML = '🗑️' ;
+                deleteIcon.style.cursor = 'pointer' ;
+                deleteIcon.style.fontSize = '18px' ;
+                deleteIcon.style.fontWeight = 'bold' ;
+                deleteIcon.style.filter = 'brightness(1.3) contrast(1.2)' ;
+                deleteIcon.style.padding = '4px' ;
+                deleteIcon.style.marginLeft = '10px' ;
+                deleteIcon.title = 'Delete configuration' ;
 
-            // Add click handler for delete icon
-            deleteIcon.addEventListener('click', (e) => {
-                e.stopPropagation() ;
-                this.deleteConfig(i) ;
-            }) ;
+                // Add click handler for delete icon
+                deleteIcon.addEventListener('click', (e) => {
+                    e.stopPropagation() ;
+                    this.deleteConfig(i) ;
+                }) ;
 
-            // Add hover effect for delete icon
-            deleteIcon.addEventListener('mouseenter', () => {
-                deleteIcon.style.backgroundColor = '#ff4444' ;
-                deleteIcon.style.borderRadius = '3px' ;
-            }) ;
-            deleteIcon.addEventListener('mouseleave', () => {
-                deleteIcon.style.backgroundColor = '' ;
-                deleteIcon.style.borderRadius = '' ;
-            }) ;
+                // Add hover effect for delete icon
+                deleteIcon.addEventListener('mouseenter', () => {
+                    deleteIcon.style.backgroundColor = '#ff4444' ;
+                    deleteIcon.style.borderRadius = '3px' ;
+                }) ;
+                deleteIcon.addEventListener('mouseleave', () => {
+                    deleteIcon.style.backgroundColor = '' ;
+                    deleteIcon.style.borderRadius = '' ;
+                }) ;
 
-            div.appendChild(deleteIcon) ;
+                div.appendChild(deleteIcon) ;
+            }
 
             // Apply selection styling
             if (i === this.selected_config_index_) {
@@ -317,35 +321,39 @@ export class SingleTeamView extends XeroView {
             // Add single-click handler to select the config
             nameSpan.addEventListener('click', () => this.selectConfig(i)) ;
 
-            // Add double-click handler to edit the config
-            nameSpan.addEventListener('dblclick', () => this.editConfig(i)) ;
+            // Add double-click handler to edit the config - only for non-coach users
+            if (!isCoach) {
+                nameSpan.addEventListener('dblclick', () => this.editConfig(i)) ;
+            }
 
             this.config_list_div_.appendChild(div) ;
         }
 
-        // Add "New Configuration" button
-        const addButton = document.createElement('div') ;
-        addButton.style.cursor = 'pointer' ;
-        addButton.style.padding = '8px' ;
-        addButton.style.marginTop = '10px' ;
-        addButton.style.marginBottom = '5px' ;
-        addButton.style.borderRadius = '3px' ;
-        addButton.style.backgroundColor = '#f0f0f0' ;
-        addButton.style.fontStyle = 'italic' ;
-        addButton.style.color = '#666' ;
-        addButton.style.borderTop = '1px solid #ccc' ;
-        addButton.style.paddingTop = '10px' ;
-        addButton.innerText = 'Add New Configuration' ;
-
-        addButton.addEventListener('click', this.addNewConfig.bind(this)) ;
-        addButton.addEventListener('mouseenter', () => {
-            addButton.style.backgroundColor = '#e0e0e0' ;
-        }) ;
-        addButton.addEventListener('mouseleave', () => {
+        // Add "New Configuration" button - only for non-coach users
+        if (!isCoach) {
+            const addButton = document.createElement('div') ;
+            addButton.style.cursor = 'pointer' ;
+            addButton.style.padding = '8px' ;
+            addButton.style.marginTop = '10px' ;
+            addButton.style.marginBottom = '5px' ;
+            addButton.style.borderRadius = '3px' ;
             addButton.style.backgroundColor = '#f0f0f0' ;
-        }) ;
+            addButton.style.fontStyle = 'italic' ;
+            addButton.style.color = '#666' ;
+            addButton.style.borderTop = '1px solid #ccc' ;
+            addButton.style.paddingTop = '10px' ;
+            addButton.innerText = 'Add New Configuration' ;
 
-        this.config_list_div_.appendChild(addButton) ;
+            addButton.addEventListener('click', this.addNewConfig.bind(this)) ;
+            addButton.addEventListener('mouseenter', () => {
+                addButton.style.backgroundColor = '#e0e0e0' ;
+            }) ;
+            addButton.addEventListener('mouseleave', () => {
+                addButton.style.backgroundColor = '#f0f0f0' ;
+            }) ;
+
+            this.config_list_div_.appendChild(addButton) ;
+        }
     }
 
     private displayTeams(): void {

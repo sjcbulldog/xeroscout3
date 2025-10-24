@@ -157,6 +157,8 @@ export class PickListView extends XeroView {
     private displayConfigs(): void {
         this.config_list_div_.innerHTML = '' ;
 
+        const isCoach = this.app.appType === 'coach' ;
+
         // Header with title and buttons
         const header = document.createElement('div') ;
         header.style.display = 'flex' ;
@@ -169,23 +171,26 @@ export class PickListView extends XeroView {
         title.style.margin = '0' ;
         header.appendChild(title) ;
 
-        // Buttons container
-        const buttonContainer = document.createElement('div') ;
-        buttonContainer.style.display = 'flex' ;
-        buttonContainer.style.gap = '5px' ;
+        // Buttons container - only show for non-coach users
+        if (!isCoach) {
+            const buttonContainer = document.createElement('div') ;
+            buttonContainer.style.display = 'flex' ;
+            buttonContainer.style.gap = '5px' ;
 
-        // Add button
-        const addBtn = document.createElement('button') ;
-        addBtn.innerText = '+' ;
-        addBtn.style.padding = '4px 10px' ;
-        addBtn.style.fontSize = '16px' ;
-        addBtn.style.fontWeight = 'bold' ;
-        addBtn.style.cursor = 'pointer' ;
-        addBtn.title = 'Add new pick list' ;
-        addBtn.addEventListener('click', () => this.addConfig()) ;
-        buttonContainer.appendChild(addBtn) ;
+            // Add button
+            const addBtn = document.createElement('button') ;
+            addBtn.innerText = '+' ;
+            addBtn.style.padding = '4px 10px' ;
+            addBtn.style.fontSize = '16px' ;
+            addBtn.style.fontWeight = 'bold' ;
+            addBtn.style.cursor = 'pointer' ;
+            addBtn.title = 'Add new pick list' ;
+            addBtn.addEventListener('click', () => this.addConfig()) ;
+            buttonContainer.appendChild(addBtn) ;
 
-        header.appendChild(buttonContainer) ;
+            header.appendChild(buttonContainer) ;
+        }
+
         this.config_list_div_.appendChild(header) ;
 
         // Scrollable container for configs
@@ -210,36 +215,38 @@ export class PickListView extends XeroView {
             nameSpan.innerText = config.name ;
             div.appendChild(nameSpan) ;
 
-            // Action buttons container
-            const actions = document.createElement('div') ;
-            actions.style.display = 'flex' ;
-            actions.style.gap = '5px' ;
+            // Action buttons container - only show for non-coach users
+            if (!isCoach) {
+                const actions = document.createElement('div') ;
+                actions.style.display = 'flex' ;
+                actions.style.gap = '5px' ;
 
-            // Edit button
-            const editBtn = document.createElement('span') ;
-            editBtn.innerHTML = '✏️' ;
-            editBtn.style.cursor = 'pointer' ;
-            editBtn.style.fontSize = '14px' ;
-            editBtn.title = 'Edit configuration' ;
-            editBtn.addEventListener('click', (e) => {
-                e.stopPropagation() ;
-                this.editConfig(i) ;
-            }) ;
-            actions.appendChild(editBtn) ;
+                // Edit button
+                const editBtn = document.createElement('span') ;
+                editBtn.innerHTML = '✏️' ;
+                editBtn.style.cursor = 'pointer' ;
+                editBtn.style.fontSize = '14px' ;
+                editBtn.title = 'Edit configuration' ;
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation() ;
+                    this.editConfig(i) ;
+                }) ;
+                actions.appendChild(editBtn) ;
 
-            // Delete button
-            const deleteBtn = document.createElement('span') ;
-            deleteBtn.innerHTML = '🗑️' ;
-            deleteBtn.style.cursor = 'pointer' ;
-            deleteBtn.style.fontSize = '14px' ;
-            deleteBtn.title = 'Delete configuration' ;
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation() ;
-                this.deleteConfig(i) ;
-            }) ;
-            actions.appendChild(deleteBtn) ;
+                // Delete button
+                const deleteBtn = document.createElement('span') ;
+                deleteBtn.innerHTML = '🗑️' ;
+                deleteBtn.style.cursor = 'pointer' ;
+                deleteBtn.style.fontSize = '14px' ;
+                deleteBtn.title = 'Delete configuration' ;
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation() ;
+                    this.deleteConfig(i) ;
+                }) ;
+                actions.appendChild(deleteBtn) ;
 
-            div.appendChild(actions) ;
+                div.appendChild(actions) ;
+            }
 
             // Apply selection styling
             if (i === this.selected_config_index_) {
