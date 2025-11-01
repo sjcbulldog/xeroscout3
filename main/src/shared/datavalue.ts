@@ -187,7 +187,8 @@ export class DataValue {
             ret += ']' ;
         }
         else if (a.type === 'error') {
-            ret = `Error: ${DataValue.toString(a)}`;
+            // Value may be any type; avoid throwing when it is not a string
+            ret = `Error: ${typeof a.value === 'string' ? a.value : String(a.value)}`;
         }
         else {
             ret = `Unknown type: ${a.type}`;

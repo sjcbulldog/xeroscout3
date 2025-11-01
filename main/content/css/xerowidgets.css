@@ -229,8 +229,8 @@
 	border: 2px solid #333;
 	border-radius: 8px;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-	min-width: 300px;
-	max-width: 500px;
+	min-width: 900px;
+	max-width: 1200px;
 	font-family: Arial, sans-serif;
 }
 
@@ -246,7 +246,7 @@
 
 .xero-popup-form-edit-dialog-client {
 	padding: 20px;
-	max-height: 400px;
+	max-height: 70vh;
 	overflow-y: auto;
 }
 

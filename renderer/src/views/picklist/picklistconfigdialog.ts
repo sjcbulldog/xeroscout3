@@ -36,7 +36,7 @@ export class PickListConfigDialog extends XeroDialog {
     async populateDialog(pdiv: HTMLDivElement): Promise<void> {
         const div = document.createElement('div') ;
         div.className = 'xero-popup-form-edit-dialog-rowdiv' ;
-        div.style.minWidth = '600px' ;
+        div.style.minWidth = '900px' ;
 
         // Configuration Name
         this.config_name_ = document.createElement('input') ;
@@ -62,7 +62,8 @@ export class PickListConfigDialog extends XeroDialog {
         this.items_container_.style.border = '1px solid #ccc' ;
         this.items_container_.style.padding = '10px' ;
         this.items_container_.style.marginBottom = '10px' ;
-        this.items_container_.style.maxHeight = '300px' ;
+        this.items_container_.style.minHeight = '450px' ;
+        this.items_container_.style.maxHeight = '900px' ;
         this.items_container_.style.overflowY = 'auto' ;
         div.appendChild(this.items_container_) ;
 

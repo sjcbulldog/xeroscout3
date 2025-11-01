@@ -61,26 +61,58 @@ export class PicklistMgr extends Manager {
 
     public getPicklistData(name: string) : Promise<IPCPickListData> {
         let ret = new Promise<IPCPickListData>(async (resolve, reject) => {
-            let picklist = this.findPicklistByName(name) ;
-            let result : IPCPickListData = {
-                config: picklist!,
-                data: []
-            } ;
-
-            for(let team of picklist?.teams || []) {
-                let tdata : IPCPickListTeamData = {
-                    team: team,
-                    values: []
-                } ;
-                result.data.push(tdata) ;
-
-                for(let item of picklist?.columns || []) {
-                    let ds = this.dset_mgr_.getDataSetByName(item.dataset) ;
-                    let d = await this.data_mgr_.getData(ds, item.name, team) ;
-                    tdata.values.push(d) ;
+            this.logger_.debug(`[PicklistMgr] Starting load for picklist '${name}'`) ;
+            try {
+                const picklist = this.findPicklistByName(name) ;
+                if (!picklist) {
+                    const err = new Error(`Picklist '${name}' not found`) ;
+                    this.logger_.error(`[PicklistMgr] ${err.message}`) ;
+                    return reject(err) ;
                 }
-            }       
-            resolve(result);
+
+                this.logger_.debug(`[PicklistMgr] Picklist found: ${picklist.teams.length} teams, ${picklist.columns.length} columns`) ;
+
+                const result : IPCPickListData = {
+                    config: picklist,
+                    data: []
+                } ;
+
+                for (const team of picklist.teams) {
+                    this.logger_.debug(`[PicklistMgr] Loading data for team ${team}`) ;
+                    const tdata : IPCPickListTeamData = {
+                        team: team,
+                        values: []
+                    } ;
+                    result.data.push(tdata) ;
+
+                    for (const item of picklist.columns) {
+                        this.logger_.debug(`[PicklistMgr]   Column '${item.label}' (dataset='${item.dataset}', field='${item.name}')`) ;
+
+                        let ds = undefined ;
+                        if (item.dataset && item.dataset.length > 0) {
+                            ds = this.dset_mgr_.getDataSetByName(item.dataset) ;
+                            if (!ds) {
+                                const err = new Error(`Dataset '${item.dataset}' not found while loading picklist '${name}'`) ;
+                                this.logger_.error(`[PicklistMgr] ${err.message}`) ;
+                                throw err ;
+                            }
+                        } else {
+                            this.logger_.debug(`[PicklistMgr]   No dataset specified, using default data scope`) ;
+                        }
+
+                        const d = await this.data_mgr_.getData(ds, item.name, team) ;
+                        tdata.values.push(d) ;
+                        this.logger_.debug(`[PicklistMgr]   Retrieved data for team ${team}, column '${item.label}'`) ;
+                    }
+                }
+
+                this.logger_.debug(`[PicklistMgr] Completed load for picklist '${name}'`) ;
+                resolve(result) ;
+            } catch (error) {
+                const err = error instanceof Error ? error : new Error(String(error)) ;
+                this.logger_.error(`[PicklistMgr] Failed loading picklist '${name}': ${err.message}`) ;
+                reject(err) ;
+            }
         });
         return ret;
     }
