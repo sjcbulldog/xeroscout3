@@ -40,9 +40,10 @@ export class NewFormulaDialog extends XeroDialog {
     private init_name_ : string = '' ;
     private init_expr_ : string = '' ;
     private init_desc_ : string = '' ;
+    private isnew_ : boolean = false ;
 
     constructor(formulas: IPCFormula[], match_fields: IPCColumnDesc[], team_fields: IPCColumnDesc[],
-                name: string = '', expr: string = '', desc: string = '') {
+                name: string, expr: string, desc: string, isnew: boolean) {
         super('New Formula') ;
 
         this.match_fields_ = match_fields ;
@@ -52,6 +53,7 @@ export class NewFormulaDialog extends XeroDialog {
         this.init_name_ = name ;
         this.init_expr_ = expr ;
         this.init_desc_ = desc ;
+        this.isnew_ = isnew ;
     }
 
     public get name() : string {
@@ -239,6 +241,26 @@ export class NewFormulaDialog extends XeroDialog {
         }
         else {
             this.name_label_!.classList.remove('xero-popup-form-edit-dialog-label-error') ;
+        }
+
+        // Check for duplicate formula names
+        if (this.isnew_) {
+            // If creating new formula, name cannot match any existing formula
+            const duplicate = this.formulas_.find((f) => f.name === this.name_) ;
+            if (duplicate) {
+                this.err_msg_!.innerText = 'A formula with this name already exists.' ;
+                this.name_label_!.classList.add('xero-popup-form-edit-dialog-label-error') ;
+                return false ;
+            }
+        } else {
+            // If editing existing formula, name cannot match any other formula
+            // (but can match the original name if unchanged)
+            const duplicate = this.formulas_.find((f) => f.name === this.name_ && f.name !== this.init_name_) ;
+            if (duplicate) {
+                this.err_msg_!.innerText = 'A formula with this name already exists.' ;
+                this.name_label_!.classList.add('xero-popup-form-edit-dialog-label-error') ;
+                return false ;
+            }
         }
 
         if (this.desc_ === '') {

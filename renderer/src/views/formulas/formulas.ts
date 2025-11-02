@@ -78,9 +78,15 @@ export class XeroFormulasView extends XeroView {
         if (data.name !== undefined) {
             this.editing_ = this.formulas_.findIndex((f) => f.name === data.name) ;
             if (this.editing_ !== -1) {
+                // Only allow editing if the formula is owned by the current app type
+                const formula = this.formulas_[this.editing_] ;
+                if (formula.owner !== this.app.appType) {
+                    return ; // Cannot edit formulas owned by other app types
+                }
+                
                 this.dialog_ = new NewFormulaDialog(this.formulas_, this.match_fields_, this.team_fields_, 
-                                    this.formulas_[this.editing_].name, this.formulas_[this.editing_].formula,
-                                    this.formulas_[this.editing_].desc) ;
+                                    formula.name, formula.formula,
+                                    formula.desc, false) ;
                 this.dialog_.on('closed', this.addNewFormulaClosed.bind(this)) ;
                 this.dialog_.showCentered(this.elem) ;
             }
@@ -93,12 +99,28 @@ export class XeroFormulasView extends XeroView {
         if (cell.getRow().getNextRow() === false && cell.getData().name === undefined) {
             ret = document.createElement('button') ;
             ret.addEventListener('click', this.addNewFormula.bind(this)) ;
-            ret.innerHTML = '<b>+</b>' ;
+            ret.innerHTML = '➕' ;
+            ret.title = 'Add new formula' ;
+            ret.style.cursor = 'pointer' ;
+            ret.style.fontSize = '16px' ;
         }
         else {
-            ret = document.createElement('button') ;
-            ret.addEventListener('click', this.deleteFormula.bind(this, cell)) ;
-            ret.innerHTML = '<b>-</b>' ;
+            const data = cell.getData() ;
+            const formula = this.formulas_.find((f) => f.name === data.name) ;
+            
+            // Only show delete button if the formula is owned by the current app type
+            if (formula && formula.owner === this.app.appType) {
+                ret = document.createElement('button') ;
+                ret.addEventListener('click', this.deleteFormula.bind(this, cell)) ;
+                ret.innerHTML = '🗑️' ;
+                ret.title = 'Delete formula' ;
+                ret.style.cursor = 'pointer' ;
+                ret.style.fontSize = '16px' ;
+            } else {
+                // Show empty cell or disabled indicator for formulas not owned by this app
+                ret = document.createElement('span') ;
+                ret.innerHTML = '' ;
+            }
         }
 
         return ret;
@@ -119,19 +141,19 @@ export class XeroFormulasView extends XeroView {
 
             if (this.editing_ !== -1) {
                 if (name !== this.formulas_[this.editing_].name) {
-                    this.request('rename-formula', this.formulas_[this.editing_].name) ;
+                    this.request('rename-formula', [this.formulas_[this.editing_].name, name]) ;
                     this.formulas_[this.editing_].name = name ;
                 }
 
                 this.formulas_[this.editing_].desc = desc ;
                 this.formulas_[this.editing_].formula = expr ;
-
             }
             else {
                 this.formulas_.push({
                     name: name,
                     desc: desc,
-                    formula: expr
+                    formula: expr,
+                    owner: this.app.appType
                 }) ;
             }
             this.request('update-formula', [name, desc, expr]) ;
@@ -142,7 +164,7 @@ export class XeroFormulasView extends XeroView {
     }
 
     private addNewFormula(e: MouseEvent) {
-        this.dialog_ = new NewFormulaDialog(this.formulas_, this.match_fields_, this.team_fields_) ;
+        this.dialog_ = new NewFormulaDialog(this.formulas_, this.match_fields_, this.team_fields_, '', '', '', true) ;
         this.dialog_.on('closed', this.addNewFormulaClosed.bind(this)) ;
         this.dialog_.showCentered(this.elem) ;
     }

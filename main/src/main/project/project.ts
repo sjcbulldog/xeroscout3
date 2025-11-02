@@ -23,7 +23,7 @@ import { FormManager } from './formmgr';
 import { TabletData, TabletManager } from './tabletmgr';
 import { ManualMatchData, MatchManager } from './matchmgr';
 import { GraphManager } from './graphmgr';
-import { IPCHint, IPCScoutResults } from '../../shared/ipc';
+import { IPCAppType, IPCHint, IPCScoutResults } from '../../shared/ipc';
 import { RulesEngine } from '../../shared/rulesengine';
 import { PlayoffManager } from './playoffmgr';
 import { SCBase } from '../apps/scbase';
@@ -61,11 +61,11 @@ export class Project {
         return false ;
     }
 
-    public init(info: ProjectInfo) {
+    public init(info: ProjectInfo, apptype: IPCAppType) {
         this.info_ = info ;
         this.team_mgr_ = new TeamManager(this.logger_, this.writeEventFile.bind(this), this.info_.team_info_) ;
         this.match_mgr_ = new MatchManager(this.logger_, this.writeEventFile.bind(this), this.info_.match_info_) ;
-        this.formula_mgr_ = new FormulaManager(this.logger_, this.writeEventFile.bind(this), this.info_.formula_info_) ;
+        this.formula_mgr_ = new FormulaManager(this.logger_, this.writeEventFile.bind(this), this.info_.formula_info_, apptype) ;
         this.data_mgr_ = new DataManager(this.logger_, this.writeEventFile.bind(this), this.location_, this.info_.data_info_, this.info_.team_db_info_, this.info_.match_db_info_, this.formula_mgr_) ;
         this.form_mgr_ = new FormManager(this.logger_, this.writeEventFile.bind(this), this.info_.form_info_, this.location_, this.data_mgr_) ;
         this.dataset_mgr_ = new DataSetManager(this.logger_, this.writeEventFile.bind(this), this.info_.dataset_info_, this.team_mgr_) ;
@@ -301,7 +301,7 @@ export class Project {
         return this.form_mgr_!.setMatchForm(form) ;
     }
 
-    public static async createEvent(logger: winston.Logger, dir: string, year: number) : Promise<Project> {
+    public static async createEvent(logger: winston.Logger, dir: string, year: number, apptype: IPCAppType) : Promise<Project> {
         let ret: Promise<Project> = new Promise<Project>((resolve, reject) => {
             logger.info('Creating event in directory \'' + dir + '\'') ;
 
@@ -326,14 +326,14 @@ export class Project {
             }
 
             let proj: Project = new Project(logger, dir, year) ;
-            proj.init(new ProjectInfo()) ;
+            proj.init(new ProjectInfo(), apptype) ;
             resolve(proj) ;
         }) ;
 
         return ret ;
     }
 
-    public static async openEvent(logger: winston.Logger, filepath: string, year: number) : Promise<Project> {
+    public static async openEvent(logger: winston.Logger, filepath: string, year: number, apptype: IPCAppType) : Promise<Project> {
         let ret: Promise<Project> = new Promise<Project>((resolve, reject) => {
 
             logger.info('Open event, location \'' + filepath + '\'') ;
@@ -360,7 +360,7 @@ export class Project {
             if (info instanceof Error) {
                 reject(info as Error) ;
             }
-            proj.init(info as ProjectInfo) ;
+            proj.init(info as ProjectInfo, apptype) ;
 
             if (proj.isLocked) {
                 //

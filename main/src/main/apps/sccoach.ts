@@ -23,6 +23,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly resetTablet: string = "reset-tablet" ;    
     private static readonly viewTeamForm: string = 'view-team-form';
     private static readonly viewMatchForm: string = 'view-match-form';
+	private static readonly viewFormulas: string = 'view-formulas';    
 
     private static readonly syncEventLocal: string = "sync-event-local" ;
     private static readonly syncEventRemote: string = "sync-event-remote" ;
@@ -55,7 +56,8 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
     private openEvent(evfile: string) : Promise<void> {
         let ret = new Promise<void>( (resolve, reject) => {
-            Project.openEvent(this.logger_, evfile, 2025)
+            let d = new Date() ;
+            Project.openEvent(this.logger_, evfile, d.getFullYear(), this.applicationType)
                 .then( (proj: Project) => {
                     this.project = proj ;
                     resolve() ;
@@ -159,6 +161,15 @@ export class SCCoach extends SCCoachCentralBaseApp {
             });					
 
 			treedata.push({ type: "separator", title: "Analysis" });
+
+            treedata.push({
+                type: 'icon',
+                command: SCCoach.viewFormulas,
+                title: "Formulas",
+                icon: this.getIconData('formula.png'),
+                width: dims,
+                height: dims	
+            });	            
 			
             treedata.push({
                 type: 'icon',
@@ -222,6 +233,9 @@ export class SCCoach extends SCCoachCentralBaseApp {
         }
         else if (cmd === SCCoach.viewMatchDB) {
             this.setView("match-db");
+        }
+        else if (cmd === SCCoach.viewFormulas) {
+            this.setView("formulas");
         }
         else if (cmd === SCCoach.viewSingleTeamSummary) {
             this.setView("singleteam");

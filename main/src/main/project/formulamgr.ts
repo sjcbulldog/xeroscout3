@@ -1,33 +1,36 @@
 import winston from "winston";
 import { Manager } from "./manager" ;
 import { Expr } from "../../shared/expr";
-import { IPCFormula } from "../../shared/ipc" ;
+import { IPCAppType, IPCFormula } from "../../shared/ipc" ;
 
 export class FormulaInfo {
-    public formulas_ : IPCFormula[] = [] ;                 
+    public formulas_ : IPCFormula[] = [] ;       
+    public coach_formulas_ : IPCFormula[] = [] ;          
 }
 
 export class FormulaManager extends Manager {
+    private appType_ : IPCAppType ;
     private info_ : FormulaInfo ;
     private expr_map_ : Map<string, Expr> = new Map() ;                                 // Map of formula name to expression
 
-    constructor(logger: winston.Logger, writer: () => void, info: FormulaInfo) {
-        super(winston.createLogger(), writer) ;
+    constructor(logger: winston.Logger, writer: () => void, info: FormulaInfo, appType: IPCAppType) {
+        super(logger, writer) ;
         this.info_ = info ;
+        this.appType_ = appType ;
     }
 
-    public getFormulas() : IPCFormula[] {
-        return this.info_.formulas_ ;
+    public get formulas() : IPCFormula[] {
+        return [...this.info_.formulas_, ...this.info_.coach_formulas_] ;
     }
 
     public get formulaNames() : string[] {
-        return this.info_.formulas_.map(f => f.name) ;
+        return this.formulas.map(f => f.name) ;
     }
 
     public hasFormula(name: string) : boolean {
         let ret = false ;
 
-        for(let f of this.info_.formulas_) {
+        for(let f of this.formulas) {
             if (f.name === name) {
                 ret = true ;
                 break ;
@@ -44,7 +47,7 @@ export class FormulaManager extends Manager {
             ret = this.expr_map_.get(name) ;
         }
         else {
-            for(let f of this.info_.formulas_) {
+            for(let f of this.formulas) {
                 if (f.name === name) {
                     ret = Expr.parse(f.formula) ;
                     this.expr_map_.set(name, ret) ;
@@ -93,7 +96,8 @@ export class FormulaManager extends Manager {
             let f : IPCFormula = {
                 name: name,
                 desc: desc,
-                formula: formula
+                formula: formula,
+                owner: this.appType_
             } ;
 
             this.info_.formulas_.push(f) ;

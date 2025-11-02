@@ -223,6 +223,7 @@ export interface IPCFormula {
     name: string,                             // The name of the formula
     desc: string,                             // A description of the formula
     formula: string                           // The expressions to evaluate
+    owner: IPCAppType ;                       // The owner of the formula
 }
 
 export interface IPCAlliance {

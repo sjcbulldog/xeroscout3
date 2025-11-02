@@ -153,7 +153,6 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
 		}
 	}	
 	
-
 	public getGraphData(cfg: IPCGraphConfig) {
 		if (cfg) {
 			this.project_?.graph_mgr_?.generateGraphData(cfg)
@@ -162,6 +161,19 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
 				}) ;
 		}
 	}    
+
+
+    public renameFormula(oldname: string, newname: string) : void {
+        this.project?.formula_mgr_?.renameFormula(oldname, newname) ;
+    }	
+
+    public updateFormula(name: string, desc: string, exprstr: string) : void {
+        this.project?.formula_mgr_?.addFormula(name, desc, exprstr) ;
+    }	
+
+    public deleteFormula(name: string) : void {
+        this.project?.formula_mgr_?.deleteFormula(name) ;
+    }    
 
     public async sendMatchStatus() {
         interface data {

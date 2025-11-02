@@ -113,7 +113,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		
 		let index = process.argv.indexOf('central') ;
 		if (index < process.argv.length - 1) {
-			Project.openEvent(this.logger_, process.argv[index + 1], this.year_!)
+			Project.openEvent(this.logger_, process.argv[index + 1], this.year_!, this.applicationType	)
 			.then((p) => {
 				this.addRecent(p.location);
 				this.project = p;
@@ -136,7 +136,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			if (recents && Array.isArray(recents) && recents.length > 0) {
 				let fpath = path.join(recents[0], 'event.json');
 				if (fs.existsSync(fpath)) {
-					Project.openEvent(this.logger_, fpath, this.year_!)
+					Project.openEvent(this.logger_, fpath, this.year_!, this.applicationType)
 					.then((p) => {
 						this.addRecent(p.location);
 						this.project = p;
@@ -332,7 +332,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 					label: one,
 					click: () => {
 						let evpath = path.join(one, 'event.json');
-						Project.openEvent(this.logger_, evpath, this.year_!)
+						Project.openEvent(this.logger_, evpath, this.year_!, this.applicationType)
 							.then((p) => {
 								this.addRecent(p.location);
 								this.project = p;
@@ -593,20 +593,6 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			}
 		}) ;		
 	}
-
-
-	public renameFormula(oldname: string, newname: string) : void {
-		this.project?.formula_mgr_?.renameFormula(oldname, newname) ;
-	}	
-
-	public updateFormula(name: string, desc: string, exprstr: string) : void {
-		this.project?.formula_mgr_?.addFormula(name, desc, exprstr) ;
-	}	
-
-	public deleteFormula(name: string) : void {
-		this.project?.formula_mgr_?.deleteFormula(name) ;
-	}
-
 
 	public renameDataSet(oldname: string, newname: string) : void {
 		this.project?.dataset_mgr_?.renameDataSet(oldname, newname) ;
@@ -1321,8 +1307,8 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			path
 				.then((pathname) => {
 					if (!pathname.canceled) {
-						Project.createEvent(this.logger_, pathname.filePaths[0], year)
-							.then((p) => {
+						Project.createEvent(this.logger_, pathname.filePaths[0], year, this.applicationType)
+							.then((p) => { 
 								this.addRecent(p.location);
 								this.project = p;
 								this.sendHintDB() ;
@@ -1466,7 +1452,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		path
 			.then((pathname) => {
 				if (!pathname.canceled) {
-					Project.openEvent(this.logger_, pathname.filePaths[0], year)
+					Project.openEvent(this.logger_, pathname.filePaths[0], year, this.applicationType)
 						.then((p) => {
 							this.addRecent(p.location);
 							this.project = p;

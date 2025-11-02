@@ -374,7 +374,7 @@ export async function setTabletData(cmd: string, ...args: any[]) {
 
 // delete-formula formula_name:string
 export async function deleteFormula(cmd: string, ...args: any[]) {
-    if (scappbase && isCentralType()) {
+    if (scappbase && isCentralOrCoachType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'string') {
@@ -388,7 +388,7 @@ export async function deleteFormula(cmd: string, ...args: any[]) {
 
 // update-formula [formula_name:string, formula:string]
 export async function updateFormula(cmd: string, ...args: any[]) {
-    if (scappbase && isCentralType()) {
+    if (scappbase && isCentralOrCoachType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -408,7 +408,7 @@ export async function updateFormula(cmd: string, ...args: any[]) {
 
 // rename-formula [old_name:string, new_name:string]
 export async function renameFormula(cmd: string, ...args: any[]) {
-    if (scappbase && isCentralType()) {
+    if (scappbase && isCentralOrCoachType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && Array.isArray(args[0])) {
