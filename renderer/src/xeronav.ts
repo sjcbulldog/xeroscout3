@@ -25,7 +25,18 @@ export class XeroNav  extends XeroWidget {
             navItem.xerodata = item.command ;
 
             if (item.type === 'item') {
-                navItem.textContent = item.title ;
+                let titleDiv = document.createElement('div');
+                titleDiv.textContent = item.title;
+                titleDiv.className = 'xero-nav-item-title';
+                navItem.appendChild(titleDiv);
+                
+                if (item.teamName) {
+                    let teamNameDiv = document.createElement('div');
+                    teamNameDiv.textContent = item.teamName;
+                    teamNameDiv.className = 'xero-nav-item-team-name';
+                    navItem.appendChild(teamNameDiv);
+                }
+                
                 navItem.className = 'xero-nav-list-item' ;
                 this.navelems_.push(navItem) ;
 
@@ -67,9 +78,16 @@ export class XeroNav  extends XeroWidget {
     private navItemClicked(event: Event) {
         let logger = XeroLogger.getInstance() ;
         let target = event.target as HTMLElement ;
-        if (target && target.xerodata) {
-            logger.debug(`XeroNav.navItemClicked: command=${target.xerodata}`) ;
-            this.request('execute-command', target.xerodata) ;
+        
+        // Find the element with xerodata, either the target itself or a parent
+        let commandElement = target;
+        while (commandElement && !commandElement.xerodata) {
+            commandElement = commandElement.parentElement as HTMLElement;
+        }
+        
+        if (commandElement && commandElement.xerodata) {
+            logger.debug(`XeroNav.navItemClicked: command=${commandElement.xerodata}`) ;
+            this.request('execute-command', commandElement.xerodata) ;
         }
         else {
             logger.debug(`XeroNav.navItemClicked: no command found`) ;

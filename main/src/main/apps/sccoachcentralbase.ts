@@ -365,7 +365,7 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }
 
     public sendFormulas() : void {
-        this.sendToRenderer('send-formulas', this.project?.formula_mgr_?.getFormulas()) ;
+        this.sendToRenderer('send-formulas', this.project?.formula_mgr_?.formulas) ;
     }
     
     public sendTeamFieldList() : void {

@@ -40,6 +40,7 @@ export class SCScout extends SCBase {
     private static readonly resetTablet: string = "reset-tablet" ;
     private static readonly resizeWindow: string = "resize-window" ;
     private static readonly showTeams: string = 'show-teams' ;
+    private static readonly showFullTeamNames: string = 'show-full-team-names' ;
     private static readonly reverseImage: string = 'reverse' ;
 
 
@@ -54,8 +55,10 @@ export class SCScout extends SCBase {
     private reversed_ : boolean = false ;
     private reverseImage_: MenuItem | undefined ;
     private show_teams_item_ : MenuItem | undefined ;
+    private show_full_team_names_item_ : MenuItem | undefined ;
     private sync_client_? : SyncClient ;
     private show_teams_ : boolean = false ;
+    private show_full_team_names_ : boolean = false ;
 
     private ipaddr_: string = '' ;
     private port_ : number = 0 ;
@@ -74,6 +77,10 @@ export class SCScout extends SCBase {
 
         if (this.hasSetting(SCScout.showTeams)) {
             this.show_teams_ = this.getSetting(SCScout.showTeams) ;
+        }
+
+        if (this.hasSetting(SCScout.showFullTeamNames)) {
+            this.show_full_team_names_ = this.getSetting(SCScout.showFullTeamNames) ;
         }
     }
 
@@ -125,7 +132,13 @@ export class SCScout extends SCBase {
                 if (this.show_teams_) {
                     title += ' (' + t.name + ')' ;
                 }
-                ret.push({type: 'item', command: 'st-' + t.team, title: title, number: t.team}) ;
+                
+                let teamName = undefined;
+                if (this.show_full_team_names_) {
+                    teamName = t.name.length > 64 ? t.name.substring(0, 61) + "..." : t.name;
+                }
+                
+                ret.push({type: 'item', command: 'st-' + t.team, title: title, number: t.team, teamName: teamName}) ;
             }
         }
 
@@ -194,7 +207,13 @@ export class SCScout extends SCBase {
             if (this.show_teams_) {
                 title += ' (' + t.teamname + ')' ;
             }
-            ret.push({type: 'item', command: cmd, title: title}) ;
+            
+            let teamName = undefined;
+            if (this.show_full_team_names_) {
+                teamName = t.teamname.length > 64 ? t.teamname.substring(0, 61) + "..." : t.teamname;
+            }
+            
+            ret.push({type: 'item', command: cmd, title: title, teamName: teamName}) ;
         }
         return ret ;
     }
@@ -279,6 +298,14 @@ export class SCScout extends SCBase {
                 this.show_teams_item_.checked = this.show_teams_ ;
             }
             this.setSetting(SCScout.showTeams, this.show_teams_) ;
+            this.sendNavData() ;
+        }
+        else if (cmd === SCScout.showFullTeamNames) {
+            this.show_full_team_names_ = !this.show_full_team_names_ ;
+            if (this.show_full_team_names_item_) {
+                this.show_full_team_names_item_.checked = this.show_full_team_names_ ;
+            }
+            this.setSetting(SCScout.showFullTeamNames, this.show_full_team_names_) ;
             this.sendNavData() ;
         }
         else if (cmd === SCScout.reverseImage) {
@@ -1006,6 +1033,18 @@ export class SCScout extends SCBase {
             this.show_teams_item_.checked = true ;
         }
         viewmenu.submenu?.append(this.show_teams_item_) ;
+
+        viewmenu.submenu?.append(new MenuItem({type: 'separator'}));
+
+        this.show_full_team_names_item_ = new MenuItem({
+            type: 'checkbox',
+            label: 'Show Full Team Names',
+            click: () => { this.executeCommand(SCScout.showFullTeamNames)}
+        }) ;
+        if (this.show_full_team_names_) {
+            this.show_full_team_names_item_.checked = true ;
+        }
+        viewmenu.submenu?.append(this.show_full_team_names_item_) ;
         ret.append(viewmenu) ;
 
         let helpmenu: MenuItem = new MenuItem( {

@@ -28,6 +28,17 @@ body {
     cursor:pointer;
 }
 
+.xero-nav-item-title {
+    font-size: 24px;
+    color: #c0c0c0;
+}
+
+.xero-nav-item-team-name {
+    font-size: 16px;
+    color: #a0a0a0;
+    margin-top: 2px;
+}
+
 .xero-nav-highlight {
     background: blue;
     color: white;

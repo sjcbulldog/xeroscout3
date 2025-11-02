@@ -65,6 +65,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly viewFormulas: string = 'view-formulas';
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
+	private static readonly clearExternalDownload: string = 'clear-external-download' ;
 
 
 	private ba_?: BlueAlliance = undefined;
@@ -85,6 +86,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private team_number_ : number =  1425 ;
 	private udp_broadcast_ : UDPBroadcast | undefined = undefined ;
 	private packetHandlers_ : Map<PacketType, (obj: PacketObj) => PacketObj | undefined> = new Map<PacketType, (obj: PacketObj) => PacketObj | undefined>() ;
+	private external_download_in_progress_ : boolean = false ;
+	private tablets_syncing_ : boolean = false ;
+	private external_download_timeout_: NodeJS.Timeout | undefined = undefined ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
@@ -232,6 +236,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	public close() : void {
+		// Clear any pending external download timeouts
+		if (this.external_download_timeout_) {
+			clearTimeout(this.external_download_timeout_);
+			this.external_download_timeout_ = undefined;
+		}
 	}
 
 	public canQuit(): boolean {
@@ -451,6 +460,19 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		});
 		datamenu.submenu?.append(importGraphDefns);
 		this.menuitems_.set('data/graphdefn', importGraphDefns);		
+
+		datamenu.submenu?.append(new MenuItem({ type: 'separator' }));
+
+		let clearDownloadItem: MenuItem = new MenuItem({
+			type: 'normal',
+			label: 'Clear Stuck External Download',
+			enabled: true,
+			click: () => {
+				this.executeCommand(SCCentral.clearExternalDownload);
+			},
+		});
+		datamenu.submenu?.append(clearDownloadItem);
+		this.menuitems_.set('data/cleardownload', clearDownloadItem);
 
 		datamenu.submenu?.append(new MenuItem({ type: 'separator' }));
 
@@ -675,6 +697,24 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	public async loadBaEventData(key: string): Promise<void> {
+		// Check if tablets are syncing
+		if (this.tablets_syncing_) {
+			dialog.showErrorBox(
+				'Load Blue Alliance Event',
+				'Cannot download data while tablets are syncing. Please wait for tablet sync to complete and try again.'
+			);
+			return;
+		}
+
+		// Check if another external download is already in progress
+		if (this.external_download_in_progress_) {
+			dialog.showErrorBox(
+				'Load Blue Alliance Event',
+				'Another external download is already in progress. Please wait for it to complete and try again.'
+			);
+			return;
+		}
+
 		if (!this.isBAAvailable()) {
 			dialog.showErrorBox(
 				'Load Blue Alliance Event',
@@ -682,6 +722,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			);
 			return;
 		}
+
+		// Set external download flag with timeout protection
+		this.setExternalDownloadInProgress(`Blue Alliance Event: ${key}`);
 
 		let fev: BAEvent | undefined = this.getEventFromKey(key);
 		if (fev) {
@@ -708,8 +751,13 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				);
 				this.sendToRenderer("set-status-close-button-visible", true);
 				this.setView("info");
+			} finally {
+				// Clear external download flag
+				this.clearExternalDownloadInProgress(`Blue Alliance Event: ${key}`);
 			}
 		} else {
+			// Clear external download flag
+			this.clearExternalDownloadInProgress(`Blue Alliance Event: ${key} (not found)`);
 			this.sendToRenderer("set-status-title", "Blue Alliance Error");
 			this.sendToRenderer("set-status-html","Error importing data - no event with key '" + key + "' was found");
 			this.sendToRenderer("set-status-close-button-visible", true);
@@ -718,6 +766,26 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private importBlueAllianceData() {
+		// Check if tablets are syncing
+		if (this.tablets_syncing_) {
+			let html = "Cannot download data while tablets are syncing. Please wait for tablet sync to complete and try again.";
+			this.sendToRenderer("set-status-visible", true);
+			this.sendToRenderer("set-status-title", "Error Importing Match Data");
+			this.sendToRenderer("set-status-html", html);
+			this.sendToRenderer("set-status-close-button-visible", true);
+			return;
+		}
+
+		// Check if another external download is already in progress
+		if (this.external_download_in_progress_) {
+			let html = "Another external download is already in progress. Please wait for it to complete and try again.";
+			this.sendToRenderer("set-status-visible", true);
+			this.sendToRenderer("set-status-title", "Error Importing Match Data");
+			this.sendToRenderer("set-status-html", html);
+			this.sendToRenderer("set-status-close-button-visible", true);
+			return;
+		}
+
 		if (!this.project) {
 			let html = "Must create or open a project to import data.";
 			this.sendToRenderer("set-status-visible", true);
@@ -736,8 +804,18 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			return;
 		}
 
+		// Set external download flag with timeout protection
+		this.setExternalDownloadInProgress("Blue Alliance Data Import");
+
 		let fev: BAEvent | undefined = this.project?.info?.frcev_;
 		if (fev) {
+
+			if (!fev.key) {
+				let key = await this.promptString('Blue Alliance Event Key', 'Enter the Blue Alliance event key (e.g. 2024miket)', '')
+			}
+
+			fev.key = key ;
+
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title","Loading match data") ;
 			this.msg_ = "";
@@ -758,8 +836,14 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				this.appendStatusText("<br><br>Error loading data - " + err.message);
 				this.sendToRenderer("set-status-close-button-visible", true);
 				this.project!.writeEventFile() ;				
+			})
+			.finally(() => {
+				// Clear external download flag
+				this.clearExternalDownloadInProgress("Blue Alliance Data Import");
 			});
 		} else {
+			// Clear external download flag
+			this.clearExternalDownloadInProgress("Blue Alliance Data Import (no event)");
 			let html = "The event is not a blue alliance event";
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title", "Load Match Data");
@@ -769,6 +853,26 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}	
 
 	private importStatboticsData() {
+		// Check if tablets are syncing
+		if (this.tablets_syncing_) {
+			let html = "Cannot download data while tablets are syncing. Please wait for tablet sync to complete and try again.";
+			this.sendToRenderer("set-status-visible", true);
+			this.sendToRenderer("set-status-title", "Error Importing Match Data");
+			this.sendToRenderer("set-status-html", html);
+			this.sendToRenderer("set-status-close-button-visible", true);
+			return;
+		}
+
+		// Check if another external download is already in progress
+		if (this.external_download_in_progress_) {
+			let html = "Another external download is already in progress. Please wait for it to complete and try again.";
+			this.sendToRenderer("set-status-visible", true);
+			this.sendToRenderer("set-status-title", "Error Importing Match Data");
+			this.sendToRenderer("set-status-html", html);
+			this.sendToRenderer("set-status-close-button-visible", true);
+			return;
+		}
+
 		if (!this.project) {
 			let html = "Must create or open a project to import data.";
 			this.sendToRenderer("set-status-visible", true);
@@ -786,6 +890,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			this.sendToRenderer("set-status-close-button-visible", true);
 			return;
 		}
+
+		// Set external download flag with timeout protection
+		this.setExternalDownloadInProgress("Statbotics Data Import");
 
 		let fev: BAEvent | undefined = this.project?.info?.frcev_;
 		if (fev) {
@@ -813,8 +920,16 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			.catch((err) => {
 				this.appendStatusText("<br><br>Error loading data - " + err.message);
 				this.sendToRenderer("set-status-close-button-visible", true);
+			})
+			.finally(() => {
+				// Clear external download flag
+				this.clearExternalDownloadInProgress("Statbotics Data Import");
 			});
 		} else {
+			// Clear external download flag
+			this.clearExternalDownloadInProgress("Statbotics Data Import (no event)");
+			// Clear external download flag
+			this.clearExternalDownloadInProgress("Statbotics Data Import (no event)");
 			let html = "The event is not a blue alliance event";
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title", "Load Match Data");
@@ -1067,6 +1182,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			this.setView("playoffs", null) ;
 		} else if (cmd === SCCentral.viewSingleTeamSummary) {
 			this.setView("singleteam") ;
+		}
+		else if (cmd === SCCentral.clearExternalDownload) {
+			this.forceClearExternalDownload();
 		}
 		else if (cmd === SCCentral.createMatchForm) {
 			if (this.project && this.project.form_mgr_) {
@@ -1527,6 +1645,17 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleRequestHelloFromScouter(p: PacketObj): PacketObj {
+		// Check if external download is in progress
+		if (this.external_download_in_progress_) {
+			return new PacketObj(
+				PacketType.Error,
+				Buffer.from("Central is busy downloading data from external sites. Please try syncing again after the download is complete.", "utf-8")
+			);
+		}
+
+		// Set tablets syncing flag
+		this.tablets_syncing_ = true;
+
 		this.synctype_ = 'data' ;
 		if (p.data_.length > 0) {
 			try {
@@ -1823,6 +1952,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleGoodbyeFromScouter(p: PacketObj): PacketObj | undefined {
+		// Clear tablets syncing flag
+		this.tablets_syncing_ = false;
+
 		let msg: string ;
 		if (this.synctype_ === "initialize") {
 			msg = "Tablet '" + p.payloadAsString() + "' has sucessfully completed synchronization and is ready to use";
@@ -1856,15 +1988,18 @@ export class SCCentral extends SCCoachCentralBaseApp {
 					if (reply) {
 						this.tcpsyncserver_!.send(reply).then(() => {
 							if (reply.type_ === PacketType.Error) {
+								this.tablets_syncing_ = false; // Clear flag on error
 								this.tcpsyncserver_!.shutdownClient();
 							}
 						});
 					} else {
+						this.tablets_syncing_ = false; // Clear flag on shutdown
 						this.tcpsyncserver_?.shutdownClient();
 					}
 				});
 
 			this.tcpsyncserver_.on("error", (err) => {
+				this.tablets_syncing_ = false; // Clear flag on error
 				this.tcpsyncserver_?.shutdownClient();
 				dialog.showMessageBox(this.win_, {
 					message: "Error syncing client - " + err.message,
@@ -1879,6 +2014,49 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}
 	}
 	// #endregion
+
+	private setExternalDownloadInProgress(operation: string) {
+		if (this.external_download_in_progress_) {
+			this.logger_.warn(`Attempting to start external download (${operation}) while another download is already in progress`);
+		}
+		
+		this.external_download_in_progress_ = true;
+		this.logger_.info(`External download started: ${operation}`);
+		
+		// Set a timeout to automatically clear the flag if download hangs (30 minutes)
+		this.external_download_timeout_ = setTimeout(() => {
+			this.logger_.error(`External download timeout reached for: ${operation}. Forcing clear of download flag.`);
+			this.clearExternalDownloadInProgress(`${operation} (timeout)`);
+		}, 30 * 60 * 1000); // 30 minutes
+	}
+
+	private clearExternalDownloadInProgress(operation: string) {
+		this.external_download_in_progress_ = false;
+		this.logger_.info(`External download completed: ${operation}`);
+		
+		if (this.external_download_timeout_) {
+			clearTimeout(this.external_download_timeout_);
+			this.external_download_timeout_ = undefined;
+		}
+	}
+
+	private forceClearExternalDownload() {
+		if (this.external_download_in_progress_) {
+			this.logger_.warn("Manually clearing stuck external download");
+			this.clearExternalDownloadInProgress("Manual Clear");
+			dialog.showMessageBox(this.win_, {
+				title: "External Download Cleared",
+				message: "The external download flag has been manually cleared. You can now start new downloads.",
+				type: "info",
+			});
+		} else {
+			dialog.showMessageBox(this.win_, {
+				title: "No Download In Progress",
+				message: "No external download is currently in progress.",
+				type: "info",
+			});
+		}
+	}
 
 	public generateRandomData() {
 		if (this.lastview_ && this.lastview_ === 'info') {

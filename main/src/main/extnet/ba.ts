@@ -128,7 +128,6 @@ export class BlueAlliance extends NetBase {
             let query = "/event/" + evkey + "/matches" ;
             this.request(query)
                 .then((obj) => {
-
                     if (str) {
                         //
                         // If the string 'noplayoffs' is in the environment variable, filter out playoff matches.  To simulate the
@@ -152,7 +151,12 @@ export class BlueAlliance extends NetBase {
                             }                            
                         }
                     }
-                    resolve(obj) ;
+                    if (!obj) {
+                        resolve([]) ;
+                    }
+                    else {
+                        resolve(obj) ;
+                    }
                 })
                 .catch((err) => {
                     reject(err) ;
