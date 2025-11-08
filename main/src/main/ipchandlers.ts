@@ -2,7 +2,7 @@ import { scappbase } from "../main";
 import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { TabletData } from "./project/tabletmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCTeamInfo } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
 
 function isScoutType() : boolean {
@@ -864,6 +864,36 @@ export async function getGraphData(cmd: string, ...args: any[]) {
         let central : SCCentral = scappbase as SCCentral ;
         if (args.length === 1 && typeof args[0] === 'object') {
             central.getGraphData(args[0] as IPCGraphConfig) ;
+        }
+    }
+}
+
+// prompt-string-request
+export async function promptStringRequest(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        if (args.length === 1 && typeof args[0] === 'object') {
+            const request = args[0] as IPCPromptStringRequest;
+            const result = await scappbase.promptString(request.title, request.message, request.defaultValue, request.placeholder);
+            const response: IPCPromptStringResponse = {
+                id: request.id,
+                value: result
+            };
+            scappbase.sendToRenderer("prompt-string-response", response);
+        }
+    }
+}
+
+// prompt-string-response
+export async function promptStringResponse(cmd: string, ...args: any[]) {
+    if (scappbase) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        if (args.length === 1 && typeof args[0] === 'object') {
+            const response = args[0] as IPCPromptStringResponse;
+            if (scappbase.applicationType === 'central') {
+                const central = scappbase as SCCentral;
+                central.handlePromptStringResponse(response);
+            }
         }
     }
 }

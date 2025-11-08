@@ -29,7 +29,9 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getGraphData,
          getPicklistData,
          savePicklistConfig,
-         getPicklistConfigs
+         getPicklistConfigs,
+         promptStringRequest,
+         promptStringResponse
 } from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
@@ -197,6 +199,9 @@ app.on("ready", () => {
     ipcMain.on('get-picklist-configs', (event, ...args) => { getPicklistConfigs('get-picklist-config', ...args)}) ;
     ipcMain.on('save-picklist-config', (event, ...args) => { savePicklistConfig('save-picklist-config', ...args)}) ;
     ipcMain.on('get-picklist-data', (event, ...args) => { getPicklistData('get-picklist-data', ...args)}) ;
+
+    ipcMain.on('prompt-string-request', (event, ...args) => { promptStringRequest('prompt-string-request', ...args)}) ;
+    ipcMain.on('prompt-string-response', (event, ...args) => { promptStringResponse('prompt-string-response', ...args)}) ;
 
     createWindow() ;
 }) ;

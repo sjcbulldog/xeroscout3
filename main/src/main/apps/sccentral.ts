@@ -15,7 +15,7 @@ import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
 import { FormManager } from "../project/formmgr";
-import { IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCPickListConfig, IPCAppType } from "../../shared/ipc";
+import { IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCPickListConfig, IPCAppType, IPCPromptStringRequest, IPCPromptStringResponse } from "../../shared/ipc";
 import { UDPBroadcast } from "../sync/udpbroadcast";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
@@ -88,6 +88,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private packetHandlers_ : Map<PacketType, (obj: PacketObj) => PacketObj | undefined> = new Map<PacketType, (obj: PacketObj) => PacketObj | undefined>() ;
 	private external_download_in_progress_ : boolean = false ;
 	private tablets_syncing_ : boolean = false ;
+	private promptResolvers : Map<string, (value: string | undefined) => void> = new Map() ;
 	private external_download_timeout_: NodeJS.Timeout | undefined = undefined ;
 
 	constructor(win: BrowserWindow, args: string[]) {
@@ -444,7 +445,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			label: 'Import Data From Statbotics',
 			enabled: false,
 			click: () => {
-				this.importStatboticsData();
+				this.importStatboticsData().catch(err => {
+					this.logger_.error(`Error importing Statbotics data: ${err.message}`);
+				});
 			},
 		});
 		datamenu.submenu?.append(downloadSTData);
@@ -765,7 +768,27 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}
 	}
 
-	private importBlueAllianceData() {
+	public async promptString(title: string, message: string, defaultValue?: string, placeholder?: string) : Promise<string | undefined> {
+		return new Promise<string | undefined>((resolve) => {
+			const requestId = Math.random().toString(36).substring(2, 15);
+			
+			// Store the resolver function to call when we get the response
+			this.promptResolvers.set(requestId, resolve);
+			
+			// Send request to renderer
+			const request: IPCPromptStringRequest = {
+				id: requestId,
+				title,
+				message,
+				defaultValue,
+				placeholder
+			};
+			
+			this.sendToRenderer("prompt-string-request", request);
+		});
+	}
+
+	private async importBlueAllianceData() {
 		// Check if tablets are syncing
 		if (this.tablets_syncing_) {
 			let html = "Cannot download data while tablets are syncing. Please wait for tablet sync to complete and try again.";
@@ -811,10 +834,17 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		if (fev) {
 
 			if (!fev.key) {
-				let key = await this.promptString('Blue Alliance Event Key', 'Enter the Blue Alliance event key (e.g. 2024miket)', '')
+				let key = await this.promptString('Blue Alliance Event Key', 'Enter the Blue Alliance event key (e.g. 2024miket)', '');
+				if (key) {
+					fev.key = key;
+					// Save the project immediately after setting the key so it's available for future use
+					this.project!.writeEventFile();
+				} else {
+					// User cancelled, stop the import
+					this.clearExternalDownloadInProgress("Blue Alliance Data Import (cancelled)");
+					return;
+				}
 			}
-
-			fev.key = key ;
 
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer("set-status-title","Loading match data") ;
@@ -852,7 +882,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}
 	}	
 
-	private importStatboticsData() {
+	private async importStatboticsData() {
 		// Check if tablets are syncing
 		if (this.tablets_syncing_) {
 			let html = "Cannot download data while tablets are syncing. Please wait for tablet sync to complete and try again.";
@@ -896,6 +926,20 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 		let fev: BAEvent | undefined = this.project?.info?.frcev_;
 		if (fev) {
+
+			if (!fev.key) {
+				let key = await this.promptString('Blue Alliance Event Key', 'Enter the Blue Alliance event key (e.g. 2024miket)', '');
+				if (key) {
+					fev.key = key;
+					// Save the project immediately after setting the key so it's available for future use
+					this.project!.writeEventFile();
+				} else {
+					// User cancelled, stop the import
+					this.clearExternalDownloadInProgress("Statbotics Data Import (cancelled)");
+					return;
+				}
+			}
+
 			this.sendToRenderer("set-status-visible", true);
 			this.sendToRenderer(
 				"set-status-title",
@@ -2149,5 +2193,16 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		if (this.project && this.project.isInitialized()) {
 			this.project.data_mgr_!.setMatchFormatFormulas(formulas)
 		}
-	}		
+	}
+
+	// Handle the response from the renderer
+	public handlePromptStringResponse(response: IPCPromptStringResponse): void {
+		if (this.promptResolvers && this.promptResolvers.has(response.id)) {
+			const resolver = this.promptResolvers.get(response.id);
+			this.promptResolvers.delete(response.id);
+			if (resolver) {
+				resolver(response.value);
+			}
+		}
+	}
 }

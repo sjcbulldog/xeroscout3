@@ -564,5 +564,10 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
         return ret;
     }    
  
+    // Implementation of abstract promptString method - Coach app does not support user prompts
+    public async promptString(title: string, message: string, defaultValue?: string, placeholder?: string): Promise<string | undefined> {
+        // Coach app does not support user input prompts, always return undefined
+        return Promise.resolve(undefined);
+    }
 
 }

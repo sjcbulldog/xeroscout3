@@ -392,3 +392,16 @@ export interface IPCPickListData {
     config: IPCPickListConfig ;                     // The picklist configuration
     data: IPCPickListTeamData[] ;                   // The data items for the pick list, for each column
 }
+
+export interface IPCPromptStringRequest {
+    id: string ;                                    // Unique identifier for this request
+    title: string ;                                 // The title for the dialog
+    message: string ;                               // The message to display to the user
+    defaultValue?: string ;                         // Optional default value for the input field
+    placeholder?: string ;                          // Optional placeholder text for the input field
+}
+
+export interface IPCPromptStringResponse {
+    id: string ;                                    // The ID from the corresponding request
+    value?: string ;                                // The entered string value, undefined if cancelled
+}

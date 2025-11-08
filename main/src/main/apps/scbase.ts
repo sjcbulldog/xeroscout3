@@ -95,6 +95,9 @@ export abstract class SCBase {
 	public abstract canQuit(): boolean;
 	public abstract close() : void ;
 
+	// Abstract method to be implemented by derived classes for prompting user input
+	public abstract promptString(title: string, message: string, defaultValue?: string, placeholder?: string): Promise<string | undefined>;
+
 	// process.vesions.node
 	// process.version
 

@@ -16,7 +16,7 @@ import {  XeroMatchStatus   } from "../views/matchstatus.js";
 import {  MessageOverlay   } from "../messages/messageoverlay.js";
 import {  XeroTeamDatabaseView   } from "../views/teamdbview.js";
 import {  XeroMatchDatabaseView   } from "../views/matchdbview.js";
-import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView   } from "../shared/ipc.js";
+import {  IPCAppInit, IPCAppType, IPCSetStatus, IPCSetView, IPCPromptStringRequest, IPCPromptStringResponse   } from "../shared/ipc.js";
 import { HintManager } from "./hintmgr.js";
 import { ImageDataSource } from "./imagesrc.js";
 import { XeroSelectTablet } from "../views/selecttablet/selecttablet.js";
@@ -29,6 +29,7 @@ import { EditTeamsView } from "../views/editteams/editteamsview.js";
 import { EditMatchesView } from "../views/editmatches/editmatchesview.js";
 import { SingleTeamView } from "../views/singleteam/singleteamview.js";
 import { PickListView } from "../views/picklist/picklistview.js";
+import { XeroStringDialog } from "../widgets/xerostringdialog.js";
 
 let mainapp: XeroApp | undefined = undefined ;
 
@@ -63,6 +64,7 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('xero-app-init', this.init.bind(this)) ;
         this.registerCallback('resize-window', this.resizeWinow.bind(this)) ;
         this.registerCallback('tablet-title', this.setTabletTitle.bind(this)) ;
+        this.registerCallback('prompt-string-request', this.handlePromptStringRequest.bind(this)) ;
     }
 
     public get appType() : IPCAppType {
@@ -97,6 +99,38 @@ export class XeroApp extends XeroMainProcessInterface {
 
     private setTabletTitle(title: string) {
         document.title = title ;
+    }
+
+    private async handlePromptStringRequest(request: IPCPromptStringRequest) {
+        const dialog = new XeroStringDialog(
+            request.title,
+            request.message,
+            request.defaultValue,
+            request.placeholder
+        );
+
+        // Create a promise that resolves when the dialog is closed
+        const result = await new Promise<boolean>((resolve) => {
+            dialog.on('closed', (ok: boolean) => {
+                resolve(ok);
+            });
+            
+            // Show the dialog centered on the main view pane
+            if (this.right_view_pane_) {
+                dialog.showCentered(this.right_view_pane_.elem);
+            } else {
+                dialog.showCentered(document.body);
+            }
+        });
+        
+        // Create response
+        const response: IPCPromptStringResponse = {
+            id: request.id,
+            value: result ? dialog.getResult() : undefined
+        };
+
+        // Send response back to main process
+        this.request('prompt-string-response', response);
     }
 
     private resizeWinow() {

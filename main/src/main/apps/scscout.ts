@@ -1244,4 +1244,10 @@ export class SCScout extends SCBase {
             this.sendNavData() ;
         }
     }
+
+    // Implementation of abstract promptString method - Scout app does not support user prompts
+    public async promptString(title: string, message: string, defaultValue?: string, placeholder?: string): Promise<string | undefined> {
+        // Scout app does not support user input prompts, always return undefined
+        return Promise.resolve(undefined);
+    }
 }

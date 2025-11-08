@@ -221,3 +221,86 @@
 .xero-popup-checkbox {
 	margin-left: 10px;
 }
+
+/* Dialog styles */
+.xero-popup-form-edit-dialog {
+	position: absolute;
+	background-color: white;
+	border: 2px solid #333;
+	border-radius: 8px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	min-width: 300px;
+	max-width: 500px;
+	font-family: Arial, sans-serif;
+}
+
+.xero-popup-form-edit-dialog-topbar {
+	background-color: #f0f0f0;
+	border-bottom: 1px solid #ccc;
+	padding: 10px 15px;
+	font-weight: bold;
+	font-size: 16px;
+	cursor: move;
+	border-radius: 6px 6px 0 0;
+}
+
+.xero-popup-form-edit-dialog-client {
+	padding: 20px;
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+.xero-popup-form-edit-dialog-buttons {
+	padding: 10px 20px;
+	border-top: 1px solid #ccc;
+	text-align: right;
+	background-color: #f9f9f9;
+	border-radius: 0 0 6px 6px;
+}
+
+.xero-popup-form-edit-dialog-button {
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	padding: 8px 16px;
+	margin-left: 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	min-width: 70px;
+}
+
+.xero-popup-form-edit-dialog-button:hover {
+	background-color: #45a049;
+}
+
+.xero-popup-form-edit-dialog-button:last-child {
+	background-color: #f44336;
+}
+
+.xero-popup-form-edit-dialog-button:last-child:hover {
+	background-color: #da190b;
+}
+
+/* String dialog specific styles */
+.xero-string-dialog-message {
+	margin-bottom: 15px;
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.xero-string-dialog-input {
+	width: 100%;
+	padding: 8px 12px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 14px;
+	font-family: Arial, sans-serif;
+	box-sizing: border-box;
+}
+
+.xero-string-dialog-input:focus {
+	outline: none;
+	border-color: #4CAF50;
+	box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
