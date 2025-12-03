@@ -800,7 +800,7 @@ export class PickListView extends XeroView {
 
         const applyButton = document.createElement('button') ;
         applyButton.type = 'button' ;
-        applyButton.innerText = 'Apply red → green gradient' ;
+        applyButton.innerText = 'Apply 5-point gradient (min→Q1→median→Q3→max)' ;
         applyButton.style.padding = '6px 8px' ;
         applyButton.style.margin = '2px 0' ;
         applyButton.style.border = '1px solid rgba(0,0,0,0.2)' ;
@@ -1065,23 +1065,48 @@ export class PickListView extends XeroView {
         }
 
         numericEntries.sort((a, b) => a.value - b.value) ;
-        const min = numericEntries[0].value ;
-        const max = numericEntries[numericEntries.length - 1].value ;
+        const sortedValues = numericEntries.map(entry => entry.value).sort((a, b) => a - b) ;
+        const min = sortedValues[0] ;
+        const q1 = this.computePercentile(sortedValues, 0.25) ;
+        const median = this.computePercentile(sortedValues, 0.5) ;
+        const q3 = this.computePercentile(sortedValues, 0.75) ;
+        const max = sortedValues[sortedValues.length - 1] ;
 
         if (!config.cellColors) {
             config.cellColors = {} ;
         }
         config.cellColors[field] = {} ;
 
-        const denominator = max - min ;
+        const stops = [
+            { value: min, color: '#e67c73' },   // Custom min color
+            { value: q1, color: '#f3a96d' },    // Custom Q1 color
+            { value: median, color: '#ffd666' },// Custom median color
+            { value: q3, color: '#abc978' },    // Custom Q3 color
+            { value: max, color: '#57bb8a' }    // Custom max color
+        ] ;
+
+        const isFlat = max === min ;
         numericEntries.forEach(entry => {
-            let ratio = denominator === 0 ? 0.5 : (entry.value - min) / denominator ;
-            ratio = Math.max(0, Math.min(1, ratio)) ;
-            const color = this.interpolateColor('#f44336', '#4caf50', ratio) ;
-            config.cellColors![field]![entry.team] = color ;
+            if (isFlat) {
+                config.cellColors![field]![entry.team] = stops[2].color ;
+                return ;
+            }
+
+            for (let i = 0; i < stops.length - 1; i++) {
+                const start = stops[i] ;
+                const end = stops[i + 1] ;
+                const reachedEnd = i === stops.length - 2 ;
+                if (entry.value <= end.value || reachedEnd) {
+                    const span = end.value - start.value ;
+                    const ratio = span === 0 ? 0 : (entry.value - start.value) / span ;
+                    const color = this.interpolateColor(start.color, end.color, Math.max(0, Math.min(1, ratio))) ;
+                    config.cellColors![field]![entry.team] = color ;
+                    return ;
+                }
+            }
         }) ;
 
-        config.columnGradients![field] = 'minmax' ;
+        config.columnGradients![field] = 'box5' ;
 
         // Apply formatting to each row
         rows.forEach(row => this.applyStoredColorsToRow(row)) ;
@@ -1138,6 +1163,20 @@ export class PickListView extends XeroView {
         const g = Math.round(start.g + (end.g - start.g) * ratio) ;
         const b = Math.round(start.b + (end.b - start.b) * ratio) ;
         return `#${this.componentToHex(r)}${this.componentToHex(g)}${this.componentToHex(b)}` ;
+    }
+
+    private computePercentile(sortedValues: number[], percentile: number): number {
+        if (sortedValues.length === 0) {
+            return 0 ;
+        }
+        const index = (sortedValues.length - 1) * percentile ;
+        const lower = Math.floor(index) ;
+        const upper = Math.ceil(index) ;
+        if (lower === upper) {
+            return sortedValues[lower] ;
+        }
+        const weight = index - lower ;
+        return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight ;
     }
 
     private hexToRgb(hex: string): { r: number ; g: number ; b: number } {

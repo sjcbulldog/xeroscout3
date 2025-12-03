@@ -371,7 +371,7 @@ export interface IPCPickListConfig {
     columns: IPCDataItem[] ;                        // The data columns to display in the pick list
     notes: string[] ;                               // The notes for each team, in order of the teams array
     cellColors?: { [field: string]: { [team: number]: string } } ;
-    columnGradients?: { [field: string]: 'minmax' } ;
+    columnGradients?: { [field: string]: 'minmax' | 'box5' } ;
     positionWidth?: number ;                        // The width of the Position column (optional)
     teamWidth?: number ;                            // The width of the Team column (optional)
     nicknameWidth?: number ;                        // The width of the Nickname column (optional)
