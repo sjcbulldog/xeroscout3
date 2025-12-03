@@ -271,6 +271,10 @@ body {
     border: gray 4px solid;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    min-width: 1000px;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow: hidden;
 }
 
 .xero-popup-form-edit-dialog-topbar {
@@ -290,6 +294,8 @@ body {
     align-items: center;
     flex-grow: 1;
     padding: 2px ;
+    max-height: calc(90vh - 60px);
+    overflow-y: auto;
 }
 
 .xero-popup-form-edit-dialog-buttons {

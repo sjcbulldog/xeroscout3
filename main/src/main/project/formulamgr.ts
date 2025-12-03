@@ -20,6 +20,13 @@ export class FormulaManager extends Manager {
     }
 
     public get formulas() : IPCFormula[] {
+        // Older project files may not contain coach formulas; ensure arrays exist
+        if (!this.info_.formulas_) {
+            this.info_.formulas_ = [] ;
+        }
+        if (!this.info_.coach_formulas_) {
+            this.info_.coach_formulas_ = [] ;
+        }
         return [...this.info_.formulas_, ...this.info_.coach_formulas_] ;
     }
 

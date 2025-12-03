@@ -1162,21 +1162,32 @@ export class Expr {
 			let result: IPCTypedDataValue[] = [];
 			Expr.flatten(args, result);
 			let sum = 0.0;
+			let count = 0;
 			for (let i = 0; i < result.length; i++) {
 				if (DataValue.isError(result[i])) {
 					return result[i];
+				} else if (DataValue.isNull(result[i])) {
+					continue;
 				} else if (!DataValue.isNumber(result[i])) {
 					return {
 						type: "error",
 						value: new Error("Invalid argument type for function average"),
 					};
 				}
-				sum += (result[i].value as number) ;
+				sum += (result[i].value as number);
+				count++;
+			}
+
+			if (count === 0) {
+				return {
+					type: "error",
+					value: new Error("No non-null values for function average"),
+				};
 			}
 
 			return {
 				type: "real",
-				value: sum / result.length,
+				value: sum / count,
 			}
 		});
 
