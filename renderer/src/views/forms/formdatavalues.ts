@@ -29,4 +29,8 @@ export class XeroFormDataValues {
             this.dvalues_.push({ tag, value });
         }
     }
+
+    public clear(): void {
+        this.dvalues_ = [] ;
+    }
 }

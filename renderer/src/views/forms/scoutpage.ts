@@ -104,7 +104,13 @@ export class XeroFormScoutSectionPage extends XeroWidget {
             }
         }
 
-        let data = this.data_.get(control.item.tag) ;
+        let data = undefined ;
+        if (control.item.type === 'stopwatch') {
+            data = this.data_.get(control.item.tag + '_segments') ;
+        }
+        if (!data) {
+            data = this.data_.get(control.item.tag) ;
+        }
         if (data) {
             control.setData(data) ;
         }

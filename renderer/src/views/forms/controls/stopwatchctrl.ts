@@ -1,0 +1,171 @@
+import { IPCStopwatchItem, IPCTypedDataValue } from "../../../shared/ipc.js";
+import { DataValue } from "../../../shared/datavalue.js";
+import { XeroRect } from "../../../shared/xerogeom.js";
+import { XeroView } from "../../xeroview.js";
+import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";
+import { EditStopwatchDialog } from "../dialogs/editstopwatchdialog.js";
+import { XeroScoutFormView } from "../scoutformview.js";
+import { FormControl } from "./formctrl.js";
+
+export class StopwatchControl extends FormControl {
+    private static item_desc_: IPCStopwatchItem = {
+        type: 'stopwatch',
+        tag: '',
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        color: 'black',
+        background: 'white',
+        fontFamily: 'Arial',
+        fontSize: 36,
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        datatype: 'real',
+        transparent: true,
+    } ;
+
+    private start_stop_button_? : HTMLButtonElement ;
+    private current_time_? : HTMLSpanElement ;
+
+    constructor(view: XeroView, tag: string, bounds: XeroRect) {
+        super(view, StopwatchControl.item_desc_) ;
+        this.setTag(tag) ;
+        this.setBounds(bounds) ;
+    }
+
+    public copyObject(): FormControl {
+        return new StopwatchControl(this.view, this.item.tag, this.bounds) ;
+    }
+
+    public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number): void {
+        if (this.ctrl) {
+            let item = this.item as IPCStopwatchItem ;
+            this.setPosition(scale, xoff, yoff) ;
+
+            this.start_stop_button_!.style.backgroundColor = item.background ;
+            this.start_stop_button_!.style.color = item.color ;
+            this.start_stop_button_!.style.fontFamily = item.fontFamily ;
+            this.start_stop_button_!.style.fontSize = item.fontSize + 'px' ;
+            this.start_stop_button_!.style.fontWeight = item.fontWeight ;
+            this.start_stop_button_!.style.fontStyle = item.fontStyle ;
+
+            this.current_time_!.style.backgroundColor = item.background ;
+            this.current_time_!.style.color = item.color ;
+            this.current_time_!.style.fontFamily = item.fontFamily ;
+            this.current_time_!.style.fontSize = item.fontSize + 'px' ;
+            this.current_time_!.style.fontWeight = item.fontWeight ;
+            this.current_time_!.style.fontStyle = item.fontStyle ;
+        }
+    }
+
+    private startStopStopwatch(): void {
+        if (this.view instanceof XeroScoutFormView) {
+            let view = this.view as XeroScoutFormView ;
+            if (view.isStopwatchRunning(this.item.tag)) {
+                view.stopStopwatch(this.item.tag) ;
+                this.start_stop_button_!.innerText = 'Start' ;
+            }
+            else {
+                view.startStopwatch(this.item.tag, this.displayStopwatch.bind(this)) ;
+                this.start_stop_button_!.innerText = 'Stop' ;
+            }
+        }
+    }
+
+    private displayStopwatch(): void {
+        if (this.current_time_ && this.view instanceof XeroScoutFormView) {
+            let view = this.view as XeroScoutFormView ;
+            let value = view.getStopwatchValue(this.item.tag) ;
+            let minutes = Math.floor(value / 60) ;
+            let seconds = Math.floor(value % 60) ;
+            let tenths = Math.floor((value - Math.floor(value)) * 10) ;
+            this.current_time_!.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${tenths}` ;
+        }
+    }
+
+    public createForEdit(parent: HTMLElement, xoff: number, yoff: number): void {
+        super.createForEdit(parent, xoff, yoff) ;
+
+        this.ctrl = document.createElement('div') ;
+        this.setClassList(this.ctrl, 'edit') ;
+
+        this.current_time_ = document.createElement('span') ;
+        this.setClassList(this.current_time_, 'edit', 'timer') ;
+        this.current_time_!.innerText = '00:00.0' ;
+        this.ctrl.appendChild(this.current_time_!) ;
+
+        this.start_stop_button_ = document.createElement('button') ;
+        this.setClassList(this.start_stop_button_, 'edit', 'button') ;
+        this.start_stop_button_!.innerText = 'Start' ;
+        this.start_stop_button_!.disabled = true ;
+        this.ctrl.appendChild(this.start_stop_button_!) ;
+
+        this.updateFromItem(true, 1.0, xoff, yoff) ;
+        parent.appendChild(this.ctrl) ;
+    }
+
+    public createForScouting(parent: HTMLElement, scale: number, xoff: number, yoff: number): void {
+        this.ctrl = document.createElement('div') ;
+        this.setClassList(this.ctrl, 'scout') ;
+
+        this.current_time_ = document.createElement('span') ;
+        this.setClassList(this.current_time_, 'scout', 'timer') ;
+        this.current_time_!.innerText = '00:00.0' ;
+        this.ctrl.appendChild(this.current_time_!) ;
+
+        this.start_stop_button_ = document.createElement('button') ;
+        this.setClassList(this.start_stop_button_, 'scout', 'button') ;
+        this.start_stop_button_!.innerText = 'Start' ;
+        this.start_stop_button_!.addEventListener('click', this.startStopStopwatch.bind(this)) ;
+        this.ctrl.appendChild(this.start_stop_button_!) ;
+
+        this.updateFromItem(false, scale, xoff, yoff) ;
+
+        if (this.view instanceof XeroScoutFormView) {
+            let view = this.view as XeroScoutFormView ;
+            if (view.isStopwatchRunning(this.item.tag)) {
+                this.start_stop_button_!.innerText = 'Stop' ;
+                view.setStopwatchCallback(this.item.tag, this.displayStopwatch.bind(this)) ;
+            }
+            this.displayStopwatch() ;
+        }
+
+        parent.appendChild(this.ctrl) ;
+    }
+
+    public createEditDialog(): EditFormControlDialog {
+        return new EditStopwatchDialog(this) ;
+    }
+
+    public getData(): IPCTypedDataValue | undefined {
+        if (this.view instanceof XeroScoutFormView) {
+            let view = this.view as XeroScoutFormView ;
+            return DataValue.fromReal(view.getStopwatchValue(this.item.tag)) ;
+        }
+        return undefined ;
+    }
+
+    public setData(data: IPCTypedDataValue): void {
+        if (!(this.view instanceof XeroScoutFormView)) {
+            return ;
+        }
+
+        let view = this.view as XeroScoutFormView ;
+        if (DataValue.isString(data)) {
+            view.setStopwatchSerialized(this.item.tag, DataValue.toString(data)) ;
+        }
+
+        if (this.start_stop_button_) {
+            if (view.isStopwatchRunning(this.item.tag)) {
+                this.start_stop_button_.innerText = 'Stop' ;
+                view.setStopwatchCallback(this.item.tag, this.displayStopwatch.bind(this)) ;
+            }
+            else {
+                this.start_stop_button_.innerText = 'Start' ;
+            }
+        }
+
+        this.displayStopwatch() ;
+    }
+}

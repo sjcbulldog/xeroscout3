@@ -11,6 +11,7 @@ import { UpDownControl  } from "./controls/updownctrl.js";
 import { BooleanControl  } from "./controls/booleanctrl.js";
 import { MultipleChoiceControl  } from "./controls/choicectrl.js";
 import { SelectControl  } from "./controls/selectctrl.js";
+import { StopwatchControl } from "./controls/stopwatchctrl.js";
 import { TimerControl  } from "./controls/timerctrl.js";
 import { XeroLogger  } from "../../utils/xerologger.js";
 import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
@@ -133,6 +134,7 @@ export class XeroEditFormView extends XeroView {
             new XeroPopupMenuItem('Multiple Choice', this.addNewMultipleChoiceCtrl.bind(this)),
             new XeroPopupMenuItem('Select', this.addNewSelectCtrl.bind(this)),
             new XeroPopupMenuItem('Timer', this.addNewTimerCtrl.bind(this)),
+            new XeroPopupMenuItem('Stopwatch', this.addNewStopwatchCtrl.bind(this)),
         ]
 
         this.ctrl_menu_ = new XeroPopupMenu('controls', ctrlitems) ;
@@ -315,6 +317,7 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('F9', false, false, false, 'Insert a new select control', this.addNewSelectCtrl.bind(this));
         this.keybindings_.addKeybinding('F10', false, false, false, 'Insert a new timer control', this.addNewTimerCtrl.bind(this));
         this.keybindings_.addKeybinding('F11', false, false, false, 'Insert a new image control', this.addNewImageCtrl.bind(this));
+        this.keybindings_.addKeybinding('F12', false, false, false, 'Insert a new stopwatch control', this.addNewStopwatchCtrl.bind(this));
     }
 
     private showErrors() {
@@ -527,6 +530,19 @@ export class XeroEditFormView extends XeroView {
         }        
     }
 
+    private addNewStopwatchCtrl() {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
+            let formctrl = new StopwatchControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(250, 50))) ;
+
+            this.addItemToCurrentSection(formctrl.item) ;
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
+            this.modified(new UndoStackEntry('add', 'control', [formctrl])) ;
+        }
+        else {
+            alert('You cannot create a stopwatch control without a section. Use the "Section" menu to add a section first.') ;
+        }
+    }
+
     private updateErrors(tag: string, errors: string[]) {
         let ctrls = this.findControlByTag(tag) ;
         for(let ctrl of ctrls) {
@@ -613,6 +629,10 @@ export class XeroEditFormView extends XeroView {
         }
         else if (item.type === 'timer') {
             formctrl = new TimerControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'stopwatch') {
+            formctrl = new StopwatchControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
             formctrl.update(item) ;
         }
         else {

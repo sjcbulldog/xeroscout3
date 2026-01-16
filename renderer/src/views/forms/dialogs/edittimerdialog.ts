@@ -4,7 +4,7 @@ import {  IPCTimerItem  } from "../../../shared/ipc.js";
 
 export class EditTimerDialog extends EditFormControlDialog {
     constructor(formctrl: FormControl) {
-        super('Edit UpDown', formctrl) ;
+        super('Edit Timer', formctrl) ;
     }
 
     protected async populateDialog(pdiv: HTMLElement) : Promise<void> {

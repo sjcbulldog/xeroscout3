@@ -2,9 +2,9 @@ import Papa from "papaparse";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { BlueAlliance } from "../extnet/ba";
-import { Project } from "../project/project";
-import { BrowserWindow, dialog, Menu, MenuItem, shell } from "electron";
+	import { BlueAlliance } from "../extnet/ba";
+	import { Project } from "../project/project";
+	import { BrowserWindow, dialog, Menu, MenuItem, shell } from "electron";
 import { TCPSyncServer } from "../sync/tcpserver";
 import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
@@ -14,10 +14,10 @@ import { TeamDataModel } from "../model/teammodel";
 import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
-import { FormManager } from "../project/formmgr";
-import { IPCChange, IPCScoutResult, IPCScoutResults, IPCCheckDBViewFormula, IPCDataSet, IPCGraphConfig, IPCTeamInfo, IPCPickListConfig, IPCAppType, IPCPromptStringRequest, IPCPromptStringResponse } from "../../shared/ipc";
-import { UDPBroadcast } from "../sync/udpbroadcast";
-import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
+	import { FormManager } from "../project/formmgr";
+	import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCScoutResult, IPCScoutResults, IPCTeamInfo, IPCTypedDataValue } from "../../shared/ipc";
+	import { UDPBroadcast } from "../sync/udpbroadcast";
+	import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
 export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly recentFilesSetting: string = "recent-files";
@@ -81,8 +81,12 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private blueMenuItem_ : MenuItem | undefined ;
 	private reverseImage_: MenuItem | undefined ;
 	private importImage_ : MenuItem | undefined ;
-	private lastformview_? : string ;
-	private synctype_ : string = 'data' ;
+		private lastformview_? : string ;
+		private preview_match_db_col_cfg_: IPCProjColumnsConfig = { columns: [], frozenColumnCount: 0 } ;
+		private preview_match_db_col_descs_: IPCColumnDesc[] = [] ;
+		private preview_match_db_values_: Map<string, IPCTypedDataValue> = new Map<string, IPCTypedDataValue>() ;
+		private preview_match_db_schema_key_: string = '' ;
+		private synctype_ : string = 'data' ;
 	private team_number_ : number =  1425 ;
 	private udp_broadcast_ : UDPBroadcast | undefined = undefined ;
 	private packetHandlers_ : Map<PacketType, (obj: PacketObj) => PacketObj | undefined> = new Map<PacketType, (obj: PacketObj) => PacketObj | undefined>() ;
@@ -1255,6 +1259,75 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private setFormView(view: string) {
 		this.lastformview_ = view ;
 		this.setView('form-scout', view);
+	}
+
+	private ensurePreviewMatchDBSchema() : boolean {
+		if (!this.project || !this.project.isInitialized() || !this.project.form_mgr_?.hasMatchForm()) {
+			return false ;
+		}
+
+		let cols = this.project.form_mgr_!.extractMatchFormFields() ;
+		if (cols instanceof Error) {
+			this.logger_.error('error extracting match form fields for preview match DB', cols) ;
+			return false ;
+		}
+
+		let schema_key = cols.map((c) => `${c.name}:${c.type}`).join('|') ;
+		if (schema_key !== this.preview_match_db_schema_key_) {
+			this.preview_match_db_schema_key_ = schema_key ;
+			this.preview_match_db_col_descs_ = cols ;
+			this.preview_match_db_col_cfg_ = {
+				frozenColumnCount: 0,
+				columns: cols.map((c) => {
+					return {
+						name: c.name,
+						width: -1,
+						hidden: c.name.endsWith('_segments'),
+					};
+				}),
+			} ;
+			this.preview_match_db_values_.clear() ;
+		}
+
+		return true ;
+	}
+
+	public resetPreviewMatchDB() : void {
+		this.preview_match_db_values_.clear() ;
+		this.sendPreviewMatchDB() ;
+	}
+
+	public updatePreviewMatchDB(values: IPCNamedDataValue[]) : void {
+		if (!this.ensurePreviewMatchDBSchema()) {
+			return ;
+		}
+
+		let names = new Set(this.preview_match_db_col_descs_.map((c) => c.name)) ;
+		for (let one of values) {
+			if (one && typeof one.tag === 'string' && one.value && names.has(one.tag)) {
+				this.preview_match_db_values_.set(one.tag, one.value) ;
+			}
+		}
+	}
+
+	public sendPreviewMatchDB() : void {
+		if (!this.ensurePreviewMatchDBSchema()) {
+			return ;
+		}
+
+		let row : any = {} ;
+		for (let col of this.preview_match_db_col_descs_) {
+			row[col.name] = this.preview_match_db_values_.get(col.name) || { type: 'null', value: null } ;
+		}
+
+		let dataobj : IPCDatabaseData = {
+			column_configurations: this.preview_match_db_col_cfg_,
+			column_definitions: this.preview_match_db_col_descs_,
+			keycols: [],
+			data: [row],
+		};
+
+		this.sendToRenderer('send-preview-match-db', dataobj) ;
 	}
 
 	private setFormEdit(name: string) {

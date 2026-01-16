@@ -31,7 +31,10 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          savePicklistConfig,
          getPicklistConfigs,
          promptStringRequest,
-         promptStringResponse
+         promptStringResponse,
+         getPreviewMatchDB,
+         updatePreviewMatchDB,
+         resetPreviewMatchDB
 } from "./main/ipchandlers" ;
 import { runUnitTests } from "./main/units/unittest";
 
@@ -161,6 +164,9 @@ app.on("ready", () => {
     ipcMain.on('update-match-db', (event, ...args) => { updateMatchDB('update-match-db', ...args)}) ;
     ipcMain.on('get-team-db', (event, ...args) => { getTeamDB('get-team-db', ...args)}) ;
     ipcMain.on('update-team-db', (event, ...args) => { updateTeamDB('update-team-db', ...args)}) ;
+    ipcMain.on('get-preview-match-db', (event, ...args) => { getPreviewMatchDB('get-preview-match-db', ...args)});
+    ipcMain.on('update-preview-match-db', (event, ...args) => { updatePreviewMatchDB('update-preview-match-db', ...args)});
+    ipcMain.on('reset-preview-match-db', (event, ...args) => { resetPreviewMatchDB('reset-preview-match-db', ...args)});
     ipcMain.on('get-form', (event, ...args) => { getForm('get-form', ...args)});
     ipcMain.on('get-image-data', (event, ...args) => { getImageData('get-image-data', ...args)});
     ipcMain.on('save-form', (event, ...args) => { saveForm('save-form', ...args)});

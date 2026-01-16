@@ -13,8 +13,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
   //
   // These go from the render process to the main process
   //
-  send: (channel: string, data: any) => {
-      let validChannels = [
+	    send: (channel: string, data: any) => {
+	      let validChannels = [
         'splitter-changed',               // apps/xeroapp.ts
         'get-nav-data',                   // xeronav.ts
         'sync-ipaddr',                    // views/syncipaddr/syncipaddr.ts
@@ -49,7 +49,11 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'get-team-status',                // views/teamstatus.ts
         'get-match-status',               // views/matchstatus.ts
         'set-tablet-name-purpose',        // views/selecttablet/selecttablet.ts
-        'provide-result',                 // views/forms/scoutformview.ts
+	        'provide-result',                 // views/forms/scoutformview.ts
+
+	        'get-preview-match-db',           // views/forms/scoutformview.ts (central match form preview)
+	        'update-preview-match-db',        // views/forms/scoutformview.ts (central match form preview)
+	        'reset-preview-match-db',         // views/forms/scoutformview.ts (central match form preview)
 
         'get-match-field-list',           // views/formulas/formulas.ts
         'get-team-field-list',            // views/formulas/formulas.ts
@@ -76,7 +80,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'save-picklist-config',           // views/picklist/picklistview.ts
         'get-picklist-data',              // views/picklist/picklistview.ts
         'prompt-string-response',         // apps/xeroapp.ts
-      ];
+	      ];
       if (validChannels.includes(channel)) {
         if (data) {
           ipcRenderer.send(channel, data);
@@ -94,8 +98,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
     ipcRenderer.off(channel, func) ;
   },
 
-  receive: (channel: string, func:any) => {
-      let validChannels = [
+	  receive: (channel: string, func:any) => {
+	      let validChannels = [
         'update-main-window-view',      // main/apps/scbase.ts
         'send-app-status',              // main/apps/sccentral.ts, main/apps/scscout.ts
         'send-nav-data',                // main/apps/sccentral.ts, main/apps/scscout.ts
@@ -114,7 +118,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-team-status',             // main/apps/sccentral.ts
         'send-match-status',            // main/apps/sccentral.ts
         'send-match-db',                // main/apps/sccentral.ts
-        'send-team-db',                 // main/apps/sccentral.ts
+	        'send-team-db',                 // main/apps/sccentral.ts
+	        'send-preview-match-db',        // main/apps/sccentral.ts
         'xero-app-init',                // main/apps/scbase.ts
         'set-status-text',              // main/apps/sccentral.ts, main/apps/scscout.ts
         'set-status-html',              // main/apps/sccentral.ts
