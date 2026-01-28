@@ -25,7 +25,7 @@ export class StopwatchControl extends FormControl {
         transparent: true,
     } ;
 
-    private start_stop_button_? : HTMLButtonElement ;
+    private start_stop_button_? : HTMLSpanElement ;
     private current_time_? : HTMLSpanElement ;
 
     constructor(view: XeroView, tag: string, bounds: XeroRect) {
@@ -59,16 +59,27 @@ export class StopwatchControl extends FormControl {
         }
     }
 
-    private startStopStopwatch(): void {
+    public positionUpdated() : void {
+        super.positionUpdated() ;
+        this.applyLayout() ;
+    }
+
+    private startStopwatchSegment(): void {
+        if (this.view instanceof XeroScoutFormView) {
+            let view = this.view as XeroScoutFormView ;
+            if (!view.isStopwatchRunning(this.item.tag)) {
+                view.startStopwatch(this.item.tag, this.displayStopwatch.bind(this)) ;
+                this.start_stop_button_!.innerText = 'Release' ;
+            }
+        }
+    }
+
+    private stopStopwatchSegment(): void {
         if (this.view instanceof XeroScoutFormView) {
             let view = this.view as XeroScoutFormView ;
             if (view.isStopwatchRunning(this.item.tag)) {
                 view.stopStopwatch(this.item.tag) ;
-                this.start_stop_button_!.innerText = 'Start' ;
-            }
-            else {
-                view.startStopwatch(this.item.tag, this.displayStopwatch.bind(this)) ;
-                this.start_stop_button_!.innerText = 'Stop' ;
+                this.start_stop_button_!.innerText = 'Hold' ;
             }
         }
     }
@@ -95,12 +106,12 @@ export class StopwatchControl extends FormControl {
         this.current_time_!.innerText = '00:00.0' ;
         this.ctrl.appendChild(this.current_time_!) ;
 
-        this.start_stop_button_ = document.createElement('button') ;
+        this.start_stop_button_ = document.createElement('span') ;
         this.setClassList(this.start_stop_button_, 'edit', 'button') ;
-        this.start_stop_button_!.innerText = 'Start' ;
-        this.start_stop_button_!.disabled = true ;
+        this.start_stop_button_!.innerText = 'Hold' ;
         this.ctrl.appendChild(this.start_stop_button_!) ;
 
+        this.applyLayout() ;
         this.updateFromItem(true, 1.0, xoff, yoff) ;
         parent.appendChild(this.ctrl) ;
     }
@@ -114,18 +125,33 @@ export class StopwatchControl extends FormControl {
         this.current_time_!.innerText = '00:00.0' ;
         this.ctrl.appendChild(this.current_time_!) ;
 
-        this.start_stop_button_ = document.createElement('button') ;
+        this.start_stop_button_ = document.createElement('span') ;
         this.setClassList(this.start_stop_button_, 'scout', 'button') ;
-        this.start_stop_button_!.innerText = 'Start' ;
-        this.start_stop_button_!.addEventListener('click', this.startStopStopwatch.bind(this)) ;
+        this.start_stop_button_!.innerText = 'Hold' ;
         this.ctrl.appendChild(this.start_stop_button_!) ;
 
+        this.ctrl.addEventListener('pointerdown', (ev) => {
+            ev.preventDefault() ;
+            this.startStopwatchSegment() ;
+            this.ctrl!.setPointerCapture(ev.pointerId) ;
+        }) ;
+        this.ctrl.addEventListener('pointerup', () => {
+            this.stopStopwatchSegment() ;
+        }) ;
+        this.ctrl.addEventListener('pointerleave', () => {
+            this.stopStopwatchSegment() ;
+        }) ;
+        this.ctrl.addEventListener('pointercancel', () => {
+            this.stopStopwatchSegment() ;
+        }) ;
+
+        this.applyLayout() ;
         this.updateFromItem(false, scale, xoff, yoff) ;
 
         if (this.view instanceof XeroScoutFormView) {
             let view = this.view as XeroScoutFormView ;
             if (view.isStopwatchRunning(this.item.tag)) {
-                this.start_stop_button_!.innerText = 'Stop' ;
+                this.start_stop_button_!.innerText = 'Release' ;
                 view.setStopwatchCallback(this.item.tag, this.displayStopwatch.bind(this)) ;
             }
             this.displayStopwatch() ;
@@ -158,14 +184,41 @@ export class StopwatchControl extends FormControl {
 
         if (this.start_stop_button_) {
             if (view.isStopwatchRunning(this.item.tag)) {
-                this.start_stop_button_.innerText = 'Stop' ;
+                this.start_stop_button_.innerText = 'Release' ;
                 view.setStopwatchCallback(this.item.tag, this.displayStopwatch.bind(this)) ;
             }
             else {
-                this.start_stop_button_.innerText = 'Start' ;
+                this.start_stop_button_.innerText = 'Hold' ;
             }
         }
 
         this.displayStopwatch() ;
+    }
+
+    private applyLayout() : void {
+        if (!this.ctrl || !this.current_time_ || !this.start_stop_button_) {
+            return ;
+        }
+
+        this.ctrl.style.display = 'flex' ;
+        this.ctrl.style.flexDirection = 'column' ;
+        this.ctrl.style.alignItems = 'center' ;
+        this.ctrl.style.justifyContent = 'center' ;
+        this.ctrl.style.gap = '4px' ;
+        this.ctrl.style.boxSizing = 'border-box' ;
+        this.ctrl.style.padding = '6px' ;
+        this.ctrl.style.border = '1px solid #c8c8c8' ;
+        this.ctrl.style.borderRadius = '8px' ;
+        this.ctrl.style.backgroundColor = '#f2f2f2' ;
+
+        this.current_time_.style.flex = '1 1 auto' ;
+        this.current_time_.style.minWidth = '0' ;
+        this.current_time_.style.whiteSpace = 'nowrap' ;
+        this.current_time_.style.overflow = 'hidden' ;
+        this.current_time_.style.textOverflow = 'ellipsis' ;
+        this.current_time_.style.textAlign = 'center' ;
+
+        this.start_stop_button_.style.flex = '0 0 auto' ;
+        this.start_stop_button_.style.textAlign = 'center' ;
     }
 }
