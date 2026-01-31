@@ -40,6 +40,26 @@
     cursor: default;
 }
 
+.xero-form-toolbar {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #ccc;
+    background: rgb(245, 245, 245);
+    align-items: center;
+}
+
+.xero-form-toolbar-button {
+    font-family: Arial;
+    font-size: 16px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #666;
+    background: white;
+    cursor: pointer;
+}
+
 .xero-form-tab {
     border: 1px solid #ccc;
     background-color:   rgb(192, 192, 192) ;

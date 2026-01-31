@@ -101,6 +101,7 @@ export type IPCMultipleChoiceOrientation = 'horizontal' | 'vertical' ;
 export interface IPCMultipleChoiceItem extends IPCChoicesItem {
     radiosize: number ;
     orientation: IPCMultipleChoiceOrientation
+    multiselect?: boolean ;
 }
 
 export interface IPCSelectItem extends IPCChoicesItem {
@@ -181,6 +182,8 @@ export interface IPCFormScoutData {
     message?: string ;
     form?: IPCForm ;
     reversed? : boolean ;
+    mirrorx? : boolean ;
+    mirrory? : boolean ;
     color? : string ;
     title? : string ;
 }

@@ -4,7 +4,7 @@ import {  IPCSetView  } from "../shared/ipc.js";
 import {  XeroView  } from "./xeroview.js";
 
 export class XeroInfoView extends XeroView {
-    private static minRequiredNumberTeams = 18;
+    private static minRequiredNumberTeams = 1;
     private main_div_?: HTMLDivElement ;
     private table_?: HTMLTableElement ;
     private evname_?: HTMLTableCellElement ;

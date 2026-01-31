@@ -77,29 +77,16 @@ export class ImageManager {
     }
 
     private findUserImageDir(appname: string) : string | undefined{
-        // Find the user data directory for the application
-        let appDataDir : string | undefined ;
-        if (process.platform === 'win32') {
-            if (process.env.APPDATA) {
-                appDataDir = path.join(process.env.APPDATA, app.getName(), 'images') ;
-            }
-            else if (process.env.HOMEDIR) {
-                appDataDir = path.join(process.env.HOMEDIR, app.getName(), 'images') ;
-            }
-            else if (process.env.USERNAME) {
-                appDataDir = path.join(process.env.USERNAME, app.getName(), 'images') ;
-            }
+        //
+        // Use Electron's per-user app data directory (cross-platform) instead of
+        // relying on environment variables like HOMEDIR (which is not set on macOS).
+        //
+        try {
+            return path.join(app.getPath('userData'), 'images', appname) ;
         }
-        else {
-            if (process.env.HOMEDIR) {
-                appDataDir = path.join(process.env.HOMEDIR, app.getName(), "images") ;
-            }
+        catch {
+            return undefined ;
         }
-
-        if (appDataDir) {
-            appDataDir = path.join(appDataDir, appname) ;
-        }
-        return appDataDir ;
     }
 
     private createImageDir() {

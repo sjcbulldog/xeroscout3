@@ -599,25 +599,34 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	public importImage() {
 		dialog.showOpenDialog(this.win_, {
-			title: 'Open event.json file for event',
+			title: 'Import image(s)',
 			filters: [
 				{ name: 'PNGFiles', extensions: ['png'] },
 				{ name: 'All Files', extensions: ['*']}
 			],
 			properties: [
 				'openFile',
+				'multiSelections',
 			]
 		}).then(result => {	
 			if (!result.canceled) {
-				let name = this.image_mgr_.addImage(result.filePaths[0]) ;
-				if (typeof name === 'string') {
-					this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
+				let imported = 0 ;
+				for (const file of result.filePaths) {
+					let name = this.image_mgr_.addImage(file) ;
+					if (typeof name === 'string') {
+						imported++ ;
+					}
+					else {
+						dialog.showErrorBox(
+							'Error',
+							'Error loading external image, no image directory set'
+						);
+						return ;
+					}
 				}
-				else {
-					dialog.showErrorBox(
-						'Error',
-						'Error loading external image, no image directory set'
-					);					
+
+				if (imported > 0) {
+					this.sendToRenderer('send-images', this.image_mgr_.getImageNames()) ;
 				}
 			}
 		}) ;		

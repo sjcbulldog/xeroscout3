@@ -24,6 +24,7 @@ export class MultipleChoiceControl extends FormControl {
         transparent: true,
         radiosize : 20,
         orientation: 'vertical',
+        multiselect: false,
         choices: [
             { text: 'Choice 1', value: 'choice1' },
             { text: 'Choice 2', value: 'choice2' },
@@ -59,6 +60,7 @@ export class MultipleChoiceControl extends FormControl {
         let oper = editing ? 'edit' : 'view' ;
 
         this.choice_ctrl_to_value_.clear() ;
+        let first = true ;
 
         for(let choice of item.choices) {
             let tabrow = document.createElement('tr') ;
@@ -82,9 +84,9 @@ export class MultipleChoiceControl extends FormControl {
             let input = document.createElement('input') ;
             this.setClassList(input, oper, 'radio') ;
             this.choice_ctrl_to_value_.set(input, choice.value) ;
-            input.type = 'radio' ;
+            input.type = item.multiselect ? 'checkbox' : 'radio' ;
             input.disabled = editing ;
-            input.checked = true ;
+            input.checked = item.multiselect ? false : first ;
             input.name = item.tag ;
             input.id = item.tag + '_' + choice.value ;
             input.style.fontFamily = item.fontFamily ;
@@ -96,6 +98,8 @@ export class MultipleChoiceControl extends FormControl {
             this.choice_ctrls_.push(input) ;
             iwrap.appendChild(input) ;
             this.choice_table_!.appendChild(tabrow) ;        
+
+            first = false ;
         }
     }
 
@@ -136,10 +140,10 @@ export class MultipleChoiceControl extends FormControl {
             let input = document.createElement('input') ;
             this.setClassList(input, oper, 'radio') 
             this.choice_ctrl_to_value_.set(input, choice.value) ;
-            input.type = 'radio' ;
+            input.type = item.multiselect ? 'checkbox' : 'radio' ;
             input.style.accentColor = item.color ;
             input.disabled = editing ;
-            input.checked = true ;
+            input.checked = item.multiselect ? false : first ;
             input.name = item.tag ;
             input.id = item.tag + '_' + choice.value ;
             input.style.fontFamily = item.fontFamily ;
@@ -194,7 +198,12 @@ export class MultipleChoiceControl extends FormControl {
         this.ctrl.appendChild(this.choice_table_) ;
 
         this.updateFromItem(false, scale, xoff, yoff) ;
-        this.setData(DataValue.fromString(item.choices[0].value.toString())) ;
+        if (item.multiselect) {
+            this.setData(DataValue.fromString('[]')) ;
+        }
+        else if (item.choices.length > 0) {
+            this.setData(DataValue.fromString(item.choices[0].value.toString())) ;
+        }
         parent.appendChild(this.ctrl) ;
     }
 
@@ -203,6 +212,17 @@ export class MultipleChoiceControl extends FormControl {
     }
     
     public getData() : IPCTypedDataValue | undefined {
+        let item = this.item as IPCMultipleChoiceItem ;
+        if (item.multiselect) {
+            let selected: IPCChoiceValue[] = [] ;
+            for(let ctrl of this.choice_ctrls_) {
+                if (ctrl.checked) {
+                    selected.push(this.choice_ctrl_to_value_.get(ctrl)!) ;
+                }
+            }
+            return DataValue.fromString(JSON.stringify(selected)) ;
+        }
+
         let ret : IPCTypedDataValue | undefined = undefined ;
         for(let ctrl of this.choice_ctrls_) {
             if (ctrl.checked) {
@@ -218,6 +238,35 @@ export class MultipleChoiceControl extends FormControl {
     }
 
     public setData(data:IPCTypedDataValue) : void {
+        let item = this.item as IPCMultipleChoiceItem ;
+        if (item.multiselect) {
+            let selected: IPCChoiceValue[] = [] ;
+
+            if (DataValue.isString(data)) {
+                try {
+                    const parsed = JSON.parse(DataValue.toString(data)) ;
+                    if (Array.isArray(parsed)) {
+                        selected = parsed as IPCChoiceValue[] ;
+                    }
+                    else {
+                        selected = [parsed as IPCChoiceValue] ;
+                    }
+                }
+                catch {
+                    selected = [DataValue.toString(data) as IPCChoiceValue] ;
+                }
+            }
+            else if (DataValue.isNumber(data)) {
+                selected = [DataValue.toReal(data) as IPCChoiceValue] ;
+            }
+
+            for(let ctrl of this.choice_ctrls_) {
+                const v = this.choice_ctrl_to_value_.get(ctrl)! ;
+                ctrl.checked = selected.some((sv) => sv === v) ;
+            }
+            return ;
+        }
+
         if (this.choice_ctrls_ && DataValue.isString(data)) {
             let str = DataValue.toString(data) ;
             for(let ctrl of this.choice_ctrls_) {
