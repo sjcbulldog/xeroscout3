@@ -32,6 +32,7 @@ export class ImageControl extends FormControl {
     private image_? : HTMLImageElement ;
     private image_src_ : ImageDataSource;
     private tempMirrorX_ : boolean = false ;
+    private tempMirrorY_ : boolean = false ;
 
     constructor(imsrc: ImageDataSource, view: XeroView, tag: string, bounds: XeroRect) {
         super(view, ImageControl.item_desc_) ;
@@ -47,6 +48,17 @@ export class ImageControl extends FormControl {
     public set tempMirrorX(mirror: boolean) {
         if (mirror != this.tempMirrorX_) {
             this.tempMirrorX_ = mirror ;
+            this.updateImageScale() ;
+        }
+    }
+
+    public get tempMirrorY() : boolean {
+        return this.tempMirrorY_ ;
+    }
+
+    public set tempMirrorY(mirror: boolean) {
+        if (mirror != this.tempMirrorY_) {
+            this.tempMirrorY_ = mirror ;
             this.updateImageScale() ;
         }
     }
@@ -120,14 +132,16 @@ export class ImageControl extends FormControl {
     }    
 
     private updateImageScale() : void {
-        let item = this.item as IPCImageItem ;        
-        if (this.effectiveMirrorX() && !item.mirrory) {
+        let item = this.item as IPCImageItem ;
+        const mirrorX = this.effectiveMirrorX() ;
+        const mirrorY = this.effectiveMirrorY() ;
+        if (mirrorX && !mirrorY) {
             this.image_!.style.transform = 'scaleX(-1)' ;
         }
-        else if (!this.effectiveMirrorX() && item.mirrory) {
+        else if (!mirrorX && mirrorY) {
             this.image_!.style.transform = 'scaleY(-1)' ;
         }
-        else if (this.effectiveMirrorX() && item.mirrory) {
+        else if (mirrorX && mirrorY) {
             this.image_!.style.transform = 'scaleX(-1) scaleY(-1)' ;
         }
         else {
@@ -138,5 +152,10 @@ export class ImageControl extends FormControl {
     private effectiveMirrorX() : boolean {
         let item = this.item as IPCImageItem ;
         return this.tempMirrorX_ !== item.mirrorx ;
+    }
+
+    private effectiveMirrorY() : boolean {
+        let item = this.item as IPCImageItem ;
+        return this.tempMirrorY_ !== item.mirrory ;
     }
 }

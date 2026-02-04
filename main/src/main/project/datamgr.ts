@@ -551,7 +551,7 @@ export class DataManager extends Manager {
         let colcfg = {
             name: coldesc.name,
             width: -1,
-            hidden: false
+            hidden: coldesc.name.endsWith('_segments')
         } ;
         this.info_.teamdb_col_config_?.columns.push(colcfg) ;
     }
@@ -577,7 +577,7 @@ export class DataManager extends Manager {
         let colcfg = {
             name: coldesc.name,
             width: -1,
-            hidden: false
+            hidden: coldesc.name.endsWith('_segments')
         } ;
         this.info_.matchdb_col_config_?.columns.push(colcfg) ;
     }    

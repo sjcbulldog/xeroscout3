@@ -295,6 +295,13 @@ export class FormManager extends Manager {
 
 		let formfile = path.join(this.location_, filename);
 
+		let addField = (field: IPCColumnDesc) => {
+			if (ret.find((x) => x.name === field.name)) {
+				return;
+			}
+			ret.push(field);
+		};
+
 		try {
 			let jsonobj = FormManager.readJSONFile(formfile);
 			if (jsonobj instanceof Error) {
@@ -302,12 +309,12 @@ export class FormManager extends Manager {
 			}
 			for (let section of jsonobj.sections) {
 				if (section.items && Array.isArray(section.items)) {
-					for (let obj of section.items) {
-						let item = obj as IPCFormItem ;
-						if (item.type === "image" || item.type === "label" || item.type === "box") {
-							// Skip any control that does not provide data, as these are not stored in the database
-							continue;
-						}
+						for (let obj of section.items) {
+							let item = obj as IPCFormItem ;
+							if (item.type === "image" || item.type === "label" || item.type === "box") {
+								// Skip any control that does not provide data, as these are not stored in the database
+								continue;
+							}
 
 						let choices: IPCChoice[] | undefined = undefined ;
 						if (item.type === "choice" || item.type === "select") {
@@ -317,18 +324,26 @@ export class FormManager extends Manager {
 							}
 						}
 
-						let field: IPCColumnDesc = {
-							name: item.tag,
-							type: item.datatype,
-							choices: choices,
-							editable: true,
-							source: 'form'
-						};
-						ret.push(field);
+							addField({
+								name: item.tag,
+								type: item.datatype,
+								choices: choices,
+								editable: true,
+								source: 'form'
+							});
+
+							if (item.type === 'stopwatch') {
+								addField({
+									name: item.tag + '_segments',
+									type: 'string',
+									editable: true,
+									source: 'form'
+								});
+							}
+						}
 					}
 				}
-			}
-		} catch (err) {
+			} catch (err) {
 			return err as Error;
 		}
 

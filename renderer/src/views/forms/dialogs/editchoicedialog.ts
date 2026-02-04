@@ -5,6 +5,7 @@ import { EditWithItemsDialog } from "./editwithitemsdialog.js";
 export class EditChoiceDialog extends EditWithItemsDialog {
     private data_type_?: HTMLSpanElement ;
     private radio_size_? : HTMLInputElement ;
+    private multiselect_? : HTMLInputElement ;
 
     constructor(formctrl: FormControl) {
         super('Edit Multiple Choice', formctrl) ;
@@ -18,6 +19,17 @@ export class EditChoiceDialog extends EditWithItemsDialog {
         this.createTabs(pdiv) ;
 
         this.populateTag(this.tab_page_1!) ;
+
+        this.multiselect_ = document.createElement("input") ;
+        this.multiselect_.type = "checkbox" ;
+        this.multiselect_.checked = item.multiselect || false ;
+        this.multiselect_.className = "xero-popup-form-edit-dialog-checkbox" ;
+
+        label = document.createElement("label") ;
+        label.className = "xero-popup-form-edit-dialog-label" ;
+        label.innerText = "Multi-select" ;
+        label.appendChild(this.multiselect_) ;
+        this.tab_page_1!.appendChild(label) ;
 
         this.radio_size_ = document.createElement("input");
         this.radio_size_.type = "number";
@@ -46,6 +58,7 @@ export class EditChoiceDialog extends EditWithItemsDialog {
     protected extractData() : void {
         let item = this.formctrl_.item as IPCMultipleChoiceItem ;
         item.tag = this.tag_!.value ;
+        item.multiselect = this.multiselect_ ? this.multiselect_.checked : false ;
         item.radiosize = parseInt(this.radio_size_!.value) ;
         item.color = this.text_color_!.value ;
         item.background = this.background_color_!.value ;

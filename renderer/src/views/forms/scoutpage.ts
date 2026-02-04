@@ -15,9 +15,12 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private size_ : XeroSize ;
     private scale_ : number = 1.0 ;
     private reversed_ : boolean = false ;
+    private flip_field_180_ : boolean = false ;
     private color_: string = 'blue' ;
+    private mirrorx_? : boolean ;
+    private mirrory_? : boolean ;
 
-    public constructor(app: XeroApp, data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean) {
+    public constructor(app: XeroApp, data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean, mirrorx?: boolean, mirrory?: boolean) {
         super('div', 'xero-form-section-page') ;
 
         this.app_ = app ;
@@ -25,6 +28,8 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         this.size_ = formsize ;
         this.color_ = color ;
         this.reversed_ = reversed ;
+        this.mirrorx_ = mirrorx ;
+        this.mirrory_ = mirrory ;
 
         this.formdiv_ = document.createElement('div') ;
         this.formdiv_.className = 'xero-form-section-scout-page-form' ;
@@ -54,6 +59,13 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         for(let control of this.controls_) {
             control.resetHTMLControl() ;
             this.addControlToLayout(control) ;
+        }
+    }
+
+    public setFlipField180(flip: boolean) : void {
+        if (this.flip_field_180_ !== flip) {
+            this.flip_field_180_ = flip ;
+            this.doLayout() ;
         }
     }
 
@@ -89,22 +101,43 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private addControlToLayout(control: FormControl) : void {
         let offset = this.getPlaceOffset() ;
         let image = this.isOverField(control) ;
-        if (image && this.color_ !== 'blue' && !this.reversed_) {
+        const baseMirrorControlsX = (this.mirrorx_ !== undefined) ? this.mirrorx_ : (this.color_ !== 'blue' && !this.reversed_) ;
+        const baseMirrorControlsY = (this.mirrory_ !== undefined) ? this.mirrory_ : false ;
+        const mirrorControlsX = baseMirrorControlsX !== this.flip_field_180_ ;
+        const mirrorControlsY = baseMirrorControlsY !== this.flip_field_180_ ;
+        if (image && mirrorControlsX) {
             let dl = this.scale_ * (control.bounds.left - image.bounds.left) ;
             let x2 = this.scale_ * image.bounds.right - dl - this.scale_ * control.bounds.width ;
             let dx = x2 - this.scale_ * control.bounds.left ;
             offset = new XeroSize(offset.width + dx, offset.height) ;
+        }
+        if (image && mirrorControlsY) {
+            let dt = this.scale_ * (control.bounds.top - image.bounds.top) ;
+            let y2 = this.scale_ * image.bounds.bottom - dt - this.scale_ * control.bounds.height ;
+            let dy = y2 - this.scale_ * control.bounds.top ;
+            offset = new XeroSize(offset.width, offset.height + dy) ;
         }
         control.createForScouting(this.formdiv_, this.scale_, offset.width, offset.height) 
 
         if (control.item.type === 'image') {
             let imgctrl = control as ImageControl ;
             if (imgctrl.field) {
-                imgctrl.tempMirrorX = this.reversed_ ;
+                const baseMirrorImageX = (this.mirrorx_ !== undefined) ? this.mirrorx_ : this.reversed_ ;
+                const baseMirrorImageY = (this.mirrory_ !== undefined) ? this.mirrory_ : false ;
+                const mirrorImageX = baseMirrorImageX !== this.flip_field_180_ ;
+                const mirrorImageY = baseMirrorImageY !== this.flip_field_180_ ;
+                imgctrl.tempMirrorX = mirrorImageX ;
+                imgctrl.tempMirrorY = mirrorImageY ;
             }
         }
 
-        let data = this.data_.get(control.item.tag) ;
+        let data = undefined ;
+        if (control.item.type === 'stopwatch') {
+            data = this.data_.get(control.item.tag + '_segments') ;
+        }
+        if (!data) {
+            data = this.data_.get(control.item.tag) ;
+        }
         if (data) {
             control.setData(data) ;
         }

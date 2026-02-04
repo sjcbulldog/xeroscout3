@@ -282,6 +282,14 @@
 	background-color: #da190b;
 }
 
+.xero-popup-form-edit-dialog-button-delete {
+	background-color: #777;
+}
+
+.xero-popup-form-edit-dialog-button-delete:hover {
+	background-color: #666;
+}
+
 /* String dialog specific styles */
 .xero-string-dialog-message {
 	margin-bottom: 15px;

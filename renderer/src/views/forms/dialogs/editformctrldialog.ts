@@ -38,6 +38,35 @@ export abstract class EditFormControlDialog extends XeroDialog {
     super.okButton(event); // Finish the edit operation, save the form, and dismiss the dialog
   }
 
+  public populateButtons(div: HTMLDivElement) {
+    let okbutton = document.createElement('button') ;
+    okbutton.innerText = 'OK' ;
+    okbutton.className = 'xero-popup-form-edit-dialog-button' ;
+    okbutton.addEventListener('click', this.okButton.bind(this)) ;
+    div.appendChild(okbutton) ;
+
+    let delbutton = document.createElement('button') ;
+    delbutton.innerText = 'Delete' ;
+    delbutton.className = 'xero-popup-form-edit-dialog-button xero-popup-form-edit-dialog-button-delete' ;
+    delbutton.addEventListener('click', this.deleteButton.bind(this)) ;
+    div.appendChild(delbutton) ;
+
+    let cancelbutton = document.createElement('button') ;
+    cancelbutton.innerText = 'Cancel' ;
+    cancelbutton.className = 'xero-popup-form-edit-dialog-button' ;
+    cancelbutton.addEventListener('click', this.cancelButton.bind(this)) ;
+    div.appendChild(cancelbutton) ;
+  }
+
+  private deleteButton(event: Event) {
+    let tag = this.formctrl_?.item?.tag || '' ;
+    let msg = tag.length > 0 ? `Delete control '${tag}'?` : 'Delete this control?' ;
+    if (confirm(msg + '\n\nThis will remove the control from the form.')) {
+      this.emit('delete') ;
+      this.close(false) ;
+    }
+  }
+
   protected abstract extractData(): void;
 
   protected queryLocalFonts(): Promise<FontData[]> {

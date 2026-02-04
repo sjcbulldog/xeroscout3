@@ -268,6 +268,45 @@ export async function getTeamDB(cmd: string, ...args: any[]) {
     } 
 }
 
+// get-preview-match-db
+export async function getPreviewMatchDB(cmd: string, ...args: any[]) {
+    if (scappbase && isCentralType()) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 0) {
+            central.sendPreviewMatchDB() ;
+        } else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
+// update-preview-match-db data: IPCNamedDataValue[]
+export async function updatePreviewMatchDB(cmd: string, ...args: any[]) {
+    if (scappbase && isCentralType()) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 1 && Array.isArray(args[0])) {
+            central.updatePreviewMatchDB(args[0] as IPCNamedDataValue[]) ;
+        } else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
+// reset-preview-match-db
+export async function resetPreviewMatchDB(cmd: string, ...args: any[]) {
+    if (scappbase && isCentralType()) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCentral = scappbase as SCCentral ;
+        if (args.length === 0) {
+            central.resetPreviewMatchDB() ;
+        } else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
 // update-team-db
 export async function updateTeamDB(cmd: string, ...args: any[]) {
     if (scappbase && isCentralType()) {
