@@ -17,6 +17,7 @@ import { XeroLogger  } from "../../utils/xerologger.js";
 import { XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
 import { XeroFormEditSectionPage } from "./editpage.js";
 import { BoxControl } from "./controls/boxctrl.js";
+import { AutoPlanControl } from "./controls/autoplanctrl.js";
 import { FormControl } from "./controls/formctrl.js";
 import { XeroWidget } from "../../widgets/xerowidget.js";
 import { KeybindingManager } from "./keybindings.js";
@@ -135,6 +136,7 @@ export class XeroEditFormView extends XeroView {
             new XeroPopupMenuItem('Select', this.addNewSelectCtrl.bind(this)),
             new XeroPopupMenuItem('Timer', this.addNewTimerCtrl.bind(this)),
             new XeroPopupMenuItem('Stopwatch', this.addNewStopwatchCtrl.bind(this)),
+            new XeroPopupMenuItem('Auto Planner', this.addNewAutoPlanCtrl.bind(this)),
         ]
 
         this.ctrl_menu_ = new XeroPopupMenu('controls', ctrlitems) ;
@@ -543,6 +545,18 @@ export class XeroEditFormView extends XeroView {
         }
     }
 
+    private addNewAutoPlanCtrl() {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
+            let formctrl = new AutoPlanControl(this.app.imageSource!, this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(800, 450))) ;
+            this.addItemToCurrentSection(formctrl.item) ;
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
+            this.modified(new UndoStackEntry('add', 'control', [formctrl])) ;
+        }
+        else {
+            alert('You cannot create an auto planner control without a section. Use the "Section" menu to add a section first.') ;
+        }
+    }
+
     private updateErrors(tag: string, errors: string[]) {
         let ctrls = this.findControlByTag(tag) ;
         for(let ctrl of ctrls) {
@@ -633,6 +647,10 @@ export class XeroEditFormView extends XeroView {
         }
         else if (item.type === 'stopwatch') {
             formctrl = new StopwatchControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'autoplan') {
+            formctrl = new AutoPlanControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
             formctrl.update(item) ;
         }
         else {
