@@ -16,6 +16,7 @@ import {  TextAreaControl } from "./controls/textareactrl.js";
 import {  TextControl  } from "./controls/textctrl.js";
 import { StopwatchControl } from "./controls/stopwatchctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
+import { AutoPlanControl } from "./controls/autoplanctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
@@ -424,6 +425,10 @@ export class XeroScoutFormView extends XeroView {
                 }
                 else if (item.type === 'stopwatch') {
                     formctrl = new StopwatchControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'autoplan') {
+                    formctrl = new AutoPlanControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else {

@@ -357,6 +357,16 @@ body {
     margin-left: 10px;
 }
 
+.xero-popup-form-edit-dialog-textarea {
+    background-color: wheat;
+    font: arial;
+    font-size: 18px;
+    border: 1px solid black;
+    margin-left: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .xero-popup-form-edit-dialog-error-message {
     font: arial;
     font-size: 18px;
