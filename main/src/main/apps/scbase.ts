@@ -333,6 +333,23 @@ export abstract class SCBase {
 
 	protected sortCompFun(a: any, b: any): number {
 		let ret: number = 0;
+		let compareField = (aval: any, bval: any): number => {
+			let an = Number(aval) ;
+			let bn = Number(bval) ;
+			if (!Number.isNaN(an) && !Number.isNaN(bn)) {
+				if (an < bn) {
+					return -1 ;
+				}
+				if (an > bn) {
+					return 1 ;
+				}
+				return 0 ;
+			}
+
+			let as = `${aval ?? ''}` ;
+			let bs = `${bval ?? ''}` ;
+			return as.localeCompare(bs) ;
+		} ;
 
 		let atype = this.mapMatchType(a.comp_level);
 		let btype = this.mapMatchType(b.comp_level);
@@ -342,18 +359,9 @@ export abstract class SCBase {
 		} else if (atype > btype) {
 			ret = 1;
 		} else {
-			if (a.match_number < b.match_number) {
-				ret = -1;
-			} else if (a.match_number > b.match_number) {
-				ret = 1;
-			} else {
-				if (a.set_number < b.set_number) {
-					ret = -1;
-				} else if (a.set_number > b.set_number) {
-					ret = 1;
-				} else {
-					ret = 0;
-				}
+			ret = compareField(a.match_number, b.match_number) ;
+			if (ret === 0) {
+				ret = compareField(a.set_number, b.set_number) ;
 			}
 		}
 		return ret;

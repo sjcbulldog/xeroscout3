@@ -117,6 +117,7 @@ export interface IPCTimerItem extends IPCFormItem {
 }
 
 export interface IPCStopwatchItem extends IPCFormItem {
+    holdMode?: boolean ;
 }
 
 export interface IPCSize {

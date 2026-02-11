@@ -23,6 +23,7 @@ export class StopwatchControl extends FormControl {
         fontStyle: 'normal',
         datatype: 'real',
         transparent: true,
+        holdMode: true,
     } ;
 
     private start_stop_button_? : HTMLSpanElement ;
@@ -56,6 +57,8 @@ export class StopwatchControl extends FormControl {
             this.current_time_!.style.fontSize = item.fontSize + 'px' ;
             this.current_time_!.style.fontWeight = item.fontWeight ;
             this.current_time_!.style.fontStyle = item.fontStyle ;
+
+            this.updateButtonText(this.view instanceof XeroScoutFormView && this.view.isStopwatchRunning(this.item.tag)) ;
         }
     }
 
@@ -69,7 +72,7 @@ export class StopwatchControl extends FormControl {
             let view = this.view as XeroScoutFormView ;
             if (!view.isStopwatchRunning(this.item.tag)) {
                 view.startStopwatch(this.item.tag, this.displayStopwatch.bind(this)) ;
-                this.start_stop_button_!.innerText = 'Release' ;
+                this.updateButtonText(true) ;
             }
         }
     }
@@ -79,8 +82,22 @@ export class StopwatchControl extends FormControl {
             let view = this.view as XeroScoutFormView ;
             if (view.isStopwatchRunning(this.item.tag)) {
                 view.stopStopwatch(this.item.tag) ;
-                this.start_stop_button_!.innerText = 'Hold' ;
+                this.updateButtonText(false) ;
             }
+        }
+    }
+
+    private toggleStopwatch(): void {
+        if (!(this.view instanceof XeroScoutFormView)) {
+            return ;
+        }
+
+        let view = this.view as XeroScoutFormView ;
+        if (view.isStopwatchRunning(this.item.tag)) {
+            this.stopStopwatchSegment() ;
+        }
+        else {
+            this.startStopwatchSegment() ;
         }
     }
 
@@ -108,7 +125,7 @@ export class StopwatchControl extends FormControl {
 
         this.start_stop_button_ = document.createElement('span') ;
         this.setClassList(this.start_stop_button_, 'edit', 'button') ;
-        this.start_stop_button_!.innerText = 'Hold' ;
+        this.updateButtonText(false) ;
         this.ctrl.appendChild(this.start_stop_button_!) ;
 
         this.applyLayout() ;
@@ -127,33 +144,42 @@ export class StopwatchControl extends FormControl {
 
         this.start_stop_button_ = document.createElement('span') ;
         this.setClassList(this.start_stop_button_, 'scout', 'button') ;
-        this.start_stop_button_!.innerText = 'Hold' ;
+        this.updateButtonText(false) ;
         this.ctrl.appendChild(this.start_stop_button_!) ;
 
-        this.ctrl.addEventListener('pointerdown', (ev) => {
-            ev.preventDefault() ;
-            this.startStopwatchSegment() ;
-            this.ctrl!.setPointerCapture(ev.pointerId) ;
-        }) ;
-        this.ctrl.addEventListener('pointerup', () => {
-            this.stopStopwatchSegment() ;
-        }) ;
-        this.ctrl.addEventListener('pointerleave', () => {
-            this.stopStopwatchSegment() ;
-        }) ;
-        this.ctrl.addEventListener('pointercancel', () => {
-            this.stopStopwatchSegment() ;
-        }) ;
+        if (this.isHoldMode()) {
+            this.ctrl.addEventListener('pointerdown', (ev) => {
+                ev.preventDefault() ;
+                this.startStopwatchSegment() ;
+                this.ctrl!.setPointerCapture(ev.pointerId) ;
+            }) ;
+            this.ctrl.addEventListener('pointerup', () => {
+                this.stopStopwatchSegment() ;
+            }) ;
+            this.ctrl.addEventListener('pointerleave', () => {
+                this.stopStopwatchSegment() ;
+            }) ;
+            this.ctrl.addEventListener('pointercancel', () => {
+                this.stopStopwatchSegment() ;
+            }) ;
+        }
+        else {
+            this.ctrl.addEventListener('click', (ev) => {
+                ev.preventDefault() ;
+                this.toggleStopwatch() ;
+            }) ;
+        }
 
         this.applyLayout() ;
         this.updateFromItem(false, scale, xoff, yoff) ;
 
         if (this.view instanceof XeroScoutFormView) {
             let view = this.view as XeroScoutFormView ;
-            if (view.isStopwatchRunning(this.item.tag)) {
-                this.start_stop_button_!.innerText = 'Release' ;
+            let running = view.isStopwatchRunning(this.item.tag) ;
+            if (running) {
                 view.setStopwatchCallback(this.item.tag, this.displayStopwatch.bind(this)) ;
             }
+            this.updateButtonText(running) ;
             this.displayStopwatch() ;
         }
 
@@ -184,11 +210,11 @@ export class StopwatchControl extends FormControl {
 
         if (this.start_stop_button_) {
             if (view.isStopwatchRunning(this.item.tag)) {
-                this.start_stop_button_.innerText = 'Release' ;
+                this.updateButtonText(true) ;
                 view.setStopwatchCallback(this.item.tag, this.displayStopwatch.bind(this)) ;
             }
             else {
-                this.start_stop_button_.innerText = 'Hold' ;
+                this.updateButtonText(false) ;
             }
         }
 
@@ -220,5 +246,23 @@ export class StopwatchControl extends FormControl {
 
         this.start_stop_button_.style.flex = '0 0 auto' ;
         this.start_stop_button_.style.textAlign = 'center' ;
+    }
+
+    private isHoldMode() : boolean {
+        let item = this.item as IPCStopwatchItem ;
+        return item.holdMode ?? true ;
+    }
+
+    private updateButtonText(running: boolean) : void {
+        if (!this.start_stop_button_) {
+            return ;
+        }
+
+        if (this.isHoldMode()) {
+            this.start_stop_button_.innerText = running ? 'Release' : 'Hold' ;
+        }
+        else {
+            this.start_stop_button_.innerText = running ? 'Stop' : 'Start' ;
+        }
     }
 }
