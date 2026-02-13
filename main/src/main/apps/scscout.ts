@@ -20,11 +20,13 @@ export class SCScoutInfo {
     public teamlist_? : TeamTablet[] ;
     public matchlist_? : MatchTablet[] ;
     public results_ : IPCScoutResult[] ;
+    public team_results_cache_ : IPCScoutResult[] ;
     public playoff_assignments_? : PlayoffAssignment[] ;
     public playoff_status_? : IPCPlayoffStatus ;
 
     constructor() {
         this.results_ = [] ;
+        this.team_results_cache_ = [] ;
     }
 }
 
@@ -351,6 +353,7 @@ export class SCScout extends SCBase {
         this.info_.purpose_ = undefined ;
         this.info_.tablet_ = undefined ;
         this.info_.results_ = [];
+        this.info_.team_results_cache_ = [] ;
         this.info_.uuid_ = undefined ;
         this.info_.evname_ = undefined ;
         this.info_.teamform_ = undefined ;
@@ -487,6 +490,7 @@ export class SCScout extends SCBase {
             reversed: this.reversed_,
             color: this.alliance_,
             title: this.current_scout_,
+            scoutItem: this.current_scout_,
         }
 
         if (type === 'team') {
@@ -494,6 +498,10 @@ export class SCScout extends SCBase {
         }
         else if (type === 'match') {
             ret.form = this.info_.matchform_ ;
+            let teamScoutItem = this.getTeamScoutItemFromMatch(this.current_scout_) ;
+            if (teamScoutItem) {
+                ret.activeTeamResult = this.getTeamResultFromCache(teamScoutItem) ;
+            }
         }
         else {
             ret.message = 'Invalid form type requested' ;
@@ -568,6 +576,9 @@ export class SCScout extends SCBase {
         //
         this.deleteResults(scout) ;
         this.info_.results_.push(resobj) ;
+        if (scout.startsWith('st-')) {
+            this.cacheTeamResult(resobj) ;
+        }
     }
 
     private getCurrentResults() : Promise<void> {
@@ -752,9 +763,13 @@ export class SCScout extends SCBase {
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideTeamResults) {
-            if (this.info_.purpose_ === 'team') {
-                let obj = JSON.parse(p.payloadAsString()) ;
-                for(let res of obj) {
+            let obj = JSON.parse(p.payloadAsString()) as IPCScoutResult[] ;
+            for(let res of obj) {
+                if (!res.item) {
+                    continue ;
+                }
+                this.cacheTeamResult(res) ;
+                if (this.info_.purpose_ === 'team') {
                     if (!this.getOneScoutResults(res.item)) {
                         this.addResults(res.item, res.data) ;
                     }
@@ -812,8 +827,8 @@ export class SCScout extends SCBase {
 
         for(let t of this.info_.teamlist_!) {
             let cmd: string = 'st-' + t.team ;
-            if (this.info_.results_) {
-                let res: IPCScoutResult | undefined = this.getOneScoutResults(cmd) ;
+            if (this.info_.team_results_cache_) {
+                let res: IPCScoutResult | undefined = this.getTeamResultFromCache(cmd) ;
                 if (!res) {
                     ret.push(cmd) ;
                 }
@@ -1105,8 +1120,46 @@ export class SCScout extends SCBase {
 
         const rawData = fs.readFileSync(fullpath, 'utf-8');
         this.info_ = JSON.parse(rawData) as SCScoutInfo ;
+        if (!this.info_.results_) {
+            this.info_.results_ = [] ;
+        }
+        if (!this.info_.team_results_cache_) {
+            this.info_.team_results_cache_ = [] ;
+        }
 
         return ret ;
+    }
+
+    private getTeamScoutItemFromMatch(matchItem: string) : string | undefined {
+        let match = /^sm-[^-]+-\d+-\d+-(\d+)$/.exec(matchItem) ;
+        if (!match) {
+            return undefined ;
+        }
+        return 'st-' + match[1] ;
+    }
+
+    private getTeamResultFromCache(item: string) : IPCScoutResult | undefined {
+        for(let result of this.info_.team_results_cache_) {
+            if (result.item === item) {
+                return result ;
+            }
+        }
+        return undefined ;
+    }
+
+    private cacheTeamResult(result: IPCScoutResult) {
+        if (!result.item || !result.item.startsWith('st-')) {
+            return ;
+        }
+
+        for(let i = 0 ; i < this.info_.team_results_cache_.length ; i++) {
+            if (this.info_.team_results_cache_[i].item === result.item) {
+                this.info_.team_results_cache_[i] = result ;
+                return ;
+            }
+        }
+
+        this.info_.team_results_cache_.push(result) ;
     }
 
     private writeEventFile() : Error | undefined {
