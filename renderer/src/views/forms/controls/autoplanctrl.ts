@@ -328,7 +328,7 @@ export class AutoPlanControl extends FormControl {
             return;
         }
         const item = this.item as IPCAutoPlanItem;
-        if (item.fieldImage && item.fieldImage.endsWith('.png')) {
+        if (item.fieldImage && /\.png$/i.test(item.fieldImage)) {
             item.fieldImage = item.fieldImage.replace(/\.png$/i, '');
         }
         this.image_src_.getImageData(item.fieldImage)
