@@ -417,6 +417,141 @@
     border-color: #ffd166;
 }
 
+/*
+ * Auto Selector control styles
+ */
+.xero-form-autoselector {
+    z-index: 900;
+}
+
+.xero-form-edit-autoselector {
+    z-index: 900;
+    pointer-events: none;
+}
+
+.xero-form-scout-autoselector {
+    z-index: 900;
+}
+
+.xero-autoselector-edit-label {
+    width: 100%;
+    height: 100%;
+    border: 2px dashed #51617d;
+    color: #51617d;
+    background: rgba(30, 41, 59, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.xero-autoselector-button {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #55637a;
+    border-radius: 8px;
+    background: #e6eefb;
+    color: #0f172a;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.xero-autoselector-button:hover {
+    filter: brightness(0.98);
+}
+
+.xero-autoselector-modal {
+    width: min(1200px, 90vw);
+    height: min(820px, 80vh);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.xero-autoselector-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 126px;
+    overflow-y: auto;
+}
+
+.xero-autoselector-tab {
+    border: 1px solid #4b5a72;
+    border-radius: 8px;
+    background: #f2f5fb;
+    color: #102038;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.xero-autoselector-tab.selected {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+}
+
+.xero-autoselector-canvas {
+    position: relative;
+    flex: 1;
+    border: 1px solid #45556e;
+    border-radius: 8px;
+    background: #0a1220;
+    overflow: hidden;
+}
+
+.xero-autoselector-field {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0.96;
+    pointer-events: none;
+}
+
+.xero-autoselector-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.xero-autoselector-edge {
+    stroke: #79b1ff;
+    stroke-width: 4;
+}
+
+.xero-autoselector-nodes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.xero-autoselector-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: #1d4ed8;
+    color: #ffffff;
+    border: 2px solid #94b7ff;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+
+.xero-autoselector-empty {
+    border: 1px dashed #8da1c2;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 14px;
+    color: #34405c;
+    line-height: 1.4;
+}
+
 /* 
  * Edit form 'boolean' control view related styles
  */
