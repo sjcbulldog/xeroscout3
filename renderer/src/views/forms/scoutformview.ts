@@ -326,7 +326,7 @@ export class XeroScoutFormView extends XeroView {
         }
         this.elem.append(this.titlediv_) ;
 
-        if (this.type_ !== 'team') {
+        if (this.type_ === 'match') {
             const toolbar = document.createElement('div') ;
             toolbar.className = 'xero-form-toolbar' ;
 

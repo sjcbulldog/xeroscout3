@@ -201,6 +201,7 @@ export class AutoPlanControl extends FormControl {
         this.tools_bar_.appendChild(this.redo_button_);
         this.tools_bar_.appendChild(this.delete_button_);
         this.tools_bar_.appendChild(this.clear_button_);
+        // this.tools_bar_.appendChild(this.dump_button_);
 
         this.autos_select_ = document.createElement('select');
         this.autos_select_.className = 'xero-autoplan-autos-select';
