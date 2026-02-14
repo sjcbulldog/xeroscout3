@@ -326,16 +326,18 @@ export class XeroScoutFormView extends XeroView {
         }
         this.elem.append(this.titlediv_) ;
 
-        const toolbar = document.createElement('div') ;
-        toolbar.className = 'xero-form-toolbar' ;
+        if (this.type_ === 'match') {
+            const toolbar = document.createElement('div') ;
+            toolbar.className = 'xero-form-toolbar' ;
 
-        this.flip_field_button_ = document.createElement('button') ;
-        this.flip_field_button_.className = 'xero-form-toolbar-button' ;
-        this.flip_field_button_.addEventListener('click', this.flipField.bind(this)) ;
-        toolbar.appendChild(this.flip_field_button_) ;
+            this.flip_field_button_ = document.createElement('button') ;
+            this.flip_field_button_.className = 'xero-form-toolbar-button' ;
+            this.flip_field_button_.addEventListener('click', this.flipField.bind(this)) ;
+            toolbar.appendChild(this.flip_field_button_) ;
 
-        this.elem.appendChild(toolbar) ;
-        this.updateFlipButtonText() ;
+            this.elem.appendChild(toolbar) ;
+            this.updateFlipButtonText() ;
+        }
 
         if (this.isCentralMatchPreview()) {
             this.preview_toolbar_ = document.createElement('div') ;
