@@ -336,8 +336,8 @@ export class XeroScoutFormView extends XeroView {
             toolbar.appendChild(this.flip_field_button_) ;
 
             this.elem.appendChild(toolbar) ;
+            this.updateFlipButtonText() ;
         }
-        this.updateFlipButtonText() ;
 
         if (this.isCentralMatchPreview()) {
             this.preview_toolbar_ = document.createElement('div') ;
