@@ -27,11 +27,13 @@ export class NewFormulaDialog extends XeroDialog {
     private team_fields_table_div_? : HTMLDivElement ;
     private formula_table_div_? : HTMLDivElement ;
     private function_table_div_? : HTMLDivElement ;
+    private bool_table_div_? : HTMLDivElement ;  
 
     private match_fields_table_? : TabulatorFull ;
     private team_fields_table_? : TabulatorFull ;
     private formula_table_? : TabulatorFull ;
     private function_table_? : TabulatorFull ;
+    private bool_table_? : TabulatorFull ;
 
     private match_fields_ : IPCColumnDesc[] = [] ;
     private team_fields_ : IPCColumnDesc[] = [] ;
@@ -170,6 +172,24 @@ export class NewFormulaDialog extends XeroDialog {
             maxHeight: '300px'
         }) ;
 
+        this.bool_table_div_ = document.createElement('div') ;  
+        this.bool_table_div_.className = 'xero-popup-form-new-formula-table-div' ;  
+        this.list_div_.appendChild(this.bool_table_div_) ;  
+        
+        this.bool_table_ = new TabulatorFull(this.bool_table_div_, {  
+            data: [  
+                { name: '&&' }, { name: '||' }, { name: '!' },  
+                { name: '==' }, { name: '!=' }, { name: '<' },  
+                { name: '>' }, { name: '<=' }, { name: '>=' }  
+            ],  
+            columns: [  
+                { title: 'Boolean', field: 'name' , width: 200}  
+            ],  
+            layout: 'fitColumns',  
+            maxHeight: '300px'  
+        }) ;  
+        //this.bool_table_.on('cellDblClick', this.appendCellValueToFormula.bind(this)) ;
+
         div.appendChild(this.list_div_) ;
         pdiv.appendChild(div) ;
     }
@@ -196,12 +216,14 @@ export class NewFormulaDialog extends XeroDialog {
             this.match_fields_table_!.clearFilter(true) ;
             this.formula_table_!.clearFilter(true) ;
             this.function_table_!.clearFilter(true) ;
+            this.bool_table_!.clearFilter(true) ;
         }
         else {
             this.team_fields_table_!.setFilter('name', 'starts', word) ;
             this.match_fields_table_!.setFilter('name', 'starts', word) ;
             this.formula_table_!.setFilter('name', 'starts', word) ;
             this.function_table_!.setFilter('name', 'starts', word) ;
+            this.bool_table_!.setFilter('name', 'starts', word) ;
         }
     } 
 
