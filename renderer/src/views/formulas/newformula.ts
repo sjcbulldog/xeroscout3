@@ -122,7 +122,7 @@ export class NewFormulaDialog extends XeroDialog {
 
         this.match_fields_table_div_ = document.createElement('div') ;
         this.match_fields_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
-        this.list_div_.appendChild(this.match_fields_table_div_) ;
+        this.list_div_.appendChild(this.match_fields_table_div_);
 
         this.match_fields_table_ = new TabulatorFull(this.match_fields_table_div_, {
             data: this.match_fields_,
@@ -132,6 +132,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitData',
             maxHeight: '300px',
         }) ;
+        this.match_fields_table_!.on('cellClick', this.appendCellValueToFormula.bind(this));  
 
         this.team_fields_table_div_ = document.createElement('div') ;
         this.team_fields_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
@@ -145,6 +146,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitColumns',
             maxHeight: '300px'
         }) ;        
+        this.team_fields_table_!.on('cellClick', this.appendCellValueToFormula.bind(this));  
 
         this.formula_table_div_ = document.createElement('div') ;
         this.formula_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
@@ -158,6 +160,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitColumns',
             maxHeight: '300px'
         }) ;
+        this.formula_table_!.on('cellClick', this.appendCellValueToFormula.bind(this));  
         
         this.function_table_div_ = document.createElement('div') ;
         this.function_table_div_.className = 'xero-popup-form-new-formula-table-div' ;
@@ -171,7 +174,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitColumns',
             maxHeight: '300px'
         }) ;
-
+        this.function_table_!.on('cellClick', this.appendCellValueToFormula.bind(this));  
         this.bool_table_div_ = document.createElement('div') ;  
         this.bool_table_div_.className = 'xero-popup-form-new-formula-table-div' ;  
         this.list_div_.appendChild(this.bool_table_div_) ;  
@@ -188,7 +191,7 @@ export class NewFormulaDialog extends XeroDialog {
             layout: 'fitColumns',  
             maxHeight: '300px'  
         }) ;  
-        //this.bool_table_.on('cellDblClick', this.appendCellValueToFormula.bind(this)) ;
+        this.bool_table_.on('cellDblClick', this.appendCellValueToFormula.bind(this)) ;
 
         div.appendChild(this.list_div_) ;
         pdiv.appendChild(div) ;
@@ -316,5 +319,10 @@ export class NewFormulaDialog extends XeroDialog {
         }
 
         return true ;
+    }
+    private appendCellValueToFormula(e: Event, cell: any) {  
+        const value = cell.getValue();  
+        this.expr_input_!.value += (this.expr_input_!.value ? ' ' : '') + value;  
+        this.expr_input_!.focus();  
     }
 }
