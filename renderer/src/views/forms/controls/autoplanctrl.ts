@@ -103,10 +103,12 @@ export class AutoPlanControl extends FormControl {
     private select_button_?: HTMLButtonElement;
     private draw_button_?: HTMLButtonElement;
     private clear_button_?: HTMLButtonElement;
-    private dump_button_?: HTMLButtonElement;
     private add_auto_button_?: HTMLButtonElement;
     private rename_auto_button_?: HTMLButtonElement;
     private delete_auto_button_?: HTMLButtonElement;
+    private help_button_?: HTMLButtonElement;
+    private help_menu_?: HTMLDivElement;
+    private help_open_ = false;
 
     constructor(imsrc: ImageDataSource, view: XeroView, tag: string, bounds: XeroRect) {
         super(view, AutoPlanControl.item_desc_);
@@ -154,6 +156,31 @@ export class AutoPlanControl extends FormControl {
         this.toolbar_ = document.createElement('div');
         this.toolbar_.className = 'xero-autoplan-toolbar';
 
+        const header = document.createElement('div');
+        header.className = 'xero-autoplan-header';
+        const headerTitle = document.createElement('div');
+        headerTitle.className = 'xero-autoplan-header-title';
+        headerTitle.innerText = 'Auto Planner';
+        header.appendChild(headerTitle);
+
+        const helpWrap = document.createElement('div');
+        helpWrap.className = 'xero-autoplan-help-wrap';
+
+        this.help_button_ = document.createElement('button');
+        this.help_button_.className = 'xero-autoplan-help-button';
+        this.help_button_.innerText = '?';
+        this.help_button_.title = 'Auto Planner Help';
+        this.help_button_.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            this.toggleHelpMenu();
+        });
+        helpWrap.appendChild(this.help_button_);
+
+        this.help_menu_ = this.createHelpMenu();
+        helpWrap.appendChild(this.help_menu_);
+        header.appendChild(helpWrap);
+        this.toolbar_.appendChild(header);
+
         this.actions_bar_ = document.createElement('div');
         this.actions_bar_.className = 'xero-autoplan-actions';
         this.toolbar_.appendChild(this.actions_bar_);
@@ -168,7 +195,6 @@ export class AutoPlanControl extends FormControl {
         this.redo_button_ = this.createToolButton('Redo', () => this.redo());
         this.delete_button_ = this.createToolButton('Delete', () => this.deleteSelection());
         this.clear_button_ = this.createToolButton('Clear', () => this.clearAuto());
-        this.dump_button_ = this.createToolButton('Dump JSON', () => this.dumpJson());
 
         this.tools_bar_.appendChild(this.select_button_);
         this.tools_bar_.appendChild(this.draw_button_);
@@ -176,7 +202,6 @@ export class AutoPlanControl extends FormControl {
         this.tools_bar_.appendChild(this.redo_button_);
         this.tools_bar_.appendChild(this.delete_button_);
         this.tools_bar_.appendChild(this.clear_button_);
-        this.tools_bar_.appendChild(this.dump_button_);
 
         this.autos_select_ = document.createElement('select');
         this.autos_select_.className = 'xero-autoplan-autos-select';
@@ -220,6 +245,83 @@ export class AutoPlanControl extends FormControl {
         this.updateFromItem(false, scale, xoff, yoff);
         this.resetHistory();
     }
+
+    private createHelpMenu(): HTMLDivElement {
+        const menu = document.createElement('div');
+        menu.className = 'xero-autoplan-help-menu';
+
+        const title = document.createElement('div');
+        title.className = 'xero-autoplan-help-title';
+        title.innerText = 'Auto Planner Help';
+        menu.appendChild(title);
+
+        const sections: Array<[string, string]> = [
+            ['Add nodes:', 'Switch to Select mode, choose an action, then tap/click the field to place nodes.'],
+            ['Select mode:', 'Use this mode to place actions, select nodes, and move nodes around the field.'],
+            ['Draw mode:', 'Tap one node to start drawing, then tap another node to connect them. Tap the same node again to cancel.'],
+            ['Background:', 'The field image comes from this control settings and is shown behind your nodes and paths.'],
+            ['Undo/Clear:', 'Undo reverts the last change. Clear removes all nodes and paths from the active auto.'],
+        ];
+
+        for (const [label, text] of sections) {
+            const row = document.createElement('div');
+            row.className = 'xero-autoplan-help-row';
+
+            const labelEl = document.createElement('div');
+            labelEl.className = 'xero-autoplan-help-row-label';
+            labelEl.innerText = label;
+            row.appendChild(labelEl);
+
+            const textEl = document.createElement('div');
+            textEl.className = 'xero-autoplan-help-row-text';
+            textEl.innerText = text;
+            row.appendChild(textEl);
+
+            menu.appendChild(row);
+        }
+
+        return menu;
+    }
+
+    private toggleHelpMenu(): void {
+        if (this.help_open_) {
+            this.closeHelpMenu();
+        } else {
+            this.openHelpMenu();
+        }
+    }
+
+    private openHelpMenu(): void {
+        if (!this.help_menu_) {
+            return;
+        }
+        this.help_open_ = true;
+        this.help_menu_.classList.add('open');
+        document.addEventListener('pointerdown', this.onDocumentPointerDown);
+    }
+
+    private closeHelpMenu(): void {
+        if (!this.help_menu_) {
+            return;
+        }
+        this.help_open_ = false;
+        this.help_menu_.classList.remove('open');
+        document.removeEventListener('pointerdown', this.onDocumentPointerDown);
+    }
+
+    private onDocumentPointerDown = (ev: PointerEvent): void => {
+        if (!this.help_menu_ || !this.help_button_) {
+            return;
+        }
+        const target = ev.target as Node | null;
+        if (!target) {
+            return;
+        }
+        if (this.help_menu_.contains(target) || this.help_button_.contains(target)) {
+            return;
+        }
+        this.closeHelpMenu();
+    };
 
     public createEditDialog(): EditFormControlDialog {
         return new EditAutoPlanDialog(this, this.image_src_.getImageNames());
@@ -494,11 +596,19 @@ export class AutoPlanControl extends FormControl {
             if (this.selected_node_id_ === node.id) {
                 nodeEl.classList.add('selected');
             }
+            nodeEl.addEventListener('click', () => this.onNodeClick(node.id));
             nodeEl.addEventListener('pointerdown', (ev) => this.onNodePointerDown(ev, node.id));
             nodeEl.addEventListener('pointermove', (ev) => this.onNodePointerMove(ev, node.id));
             nodeEl.addEventListener('pointerup', (ev) => this.onNodePointerUp(ev, node.id));
             this.nodes_layer_.appendChild(nodeEl);
         }
+    }
+
+    private onNodeClick(nodeId: string): void {
+        if (this.mode_ !== 'draw') {
+            return;
+        }
+        this.handleDrawTap(nodeId);
     }
 
     private onCanvasPointerDown(ev: PointerEvent): void {
@@ -540,7 +650,6 @@ export class AutoPlanControl extends FormControl {
         ev.preventDefault();
         ev.stopPropagation();
         if (this.mode_ === 'draw') {
-            this.startDraw(nodeId, ev);
             return;
         }
         if (this.selected_action_ === 'End') {
@@ -579,7 +688,6 @@ export class AutoPlanControl extends FormControl {
     private onNodePointerUp(ev: PointerEvent, nodeId: string): void {
         ev.stopPropagation();
         if (this.mode_ === 'draw') {
-            this.finishDraw(nodeId);
             return;
         }
         this.handleEndTogglePointerUp(ev);
@@ -606,6 +714,28 @@ export class AutoPlanControl extends FormControl {
         this.preview_line_.setAttribute('class', 'xero-autoplan-edge preview');
         this.draw_control_point_ = { x: from.x, y: from.y };
         document.addEventListener('pointermove', this.onDrawPointerMove);
+    }
+
+    private handleDrawTap(nodeId: string): void {
+        if (!this.drawing_from_node_id_) {
+            this.cancelDraw();
+            this.drawing_from_node_id_ = nodeId;
+            this.selectNode(nodeId);
+            this.render();
+            return;
+        }
+
+        const fromId = this.drawing_from_node_id_;
+        this.cancelDraw();
+
+        if (fromId === nodeId) {
+            this.clearSelection();
+            this.render();
+            return;
+        }
+
+        this.addEdge(fromId, nodeId);
+        this.selectNode(nodeId);
     }
 
     private finishDraw(nodeId: string): void {
