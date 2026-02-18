@@ -10,6 +10,8 @@ import { DBViewFormulaDialog } from "./dbformdialog.js";
 import { DataValue } from "../../shared/datavalue.js";
 import { XeroMatchStatus } from "../matchstatus.js";
 import { Expr } from "../../shared/expr.js";
+import { DBDebugDialog } from "./dbdebugdialog.js";
+
 
 interface MatchRowCollection {
     rows: RowComponent[] ;
@@ -58,6 +60,7 @@ export class DatabaseView extends XeroView {
             new XeroPopupMenuItem('Revert Changes', this.revertChanges.bind(this)),
             new XeroPopupMenuItem('Show/Hide/Freeze Columns', this.hideColumns.bind(this)),
             new XeroPopupMenuItem('Valid Data Formulas', this.validDataFormulas.bind(this)),
+            new XeroPopupMenuItem('Debug formulas', this.debugFormulas.bind(this)),
         ] ;
 
         this.context_menu_ = new XeroPopupMenu('Menu', items) ;
@@ -237,6 +240,7 @@ export class DatabaseView extends XeroView {
             layout:"fitData",
             resizableColumnFit:true,
             movableColumns:true,
+            selectableRows: 1,
         }) ;
 
         this.table_.on('tableBuilt', this.tableReady.bind(this)) ;
@@ -618,9 +622,12 @@ export class DatabaseView extends XeroView {
             this.logMessage('Error parsing formula: ' + formula.formula + ' - ' + expr.getErrorMessage()) ;
             return ;
         }
+ 
+       
 
         let vars = expr.variables() ;
         let mrows = this.findMatchRows() ;
+
         for(let mrow of mrows.values()) {
             let varvalues : Map<string, IPCTypedDataValue> = new Map<string, IPCTypedDataValue>() ;
 
@@ -641,6 +648,19 @@ export class DatabaseView extends XeroView {
                 if (result instanceof Error) {
                     this.logMessage('Error evaluating formula: ' + formula.formula + ' - ' + result.message) ;
                     continue ;
+                }
+                // Store variable values for debugging  
+                const debugData = {  
+                    expression: f,  
+                    variables: Array.from(varvalues.entries()).map(([name, value]: [string, any]) => ({
+                        name,  
+                        value: DataValue.toDisplayString(value)  
+                    }))  
+                };  
+                
+                // Pass debug data to dialog if it exists  
+                if (this.dialog_ && this.dialog_ instanceof DBDebugDialog) {  
+                    (this.dialog_ as DBDebugDialog).updateDebugData(formula, debugData);  
                 }
 
                 if (DataValue.isTruthy(result)) {
@@ -686,6 +706,22 @@ export class DatabaseView extends XeroView {
             if (result instanceof Error) {
                 continue ;
             }
+
+           // Store variable values for debugging  
+            const debugData = {  
+                expression: f,  
+                variables: Array.from(varvalues.entries()).map(([name, value]: [string, any]) => ({
+
+                    name,  
+                    value: DataValue.toDisplayString(value)  
+                }))  
+            };  
+            
+            // Pass debug data to dialog if it exists  
+            if (this.dialog_ && this.dialog_ instanceof DBDebugDialog) {  
+                (this.dialog_ as DBDebugDialog).updateDebugData(formula, debugData);  
+            }
+
 
             if (DataValue.isTruthy(result)) {
                 for(let col of formula.columns) {
@@ -737,8 +773,96 @@ export class DatabaseView extends XeroView {
         this.dialog_.on('closed', this.formatFormulasClosed.bind(this)) ;
         this.dialog_.showCentered(this.table_div_!) ;
     }
+    
+
+
+   private debugFormulas() {  
+        if (this.dialog_) {  
+            return;  
+        }  
+        
+        // Extract match identifier using same pattern as Scout navigation  
+        let matchId: string | undefined;  
+        const selectedRows = this.table_?.getSelectedRows();
+        matchId = "cannot get match data: " + selectedRows + ", " + this.table_?.getSelectedRows().length; // debug info  
+        if (selectedRows && selectedRows.length > 0) {  
+            const data = selectedRows[0].getData();  
+            // This matches Scout's navigation command format (sm-qm-1, sm-sf-2-1, etc.)  
+            matchId = `${data.comp_level}${data.set_number ? '-' + data.set_number : ''}-${data.match_number}`;  
+        }  
+        
+        this.dialog_ = new DBDebugDialog(this, this.type_, this.format_formulas_, this.formulas_, this.col_descs_!, matchId);  
+        this.dialog_.on('closed', this.debugDialogClosed.bind(this));  
+        this.dialog_.showCentered(this.table_div_!);  
+    }
+
+    
+    private debugDialogClosed() {  
+        this.dialog_ = undefined;  
+    }
 
     private logMessage(msg: string) {
         this.messages_.push(msg) ;
+    }
+
+
+    public debugFormulaRobot(formula: IPCCheckDBViewFormula): Array<{name: string, value: string}>[] {  
+        let f = this.findFormulaByName(formula.formula);  
+        if (!f) return [];  
+    
+        let expr = Expr.parse(f);  
+        if (expr.hasError()) return [];  
+    
+        let vars = expr.variables();  
+        let results: Array<{name: string, value: string}>[] = [];  
+    
+        for(let row of this.table_!.getRows()) {  
+            let varvalues = new Map<string, IPCTypedDataValue>();  
+            let data = row.getData();  
+            
+            for(let varname of vars) {  
+                let cfg = this.getColumnDesc(varname);  
+                if (cfg) {  
+                    let value = data[varname];  
+                    varvalues.set(varname, DataValue.convertFromString(cfg.type, value));  
+                }  
+            }  
+            
+            results.push(Array.from(varvalues.entries()).map(([name, value]: [string, any]) => ({  
+                name,  
+                value: DataValue.toDisplayString(value)  
+            })));  
+        }  
+        return results;  
+    }  
+    
+    public debugFormulaAlliance(formula: IPCCheckDBViewFormula): Array<{name: string, value: string}>[] {  
+        let f = this.findFormulaByName(formula.formula);  
+        if (!f) return [];  
+    
+        let expr = Expr.parse(f);  
+        if (expr.hasError()) return [];  
+    
+        let vars = expr.variables();  
+        let mrows = this.findMatchRows();  
+        let results: Array<{name: string, value: string}>[] = [];  
+    
+        for(let mrow of mrows.values()) {  
+            let varvalues = new Map<string, IPCTypedDataValue>();  
+            
+            for(let varname of vars) {  
+                let v = this.evalOneField(mrow, varname);  
+                if (v) {  
+                    varvalues.set(varname, v);  
+                }  
+            }  
+            
+            results.push(Array.from(varvalues.entries()).map(([name, value]: [string, any]) => ({  
+                name,  
+                value: DataValue.toDisplayString(value)  
+            })));  
+        }  
+        
+        return results;  
     }
 }
