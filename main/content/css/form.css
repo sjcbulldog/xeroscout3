@@ -201,6 +201,90 @@
     border-bottom: 1px solid #1f2a44;
 }
 
+.xero-autoplan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 30px;
+}
+
+.xero-autoplan-header-title {
+    color: #d8e4ff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.xero-autoplan-help-wrap {
+    position: relative;
+}
+
+.xero-autoplan-help-button {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid #506287;
+    background: linear-gradient(180deg, #263754 0%, #1b2942 100%);
+    color: #f1f6ff;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0;
+}
+
+.xero-autoplan-help-button:hover {
+    background: linear-gradient(180deg, #2d4265 0%, #22334f 100%);
+}
+
+.xero-autoplan-help-menu {
+    position: absolute;
+    top: 34px;
+    right: 0;
+    width: min(560px, 85vw);
+    background: #0f172a;
+    border: 1px solid #32476f;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    padding: 10px;
+    display: none;
+    z-index: 40;
+}
+
+.xero-autoplan-help-menu.open {
+    display: block;
+}
+
+.xero-autoplan-help-title {
+    color: #e9f1ff;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.xero-autoplan-help-row {
+    padding: 7px 8px;
+    border-radius: 8px;
+    background: #131f36;
+    margin-bottom: 6px;
+}
+
+.xero-autoplan-help-row:last-child {
+    margin-bottom: 0;
+}
+
+.xero-autoplan-help-row-label {
+    color: #c3d7ff;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.xero-autoplan-help-row-text {
+    color: #e5ecff;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
 .xero-autoplan-actions {
     display: flex;
     flex-wrap: wrap;
@@ -213,7 +297,7 @@
     border: 1px solid #2b3b5d;
     border-radius: 6px;
     padding: 4px 10px;
-    font-size: 13px;
+    font-size: 25px;
     cursor: pointer;
 }
 
@@ -235,7 +319,7 @@
     border: 1px solid #2b3b5d;
     border-radius: 6px;
     padding: 4px 10px;
-    font-size: 12px;
+    font-size: 25px;
     cursor: pointer;
 }
 
@@ -255,7 +339,7 @@
     border: 1px solid #2b3b5d;
     border-radius: 6px;
     padding: 4px 6px;
-    font-size: 12px;
+    font-size: 22px;
 }
 
 .xero-autoplan-canvas {
@@ -319,7 +403,7 @@
     color: #ffffff;
     padding: 6px 10px;
     border-radius: 14px;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: bold;
     border: 2px solid #83a3ff;
     cursor: pointer;
