@@ -28,7 +28,7 @@ export interface IPCTabletDefn {
     purpose: IPCFormPurpose | undefined;
 }
 
-export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'stopwatch' | 'box' | 'image' | 'autoplan' ;
+export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'stopwatch' | 'box' | 'image' | 'autoplan' | 'autoselector' ;
 
 export interface IPCFormItem {
     type: IPCFormControlType ;
@@ -63,6 +63,11 @@ export interface IPCAutoPlanItem extends IPCFormItem {
     fieldImage: string ;
     approvedActions: string[] ;
     allowMultipleAutos: boolean ;
+}
+
+export interface IPCAutoSelectorItem extends IPCFormItem {
+    fieldImage: string ;
+    showSourceTagInTab?: boolean ;
 }
 
 export interface IPCBoxItem extends IPCFormItem {
@@ -193,6 +198,8 @@ export interface IPCFormScoutData {
     mirrory? : boolean ;
     color? : string ;
     title? : string ;
+    scoutItem?: string ;
+    activeTeamResult?: IPCScoutResult ;
 }
 
 export interface IPCScoutResult {

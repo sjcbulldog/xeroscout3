@@ -78,7 +78,6 @@ export class AutoPlanControl extends FormControl {
     private dragging_node_id_: string | null = null;
     private drag_start_state_: string | null = null;
     private drawing_from_node_id_: string | null = null;
-    private draw_control_point_?: { x: number; y: number };
     private dragging_edge_id_: string | null = null;
     private edge_drag_start_state_: string | null = null;
     private end_toggle_timer_?: number;
@@ -202,6 +201,7 @@ export class AutoPlanControl extends FormControl {
         this.tools_bar_.appendChild(this.redo_button_);
         this.tools_bar_.appendChild(this.delete_button_);
         this.tools_bar_.appendChild(this.clear_button_);
+        // this.tools_bar_.appendChild(this.dump_button_);
 
         this.autos_select_ = document.createElement('select');
         this.autos_select_.className = 'xero-autoplan-autos-select';
@@ -650,6 +650,7 @@ export class AutoPlanControl extends FormControl {
         ev.preventDefault();
         ev.stopPropagation();
         if (this.mode_ === 'draw') {
+            this.handleDrawTap(nodeId);
             return;
         }
         if (this.selected_action_ === 'End') {
@@ -700,54 +701,31 @@ export class AutoPlanControl extends FormControl {
         }
     }
 
-    private startDraw(nodeId: string, ev: PointerEvent): void {
-        this.drawing_from_node_id_ = nodeId;
-        const rect = this.canvas_!.getBoundingClientRect();
-        const from = this.getActiveAuto().nodes.find(n => n.id === nodeId);
-        if (!from) {
-            return;
-        }
-        const p = this.nodeToPixel(from, rect);
-        this.preview_line_ = document.createElementNS('http://www.w3.org/2000/svg', 'path') as unknown as SVGLineElement;
-        (this.preview_line_ as unknown as SVGPathElement).setAttribute('d', `M ${p.x} ${p.y} Q ${p.x} ${p.y} ${p.x} ${p.y}`);
-        (this.preview_line_ as unknown as SVGPathElement).setAttribute('fill', 'none');
-        this.preview_line_.setAttribute('class', 'xero-autoplan-edge preview');
-        this.draw_control_point_ = { x: from.x, y: from.y };
-        document.addEventListener('pointermove', this.onDrawPointerMove);
-    }
-
     private handleDrawTap(nodeId: string): void {
         if (!this.drawing_from_node_id_) {
-            this.cancelDraw();
-            this.drawing_from_node_id_ = nodeId;
-            this.selectNode(nodeId);
-            this.render();
+            this.startDraw(nodeId);
             return;
         }
-
         const fromId = this.drawing_from_node_id_;
-        this.cancelDraw();
-
         if (fromId === nodeId) {
-            this.clearSelection();
+            this.cancelDraw();
+            this.selected_node_id_ = null;
+            this.selected_edge_id_ = null;
             this.render();
             return;
         }
 
+        this.cancelDraw();
+        this.selected_node_id_ = null;
+        this.selected_edge_id_ = null;
         this.addEdge(fromId, nodeId);
-        this.selectNode(nodeId);
     }
 
-    private finishDraw(nodeId: string): void {
-        if (!this.drawing_from_node_id_) {
-            return;
-        }
-        const fromId = this.drawing_from_node_id_;
-        this.cancelDraw();
-        if (fromId === nodeId) {
-            return;
-        }
-        this.addEdge(fromId, nodeId, this.draw_control_point_);
+    private startDraw(nodeId: string): void {
+        this.drawing_from_node_id_ = nodeId;
+        this.selected_node_id_ = nodeId;
+        this.selected_edge_id_ = null;
+        this.render();
     }
 
     private cancelDraw(): void {
@@ -756,31 +734,8 @@ export class AutoPlanControl extends FormControl {
         }
         this.preview_line_ = undefined;
         this.drawing_from_node_id_ = null;
-        this.draw_control_point_ = undefined;
-        document.removeEventListener('pointermove', this.onDrawPointerMove);
         this.renderEdges();
     }
-
-    private onDrawPointerMove = (ev: PointerEvent) => {
-        if (!this.preview_line_ || !this.canvas_) {
-            return;
-        }
-        const rect = this.canvas_.getBoundingClientRect();
-        const x = ev.clientX - rect.left;
-        const y = ev.clientY - rect.top;
-        const fromId = this.drawing_from_node_id_;
-        const from = fromId ? this.getActiveAuto().nodes.find(n => n.id === fromId) : undefined;
-        if (!from) {
-            return;
-        }
-        this.draw_control_point_ = this.pixelToNode(ev.clientX, ev.clientY, rect);
-        const p = this.nodeToPixel(from, rect);
-        const c = { x, y };
-        const q = { x, y };
-        (this.preview_line_ as unknown as SVGPathElement).setAttribute('d', `M ${p.x} ${p.y} Q ${c.x} ${c.y} ${q.x} ${q.y}`);
-        (this.preview_line_ as unknown as SVGPathElement).setAttribute('fill', 'none');
-        this.renderEdges();
-    };
 
     private onEdgeHandlePointerDown(ev: PointerEvent, edgeId: string): void {
         ev.preventDefault();

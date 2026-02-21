@@ -1,5 +1,5 @@
 import {  XeroApp  } from "../../apps/xeroapp.js";
-import {  IPCDatabaseData, IPCFormScoutData, IPCNamedDataValue, IPCSection } from "../../shared/ipc.js";
+import {  IPCDatabaseData, IPCFormScoutData, IPCNamedDataValue, IPCScoutResult, IPCSection } from "../../shared/ipc.js";
 import {  XeroLogger } from "../../utils/xerologger.js";
 import {  XeroRect, XeroSize  } from "../../shared/xerogeom.js";
 import {  XeroTabbedWidget } from "../../widgets/xerotabbedwidget.js";
@@ -17,6 +17,7 @@ import {  TextControl  } from "./controls/textctrl.js";
 import { StopwatchControl } from "./controls/stopwatchctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
 import { AutoPlanControl } from "./controls/autoplanctrl.js";
+import { AutoSelectorControl } from "./controls/autoselectorctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
@@ -98,6 +99,14 @@ export class XeroScoutFormView extends XeroView {
         }
 
         super.close() ;
+    }
+
+    public getActiveTeamResult(): IPCScoutResult | undefined {
+        return this.form_info_?.activeTeamResult ;
+    }
+
+    public getScoutItemId(): string | undefined {
+        return this.form_info_?.scoutItem ;
     }
 
     private isCentralMatchPreview() : boolean {
@@ -317,7 +326,7 @@ export class XeroScoutFormView extends XeroView {
         }
         this.elem.append(this.titlediv_) ;
 
-        if (this.type_ !== 'team') {
+        if (this.type_ === 'match') {
             const toolbar = document.createElement('div') ;
             toolbar.className = 'xero-form-toolbar' ;
 
@@ -431,6 +440,10 @@ export class XeroScoutFormView extends XeroView {
                 }
                 else if (item.type === 'autoplan') {
                     formctrl = new AutoPlanControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'autoselector') {
+                    formctrl = new AutoSelectorControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else {
