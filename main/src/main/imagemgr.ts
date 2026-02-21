@@ -105,7 +105,7 @@ export class ImageManager {
             const files = fs.readdirSync(dir) ;
             for (const file of files) {
                 const filePath = path.join(dir!, file) ;
-                if (fs.statSync(filePath).isFile() && file.endsWith('.png')) {
+                if (fs.statSync(filePath).isFile() && file.toLowerCase().endsWith('.png')) {
                     this.imagemap_.set(path.parse(file).name, filePath) ;
                 }
             }
