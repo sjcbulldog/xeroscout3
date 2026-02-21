@@ -528,6 +528,17 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		datamenu.submenu?.append(importFormulas);
 		this.menuitems_.set('data/importformulas', importFormulas);
 
+		let exportFormulas = new MenuItem({
+			type: 'normal',
+			label: 'Export Formulas',
+			enabled: false,
+			click: () => {
+				this.exportFormulasToFile();
+			},
+		});
+		datamenu.submenu?.append(exportFormulas);
+		this.menuitems_.set('data/exportformulas', exportFormulas);
+
 		ret.append(datamenu);
 
 		let viewmenu: MenuItem = new MenuItem({
@@ -586,6 +597,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			'data/graphdefn',
 			'file/close',
 			'data/importformulas',
+			'data/exportformulas',
 		];
 		for (let item of items) {
 			this.enableMenuItem(item, hasEvent);
@@ -2225,11 +2237,46 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			try {
 				let data = fs.readFileSync(path, 'utf-8') ;
 				const obj = JSON.parse(data) ;
-				this.project!.formula_mgr_!.importFormulas(obj) ;
+				const mgr = this.project!.formula_mgr_! ;
+				const names = mgr.getImportFormulaNames(obj) ;
+				const collisions = names.filter((name) => mgr.hasFormula(name)) ;
+
+				let duplicatePolicy: 'keep' | 'overwrite' = 'keep' ;
+				if (collisions.length > 0) {
+					const shown = collisions.slice(0, 10) ;
+					const extra = collisions.length > shown.length ? `\n...and ${collisions.length - shown.length} more` : '' ;
+					const button = dialog.showMessageBoxSync(this.win_, {
+						title: 'Import Formulas',
+						type: 'question',
+						buttons: ['Keep Original', 'Overwrite', 'Cancel'],
+						defaultId: 0,
+						cancelId: 2,
+						message: `Found ${collisions.length} duplicate formula name(s).`,
+						detail: `Duplicates:\n${shown.join('\n')}${extra}\n\nChoose how to handle duplicates for this import.`,
+					}) ;
+
+					if (button === 2) {
+						return ;
+					}
+
+					duplicatePolicy = button === 1 ? 'overwrite' : 'keep' ;
+				}
+
+				const result = mgr.importFormulas(obj, { duplicatePolicy: duplicatePolicy }) ;
+				const warningText = result.warnings.length > 0
+					? `\nWarnings:\n${result.warnings.slice(0, 5).join('\n')}${result.warnings.length > 5 ? `\n...and ${result.warnings.length - 5} more` : ''}`
+					: '' ;
+
+				dialog.showMessageBox(this.win_, {
+					title: 'Import Formulas',
+					type: 'info',
+					message: 'Formula import complete.',
+					detail: `Read: ${result.read}\nAdded: ${result.added}\nUpdated: ${result.updated}\nSkipped: ${result.skipped}\nInvalid: ${result.invalid}${warningText}`,
+				}) ;
 			}
 			catch(err) {
 				let errobj = err as Error ;
-				dialog.showErrorBox("Coule not import formulas", errobj.message);
+				dialog.showErrorBox("Could not import formulas", errobj.message);
 			}
 		}
 	}
@@ -2247,6 +2294,42 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}).then(result => {	
 			if (!result.canceled) {
 				this.importFormulasFromFileWithPath(result.filePaths[0]) ;
+			}
+		}) ;
+	}
+
+	private exportFormulasToFile() {
+		if (!this.project || !this.project.isInitialized()) {
+			dialog.showErrorBox('Export Formulas', 'No event has been loaded - cannot export formulas');
+			return ;
+		}
+
+		dialog.showSaveDialog(this.win_, {
+			title: 'Export formulas to file',
+			defaultPath: 'formulas.json',
+			filters: [
+				{ name: 'JSON Files', extensions: ['json'] },
+				{ name: 'All Files', extensions: ['*']}
+			],
+			properties: [
+				'showOverwriteConfirmation',
+			]
+		}).then(result => {
+			if (!result.canceled && result.filePath) {
+				try {
+					const payload = this.project!.formula_mgr_!.exportFormulas() ;
+					fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2), 'utf-8') ;
+					dialog.showMessageBox(this.win_, {
+						title: 'Export Formulas',
+						type: 'info',
+						message: 'Formula export complete.',
+						detail: `Exported ${payload.formulas.length} formula(s) to:\n${result.filePath}`,
+					}) ;
+				}
+				catch(err) {
+					let errobj = err as Error ;
+					dialog.showErrorBox('Export Formulas Error', errobj.message) ;
+				}
 			}
 		}) ;
 	}

@@ -3,6 +3,32 @@ import { Manager } from "./manager" ;
 import { Expr } from "../../shared/expr";
 import { IPCAppType, IPCFormula } from "../../shared/ipc" ;
 
+export type FormulaDuplicatePolicy = "keep" | "overwrite" ;
+
+export interface FormulaImportOptions {
+    duplicatePolicy: FormulaDuplicatePolicy ;
+}
+
+export interface FormulaFileEntry {
+    name: string ;
+    desc: string ;
+    formula: string ;
+}
+
+export interface FormulaFileV1 {
+    version: 1 ;
+    formulas: FormulaFileEntry[] ;
+}
+
+export interface FormulaImportResult {
+    read: number ;
+    added: number ;
+    updated: number ;
+    skipped: number ;
+    invalid: number ;
+    warnings: string[] ;
+}
+
 export class FormulaInfo {
     public formulas_ : IPCFormula[] = [] ;       
     public coach_formulas_ : IPCFormula[] = [] ;          
@@ -19,14 +45,18 @@ export class FormulaManager extends Manager {
         this.appType_ = appType ;
     }
 
-    public get formulas() : IPCFormula[] {
-        // Older project files may not contain coach formulas; ensure arrays exist
+    private ensureArrays(): void {
         if (!this.info_.formulas_) {
             this.info_.formulas_ = [] ;
         }
         if (!this.info_.coach_formulas_) {
             this.info_.coach_formulas_ = [] ;
         }
+    }
+
+    public get formulas() : IPCFormula[] {
+        // Older project files may not contain coach formulas; ensure arrays exist
+        this.ensureArrays() ;
         return [...this.info_.formulas_, ...this.info_.coach_formulas_] ;
     }
 
@@ -79,6 +109,112 @@ export class FormulaManager extends Manager {
         return ret ;
     }
 
+    private findFormulaInList(list: IPCFormula[], name: string) : number {
+        for(let i = 0 ; i < list.length ; i++) {
+            if (list[i].name === name) {
+                return i ;
+            }
+        }
+        return -1 ;
+    }
+
+    private findFormulaLocation(name: string) : { list: IPCFormula[], index: number } | undefined {
+        this.ensureArrays() ;
+
+        let index = this.findFormulaInList(this.info_.formulas_, name) ;
+        if (index !== -1) {
+            return { list: this.info_.formulas_, index: index } ;
+        }
+
+        index = this.findFormulaInList(this.info_.coach_formulas_, name) ;
+        if (index !== -1) {
+            return { list: this.info_.coach_formulas_, index: index } ;
+        }
+
+        return undefined ;
+    }
+
+    private parseFormulaObject(obj: unknown) : FormulaFileEntry[] {
+        if (Array.isArray(obj)) {
+            return obj as FormulaFileEntry[] ;
+        }
+
+        if (!obj || typeof obj !== "object") {
+            throw new Error("Invalid formula file: expected an object with 'version' and 'formulas'.") ;
+        }
+
+        const payload = obj as Partial<FormulaFileV1> ;
+        if (payload.version !== 1) {
+            throw new Error("Invalid formula file: missing or unsupported 'version' (expected 1).") ;
+        }
+
+        if (!Array.isArray(payload.formulas)) {
+            throw new Error("Invalid formula file: 'formulas' must be an array.") ;
+        }
+
+        return payload.formulas ;
+    }
+
+    private parseEntry(entry: unknown, index: number) : FormulaFileEntry {
+        if (!entry || typeof entry !== "object") {
+            throw new Error(`Invalid formula entry at index ${index}: expected an object.`) ;
+        }
+
+        const maybe = entry as Partial<FormulaFileEntry> ;
+        if (typeof maybe.name !== "string" || maybe.name.trim().length === 0) {
+            throw new Error(`Invalid formula entry at index ${index}: 'name' must be a non-empty string.`) ;
+        }
+        if (typeof maybe.desc !== "string") {
+            throw new Error(`Invalid formula entry at index ${index}: 'desc' must be a string.`) ;
+        }
+        if (typeof maybe.formula !== "string") {
+            throw new Error(`Invalid formula entry at index ${index}: 'formula' must be a string.`) ;
+        }
+
+        return {
+            name: maybe.name.trim(),
+            desc: maybe.desc,
+            formula: maybe.formula,
+        } ;
+    }
+
+    private parseAndNormalize(obj: unknown) : { entries: FormulaFileEntry[], readCount: number, invalidCount: number, warnings: string[] } {
+        const warnings: string[] = [] ;
+        const read = this.parseFormulaObject(obj) ;
+        const deduped = new Map<string, FormulaFileEntry>() ;
+        let invalid = 0 ;
+
+        for(let i = 0 ; i < read.length ; i++) {
+            const parsed = this.parseEntry(read[i], i) ;
+            if (deduped.has(parsed.name)) {
+                warnings.push(`Duplicate formula '${parsed.name}' in import file; using the last entry.`) ;
+            }
+            deduped.set(parsed.name, parsed) ;
+        }
+
+        return {
+            entries: [...deduped.values()],
+            readCount: read.length,
+            invalidCount: invalid,
+            warnings: warnings,
+        } ;
+    }
+
+    public getImportFormulaNames(obj: unknown) : string[] {
+        return this.parseAndNormalize(obj).entries.map((f) => f.name) ;
+    }
+
+    public exportFormulas() : FormulaFileV1 {
+        return {
+            version: 1,
+            formulas: this.formulas.map((f) => ({
+                name: f.name,
+                desc: f.desc,
+                formula: f.formula
+            }))
+        } ;
+    }
+
     public deleteFormula(name: string) {
         let index = this.findFormulaIndex(name) ;
         if (index != undefined) {
@@ -112,7 +248,45 @@ export class FormulaManager extends Manager {
         this.write() ;
     }
 
-    public importFormulas(obj: any) {
-        // TODO: implement this function
+    public importFormulas(obj: unknown, options: FormulaImportOptions) : FormulaImportResult {
+        const parsed = this.parseAndNormalize(obj) ;
+        const result: FormulaImportResult = {
+            read: parsed.readCount,
+            added: 0,
+            updated: 0,
+            skipped: 0,
+            invalid: parsed.invalidCount,
+            warnings: parsed.warnings,
+        } ;
+
+        this.ensureArrays() ;
+        const policy = options.duplicatePolicy ;
+
+        for(let entry of parsed.entries) {
+            const normalized: IPCFormula = {
+                name: entry.name,
+                desc: entry.desc,
+                formula: entry.formula,
+                owner: this.appType_
+            } ;
+
+            const existing = this.findFormulaLocation(entry.name) ;
+            if (!existing) {
+                this.info_.formulas_.push(normalized) ;
+                this.expr_map_.delete(entry.name) ;
+                result.added++ ;
+            }
+            else if (policy === "overwrite") {
+                existing.list[existing.index] = normalized ;
+                this.expr_map_.delete(entry.name) ;
+                result.updated++ ;
+            }
+            else {
+                result.skipped++ ;
+            }
+        }
+
+        this.write() ;
+        return result ;
     }    
 }
