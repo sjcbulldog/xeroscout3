@@ -1,0 +1,314 @@
+.xero-splitter-bar {
+	background-color: lightgray;
+}
+
+.xero-splitter-bar:hover {
+	background-color: blue;
+}
+
+.xero-status-bar-left {
+	height: 100%;
+	flex-grow: 0;
+	font-size: 20px;
+}
+
+.xero-status-bar-middle {
+	height: 100%;
+	flex-grow: 1;
+	text-align: center;
+	font-size: 20px;
+}
+
+.xero-status-bar-right {
+	height: 100%;
+	flex-grow: 0;
+	font-size: 20px;
+}
+
+.xero-status-bar {
+	display: flex;
+	flex-direction: row;
+	width: calc(100% - 20px);
+	background-color: lightgray;
+	padding-left: 10px;
+	padding-right: 10px;
+	justify-content: space-between;
+}
+
+.xero-status-win {
+	width: 100%;
+	height: 100%;
+}
+
+.xero-popup-menu {
+	z-index: 1000;
+	position: absolute;
+	background-color: white;
+	border: black 1px solid;
+	border-radius: 5px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+	user-select: none;
+}
+
+.xero-popup-menu-item-div {
+	display: flex;
+	flex-direction: row;
+	cursor: pointer;
+	font-size: 16px;
+	color: black;
+	background-color: white;
+	user-select: none;
+}
+
+.xero-popup-menu-item-div:hover {
+	background-color: gray;
+	color: white
+}
+
+.xero-popup-menu-item {
+	padding: 10px;
+	flex-grow: 1;
+	user-select: none;
+}
+
+.xero-popup-menu-item:hover {
+	background-color: gray;
+	color: white
+}
+
+.xero-popup-menu-submenu {
+	padding: 10px;
+	flex-grow: 0;
+	user-select: none;	
+}
+
+.xero-popup-menu-submenu:hover {
+	background-color: gray;
+	color: white
+}
+
+.xero-tabbed-widget-top {
+	background-color: white;	
+}
+
+.xero-tabbed-widget-bar {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+	background-color: rgb(192, 192, 192);
+	font-family: Arial ;
+	font-size: 18px;
+	font-weight: bold;
+	flex-grow: 0;
+}
+
+.xero-tabbed-widget-page {
+	flex-grow: 1 ;
+}
+
+.xero-tabbed-widget-tab {
+	padding-left: 10px ;
+	padding-right: 10px ;
+	padding-top: 3px ;
+	padding-bottom: 3px ;
+	text-align: center;
+	vertical-align: middle;
+	user-select: none;
+}
+
+.xero-tabbed-widget-filler {
+    border-bottom: 2px solid black ;
+    background: rgb(192, 192, 192) ;
+    flex-grow: 1 ;
+}
+
+.xero-tabbed-widget-tab-selected {
+    width: fit-content;
+    cursor: pointer;    
+    border-left: 2px solid black ;    
+    border-right: 2px solid black ;
+    border-top: 2px solid black ;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: rgb(230, 230, 230) ;
+    flex-grow: 0 ;    
+}
+
+.xero-tabbed-widget-tab-unselected {
+    width: fit-content;
+    cursor: pointer;
+    border-bottom: 2px solid black ;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: rgb(192, 192, 192) ;
+    flex-grow: 0 ;
+}
+
+.xero-tabbed-widget-tab-unselected:hover {
+	color: white ;
+	background-color: lightgrey;
+}
+
+.xero-tabbed-widget-top {
+	width: 100%;	
+	height: 100%;
+	display: flex ;
+	flex-direction: column;
+}
+
+.xero-popup-top {
+	z-index: 1010 ;
+	width: 400px ;
+	height: auto ;
+	background-color: rgb(230, 230, 230);
+	position: absolute ;
+	border-radius: 20px;
+
+	opacity: 1;
+	animation-name: fadeInOpacity;
+	animation-iteration-count: 1;
+	animation-timing-function: ease-in;
+	animation-duration: 1s;	
+}
+
+@keyframes fadeInOpacity {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+.xero-popup-div {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.xero-popup-title {
+	font-size: 20px ;
+	flex-grow: 0 ;
+	display: flex ;
+}
+
+.xero-popup-title-text {
+	flex-grow: 1;
+}
+
+.xero-popup-title-close {
+	flex-grow: 0;
+	cursor: pointer;
+	font-size: 20px ;
+}
+
+.xero-popup-text {
+	font-size: 20px;
+	flex-grow:1 ;
+}
+
+.xero-popup-checkbox-label {
+	flex-grow: 0;
+	padding: 5px;
+}
+
+.xero-popup-checkbox {
+	margin-left: 10px;
+}
+
+/* Dialog styles */
+.xero-popup-form-edit-dialog {
+	position: absolute;
+	background-color: white;
+	border: 2px solid #333;
+	border-radius: 8px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	min-width: 900px;
+	max-width: 1200px;
+	font-family: Arial, sans-serif;
+}
+
+.xero-popup-form-edit-dialog-topbar {
+	background-color: #f0f0f0;
+	border-bottom: 1px solid #ccc;
+	padding: 10px 15px;
+	font-weight: bold;
+	font-size: 16px;
+	cursor: move;
+	border-radius: 6px 6px 0 0;
+}
+
+.xero-popup-form-edit-dialog-client {
+	padding: 20px;
+	max-height: 70vh;
+	overflow-y: auto;
+}
+
+.xero-popup-form-edit-dialog-buttons {
+	padding: 10px 20px;
+	border-top: 1px solid #ccc;
+	text-align: right;
+	background-color: #f9f9f9;
+	border-radius: 0 0 6px 6px;
+}
+
+.xero-popup-form-edit-dialog-button {
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	padding: 8px 16px;
+	margin-left: 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	min-width: 70px;
+}
+
+.xero-popup-form-edit-dialog-button:hover {
+	background-color: #45a049;
+}
+
+.xero-popup-form-edit-dialog-button:last-child {
+	background-color: #f44336;
+}
+
+.xero-popup-form-edit-dialog-button:last-child:hover {
+	background-color: #da190b;
+}
+
+.xero-popup-form-edit-dialog-button-delete {
+	background-color: #777;
+}
+
+.xero-popup-form-edit-dialog-button-delete:hover {
+	background-color: #666;
+}
+
+/* String dialog specific styles */
+.xero-string-dialog-message {
+	margin-bottom: 15px;
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.xero-string-dialog-input {
+	width: 100%;
+	padding: 8px 12px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 14px;
+	font-family: Arial, sans-serif;
+	box-sizing: border-box;
+}
+
+.xero-string-dialog-input:focus {
+	outline: none;
+	border-color: #4CAF50;
+	box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
