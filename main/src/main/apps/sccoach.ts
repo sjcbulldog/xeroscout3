@@ -7,7 +7,7 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
-import { IPCAppType } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem } from "../../shared/ipc";
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
@@ -32,6 +32,11 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
     private sync_client_? : SyncClient ;    
     private sync_project_file_ : string = '' ;
+
+    private team_form_?: IPCForm ;
+    private match_form_?: IPCForm ;
+    private awaiting_images_: boolean = false ;
+    private sync_finalized_: boolean = false ;
 
     public constructor(win: BrowserWindow, args: string[]) {
         super(win, 'coach') ;
@@ -204,16 +209,19 @@ export class SCCoach extends SCCoachCentralBaseApp {
             this.syncCoach() ;            
         }
         else if (cmd === SCCoach.syncEventRemote) {
+            this.sync_client_ = new TCPClient(this.logger_, '192.168.1.1') ;
+            this.sync_client_?.on('close', this.syncDone.bind(this)) ; 
+            this.sync_client_?.on('error', this.syncError.bind(this)) ;
+            this.syncCoach() ;
         }
         else if (cmd === SCCoach.syncEventWiFi) {
+            this.setView('sync-ipaddr') ;
         }      
         else if (cmd === SCCoach.syncEventIPAddr) {
             this.setView('sync-ipaddr') ;
         }
         else if (cmd === SCCoach.resetTablet) {
-            this.project = undefined ;
-            this.unsetSettings(SCCoach.lastEventLoaded) ;
-            this.sendNavData() ;
+            this.resetTabletCmd() ;
         }
         else if (cmd === SCCoach.viewInit) {
             this.setView('info') ;
@@ -313,7 +321,38 @@ export class SCCoach extends SCCoachCentralBaseApp {
         this.logger_.error('Sync error: ' + err.message) ;
     }
 
+    public syncIPAddrWithAddr(ipaddr: string, port: number) {
+        this.sync_client_ = new TCPClient(this.logger_, ipaddr, port) ;
+        this.sync_client_?.on('close', this.syncDone.bind(this)) ; 
+        this.sync_client_?.on('error', this.syncError.bind(this)) ;
+        this.syncCoach() ;
+    }
+
+    private resetTabletCmd() {
+        let ans = dialog.showMessageBoxSync(
+            {
+              title: 'Reset Tablet',
+              type: 'question',
+              buttons: ['Yes', 'No'],
+              message: `This operation will reset the tablet and all data will be lost unless you have sync'ed with the central server.\nDo you want to continue?`,
+            }) ;
+        if (ans === 1) {
+            return ;
+        }
+
+        this.project = undefined ;
+        this.unsetSettings(SCCoach.lastEventLoaded) ;
+        this.image_mgr_.removeAllImages() ;
+        this.sendNavData() ;
+        this.setView('text', 'No Event Loaded') ;
+    }
+
     private syncCoach() : void {
+        this.team_form_ = undefined ;
+        this.match_form_ = undefined ;
+        this.awaiting_images_ = false ;
+        this.sync_finalized_ = false ;
+
         this.sync_client_!.connect()
             .then(async ()=> {
                 this.logger_.info(`ScouterSync: connected to server ' ${this.sync_client_!.name()}'`) ;
@@ -355,6 +394,99 @@ export class SCCoach extends SCCoachCentralBaseApp {
             .catch((err) => {
                 this.logger_.error('Error connecting to sync server: ' + err.message) ;
             }) ;
+    }
+
+    private normalizeImageName(name: string) : string {
+        let ret = (name ?? '').trim() ;
+        if (ret.length === 0) {
+            return '' ;
+        }
+
+        if (/\.png$/i.test(ret)) {
+            ret = ret.replace(/\.png$/i, '') ;
+        }
+
+        return ret.trim() ;
+    }
+
+    private collectRequiredImagesFromForm(form: IPCForm) : string[] {
+        let ret: string[] = [] ;
+
+        for (let section of form.sections || []) {
+            for (let item of section.items || []) {
+                if (!item || typeof (item as any).type !== 'string') {
+                    continue ;
+                }
+
+                if (item.type === 'image') {
+                    let imitem = item as IPCImageItem ;
+                    let img = this.normalizeImageName(imitem.image) ;
+                    if (img.length > 0) {
+                        ret.push(img) ;
+                    }
+                }
+                else if (item.type === 'autoplan') {
+                    let apitem = item as IPCAutoPlanItem ;
+                    let img = this.normalizeImageName(apitem.fieldImage) ;
+                    if (img.length > 0) {
+                        ret.push(img) ;
+                    }
+                }
+                else if (item.type === 'autoselector') {
+                    let asitem = item as IPCAutoSelectorItem ;
+                    let img = this.normalizeImageName(asitem.fieldImage) ;
+                    if (img.length > 0) {
+                        ret.push(img) ;
+                    }
+                }
+            }
+        }
+
+        return [...new Set(ret)] ;
+    }
+
+    private computeMissingImages() : string[] {
+        let required: string[] = [] ;
+        if (this.team_form_) {
+            required = [...required, ...this.collectRequiredImagesFromForm(this.team_form_)] ;
+        }
+        if (this.match_form_) {
+            required = [...required, ...this.collectRequiredImagesFromForm(this.match_form_)] ;
+        }
+
+        let ret: string[] = [] ;
+        for (let img of [...new Set(required)]) {
+            if (img.length === 0) {
+                continue ;
+            }
+            if (!this.image_mgr_.hasImage(img)) {
+                ret.push(img) ;
+            }
+        }
+
+        return ret ;
+    }
+
+    private maybeRequestImagesOrCompleteSync() : void {
+        let missing = this.computeMissingImages() ;
+        if (missing.length > 0) {
+            this.awaiting_images_ = true ;
+            let payload = Buffer.from(JSON.stringify(missing), 'utf-8') ;
+            this.sync_client_!.send(new PacketObj(PacketType.RequestImages, payload)) ;
+        }
+        else {
+            this.completeSync() ;
+        }
+    }
+
+    private completeSync() : void {
+        if (this.sync_finalized_) {
+            return ;
+        }
+
+        this.sync_finalized_ = true ;
+        this.sync_client_!.send(new PacketObj(PacketType.GoodbyeFromCoach, new Uint8Array(0))) ;
+        this.finishSync() ;
     }
 
     private syncTablet(p: PacketObj) : void {
@@ -414,6 +546,12 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
             case PacketType.ProvideTeamForm:
                 this.logger_.debug('SyncTablet: received ProvideTeamForm packet') ;
+                try {
+                    this.team_form_ = JSON.parse(p.payloadAsString()) as IPCForm ;
+                }
+                catch {
+                    this.team_form_ = undefined ;
+                }
                 this.receiveTeamForm(p) ;
                 p = new PacketObj(PacketType.RequestMatchForm, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;                 
@@ -421,10 +559,31 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
             case PacketType.ProvideMatchForm:
                 this.logger_.debug('SyncTablet: received ProvideMatchForm packet') ;
+                try {
+                    this.match_form_ = JSON.parse(p.payloadAsString()) as IPCForm ;
+                }
+                catch {
+                    this.match_form_ = undefined ;
+                }
                 this.receiveMatchForm(p) ;
-                p = new PacketObj(PacketType.GoodbyeFromCoach, new Uint8Array(0)) ;
-                this.sync_client_!.send(p) ;
-                this.finishSync() ;                
+                this.maybeRequestImagesOrCompleteSync() ;
+                break ;
+
+            case PacketType.ProvideImages:
+                try {
+                    let obj = JSON.parse(p.payloadAsString()) as { [name: string]: string } ;
+                    for (let imname of Object.keys(obj)) {
+                        let imdata = obj[imname] ;
+                        let norm = this.normalizeImageName(imname) ;
+                        if (norm.length > 0) {
+                            this.image_mgr_.addImageWithData(norm, imdata) ;
+                        }
+                    }
+                }
+                catch {
+                }
+                this.awaiting_images_ = false ;
+                this.completeSync() ;
                 break ;
         }
     }
@@ -449,7 +608,11 @@ export class SCCoach extends SCCoachCentralBaseApp {
         try {
             let obj = JSON.parse(p.payloadAsString()) ;
             if (this.project && this.project.info?.uuid_ && obj.uuid !== this.project.info.uuid_) {
-                alert('The connected event does not match the currently loaded event.');
+                dialog.showMessageBoxSync(this.win_, {
+                    title: 'Synchronization Error',
+                    message: 'The connected event does not match the currently loaded event.\nReset the Coach tablet to sync to this new event.',
+                    type: 'error'
+                }) ;
                 //
                 // We have an event loaded and it does not match
                 //

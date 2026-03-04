@@ -1,6 +1,7 @@
 import { scappbase } from "../main";
 import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
+import { SCCoach } from "./apps/sccoach";
 import { TabletData } from "./project/tabletmgr";
 import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
@@ -861,6 +862,19 @@ export async function syncIPAddr(cmd: string, ...args: any[]) {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
+    else if (scappbase && isCoachType()) {
+        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let coach : SCCoach = scappbase as SCCoach ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            let obj = args[0] ;
+            if (obj.hasOwnProperty('ipaddr') && obj.hasOwnProperty('port')) {
+                coach.syncIPAddrWithAddr(obj.ipaddr as string, obj.port as number) ;
+            }
+        }
+        else {
+            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }        
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
