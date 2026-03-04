@@ -1,0 +1,25 @@
+#!/bin/bash
+
+labelstep() {
+    echo '##############################################################'
+    echo '##############################################################'
+    echo
+    echo $1
+    echo
+    echo '##############################################################'
+    echo '##############################################################'
+}
+
+labelstep 'Removing old artifacts' 
+rm -rf out dist
+
+labelstep 'Compiling the application'
+npm run main
+
+labelstep 'Creating the bundled electron application'
+npm run make
+
+labelstep 'Creating the installation package'
+pushd installer
+"/c/Program Files (x86)/Inno Setup 6/iscc.exe" xeroscout_luke.iss
+popd
