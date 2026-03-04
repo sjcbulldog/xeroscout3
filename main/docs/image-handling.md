@@ -31,6 +31,11 @@ Images are managed end-to-end by a shared `ImageManager` class and a handful of 
 - **Reset handling** – Choosing *Reset Tablet* wipes the cache directory via `ImageManager.removeAllImages()` and clears the runtime state, guaranteeing the next sync will re-download every referenced image (`src/main/apps/scscout.ts:320-347`, `src/main/imagemgr.ts:128-135`).
 - **Fallback coverage** – The UI always has access to the bundled `blank` and `missing` assets because the renderer requests them immediately; if a specific asset was not delivered, Scouter serves the `missing` data in its place (`src/main/apps/scbase.ts:147-151`).
 
+## XeroCoach Workflow Details
+- **Startup cache** – Coach builds its `ImageManager('coach')` with the user cache, and depends on cable sync to populate images for the current event.
+- **Sync download** – After receiving team and match forms, Coach collects all referenced image basenames (`image` control `image` fields plus `autoplan`/`autoselector` `fieldImage`) and requests any missing entries with `PacketType.RequestImages`. Central replies with `PacketType.ProvideImages` containing a JSON map of `{ name: base64 }`, which Coach materializes to `<cache>/<name>.png` via `ImageManager.addImageWithData()`.
+- **Reset handling** – Choosing *Reset Tablet* clears the cached images via `ImageManager.removeAllImages()` so the next sync re-downloads all required assets.
+
 ## File Path Touchpoints
 | Location | Role |
 | --- | --- |

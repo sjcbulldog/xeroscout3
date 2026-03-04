@@ -43,7 +43,7 @@ interface ParsedAutoTab {
 class AutoSelectorDialog extends XeroDialog {
     private readonly autos_: ParsedAutoTab[];
     private readonly image_src_: ImageDataSource;
-    private readonly field_image_name_: string;
+    private field_image_name_: string;
     private readonly on_selected_: (autoName: string) => void;
 
     private tabs_?: HTMLDivElement;
@@ -55,6 +55,7 @@ class AutoSelectorDialog extends XeroDialog {
     private select_button_?: HTMLButtonElement;
 
     private selected_index_: number = -1;
+    private selected_other_ = false;
 
     constructor(
         autos: ParsedAutoTab[],
@@ -66,10 +67,13 @@ class AutoSelectorDialog extends XeroDialog {
         super('Auto Selector');
         this.autos_ = autos;
         this.image_src_ = imageSrc;
-        this.field_image_name_ = fieldImageName;
+        this.field_image_name_ = (fieldImageName || '').trim();
         this.on_selected_ = onSelected;
 
-        if (this.autos_.length > 0) {
+        if (selectedAutoName === 'Other') {
+            this.selected_other_ = true;
+        }
+        else if (this.autos_.length > 0) {
             const preferred = this.autos_.findIndex((a) => a.autoName === selectedAutoName);
             this.selected_index_ = preferred >= 0 ? preferred : 0;
         }
@@ -113,6 +117,12 @@ class AutoSelectorDialog extends XeroDialog {
         this.select_button_.innerText = 'Select';
         this.select_button_.className = 'xero-popup-form-edit-dialog-button';
         this.select_button_.addEventListener('click', () => {
+            if (this.selected_other_) {
+                this.on_selected_('Other');
+                this.close(true);
+                return;
+            }
+
             const active = this.getActiveAuto();
             if (!active) {
                 return;
@@ -154,16 +164,31 @@ class AutoSelectorDialog extends XeroDialog {
             const tab = document.createElement('button');
             tab.className = 'xero-autoselector-tab';
             tab.innerText = auto.tabLabel;
-            if (i === this.selected_index_) {
+            if (!this.selected_other_ && i === this.selected_index_) {
                 tab.classList.add('selected');
             }
             tab.addEventListener('click', () => {
+                this.selected_other_ = false;
                 this.selected_index_ = i;
                 this.renderTabs();
                 this.renderContent();
             });
             this.tabs_.appendChild(tab);
         }
+
+        const otherTab = document.createElement('button');
+        otherTab.className = 'xero-autoselector-tab';
+        otherTab.innerText = 'Other';
+        if (this.selected_other_) {
+            otherTab.classList.add('selected');
+        }
+        otherTab.addEventListener('click', () => {
+            this.selected_other_ = true;
+            this.selected_index_ = -1;
+            this.renderTabs();
+            this.renderContent();
+        });
+        this.tabs_.appendChild(otherTab);
     }
 
     private updateFieldImage(): void {
@@ -171,10 +196,17 @@ class AutoSelectorDialog extends XeroDialog {
             return;
         }
 
-        const imgname = this.field_image_name_.replace(/\.png$/i, '');
+        let imgname = (this.field_image_name_ || '').trim();
+        if (imgname.length === 0) {
+            imgname = 'field2025';
+        }
+        imgname = imgname.replace(/\.png$/i, '');
         this.image_src_.getImageData(imgname)
             .then((data) => {
                 if (data && data.data && this.field_) {
+                    if (data.newname) {
+                        this.field_image_name_ = data.newname;
+                    }
                     this.field_.src = `data:image/png;base64,${data.data}`;
                 }
             })
@@ -189,11 +221,17 @@ class AutoSelectorDialog extends XeroDialog {
         }
 
         const active = this.getActiveAuto();
-        const hasData = active !== undefined;
+        const hasData = active !== undefined || this.selected_other_;
 
-        this.empty_.style.display = hasData ? 'none' : 'block';
-        this.canvas_.style.display = hasData ? 'block' : 'none';
+        this.empty_.style.display = hasData && !this.selected_other_ ? 'none' : 'block';
+        this.canvas_.style.display = hasData && !this.selected_other_ ? 'block' : 'none';
         this.select_button_.disabled = !hasData;
+
+        if (this.selected_other_) {
+            this.empty_.innerHTML = '<b>Other</b><br/>Select this when the performed auto is not shown in the tabs.';
+            return;
+        }
+        this.empty_.innerHTML = '<b>No autos are available for this team.</b><br/>Sync with Central and ensure Team Form Auto Planner data exists.';
 
         if (!active) {
             return;
@@ -413,13 +451,16 @@ export class AutoSelectorControl extends FormControl {
         }
 
         const item = this.item as IPCAutoSelectorItem;
+        if (item.fieldImage && /\.png$/i.test(item.fieldImage)) {
+            item.fieldImage = item.fieldImage.replace(/\.png$/i, '');
+        }
         const autos = this.collectAutos(item.showSourceTagInTab !== false);
 
         const parent = this.ctrl?.parentElement || this.view.elem;
         this.dialog_ = new AutoSelectorDialog(
             autos,
             this.image_src_,
-            item.fieldImage,
+            (item.fieldImage || '').trim(),
             this.selected_auto_name_,
             (autoName: string) => {
                 this.selected_auto_name_ = autoName;
