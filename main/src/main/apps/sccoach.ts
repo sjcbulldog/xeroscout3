@@ -11,6 +11,10 @@ import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
+    private static readonly syncIPAddrSetting: string = 'coach-sync-ipaddr' ;
+    private static readonly syncPortSetting: string = 'coach-sync-port' ;
+    private static readonly defaultSyncIPAddr = '192.168.1.1' ;
+    private static readonly defaultSyncPort = 45455 ;
 
     private static readonly viewInit: string = 'view-init' ;
 	private static readonly viewTeamStatus: string = 'view-team-status';
@@ -32,6 +36,8 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
     private sync_client_? : SyncClient ;    
     private sync_project_file_ : string = '' ;
+    private sync_ipaddr_ : string = SCCoach.defaultSyncIPAddr ;
+    private sync_port_ : number = SCCoach.defaultSyncPort ;
 
     private team_form_?: IPCForm ;
     private match_form_?: IPCForm ;
@@ -40,6 +46,20 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
     public constructor(win: BrowserWindow, args: string[]) {
         super(win, 'coach') ;
+
+        if (this.hasSetting(SCCoach.syncIPAddrSetting)) {
+            let value = this.getSetting(SCCoach.syncIPAddrSetting) ;
+            if (typeof value === 'string' && value.length > 0) {
+                this.sync_ipaddr_ = value ;
+            }
+        }
+
+        if (this.hasSetting(SCCoach.syncPortSetting)) {
+            let value = this.getSetting(SCCoach.syncPortSetting) ;
+            if (typeof value === 'number' && value > 0) {
+                this.sync_port_ = value ;
+            }
+        }
     }
 
     public get applicationType() : IPCAppType { 
@@ -209,7 +229,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
             this.syncCoach() ;            
         }
         else if (cmd === SCCoach.syncEventRemote) {
-            this.sync_client_ = new TCPClient(this.logger_, '192.168.1.1') ;
+            this.sync_client_ = new TCPClient(this.logger_, this.sync_ipaddr_, this.sync_port_) ;
             this.sync_client_?.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_?.on('error', this.syncError.bind(this)) ;
             this.syncCoach() ;
@@ -274,7 +294,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
         synctcpitem = new MenuItem( {
             type: 'normal',
-            label: 'Sync Event Cable (192.168.1.1)',
+            label: 'Sync Event Cable (Last Sync Address)',
             click: () => { this.executeCommand(SCCoach.syncEventRemote)}
         }) ;
         filemenu.submenu?.insert(1, synctcpitem) ;
@@ -322,6 +342,10 @@ export class SCCoach extends SCCoachCentralBaseApp {
     }
 
     public syncIPAddrWithAddr(ipaddr: string, port: number) {
+        this.sync_ipaddr_ = ipaddr ;
+        this.sync_port_ = port ;
+        this.setSetting(SCCoach.syncIPAddrSetting, this.sync_ipaddr_) ;
+        this.setSetting(SCCoach.syncPortSetting, this.sync_port_) ;
         this.sync_client_ = new TCPClient(this.logger_, ipaddr, port) ;
         this.sync_client_?.on('close', this.syncDone.bind(this)) ; 
         this.sync_client_?.on('error', this.syncError.bind(this)) ;

@@ -40,7 +40,29 @@ import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
 let mainWindow : BrowserWindow | undefined = undefined ;
-const allowMultiInstance = !app.isPackaged || process.argv.includes('--allow-multi-instance') ;
+
+function getRequestedAppType(args: string[]) : string | undefined {
+    let index = 2 ;
+    while (index < args.length && args[index].startsWith('-')) {
+        index++ ;
+    }
+
+    if (index >= args.length) {
+        return undefined ;
+    }
+
+    let value = args[index] ;
+    if (value === 'central' || value === 'scout' || value === 'coach') {
+        return value ;
+    }
+
+    return undefined ;
+}
+
+const requestedAppType = getRequestedAppType(process.argv) ;
+const allowMultiInstance = !app.isPackaged ||
+    process.argv.includes('--allow-multi-instance') ||
+    requestedAppType !== undefined ;
 
 if (!allowMultiInstance) {
     const gotSingleInstanceLock = app.requestSingleInstanceLock() ;

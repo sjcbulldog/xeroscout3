@@ -33,6 +33,9 @@ export class SCScoutInfo {
 export class SCScout extends SCBase {
     private static readonly last_event_setting = "lastevent" ;
     private static readonly SYNC_IPADDR = 'SYNC_IPADDR' ;
+    private static readonly SYNC_PORT = 'SYNC_PORT' ;
+    private static readonly defaultSyncIPAddr = '192.168.1.1' ;
+    private static readonly defaultSyncPort = 45455 ;
 
     private static readonly viewPlayoffs: string = 'view-playoffs' ;
     private static readonly syncEventLocal: string = "sync-event-local" ;
@@ -62,8 +65,8 @@ export class SCScout extends SCBase {
     private show_teams_ : boolean = false ;
     private show_full_team_names_ : boolean = false ;
 
-    private ipaddr_: string = '' ;
-    private port_ : number = 0 ;
+    private ipaddr_: string = SCScout.defaultSyncIPAddr ;
+    private port_ : number = SCScout.defaultSyncPort ;
 
     private team_number_ : number = 1425 ;
 
@@ -83,6 +86,20 @@ export class SCScout extends SCBase {
 
         if (this.hasSetting(SCScout.showFullTeamNames)) {
             this.show_full_team_names_ = this.getSetting(SCScout.showFullTeamNames) ;
+        }
+
+        if (this.hasSetting(SCScout.SYNC_IPADDR)) {
+            let value = this.getSetting(SCScout.SYNC_IPADDR) ;
+            if (typeof value === 'string' && value.length > 0) {
+                this.ipaddr_ = value ;
+            }
+        }
+
+        if (this.hasSetting(SCScout.SYNC_PORT)) {
+            let value = this.getSetting(SCScout.SYNC_PORT) ;
+            if (typeof value === 'number' && value > 0) {
+                this.port_ = value ;
+            }
         }
     }
 
@@ -266,7 +283,7 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventRemote) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
-            this.sync_client_ = new TCPClient(this.logger_, '192.168.1.1') ;
+            this.sync_client_ = new TCPClient(this.logger_, this.ipaddr_, this.port_) ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
 
@@ -327,6 +344,10 @@ export class SCScout extends SCBase {
     public syncIPAddrWithAddr(ipaddr: string, port: number) {
         this.setViewString() ;
         this.current_scout_ = undefined ;
+        this.ipaddr_ = ipaddr ;
+        this.port_ = port ;
+        this.setSetting(SCScout.SYNC_IPADDR, this.ipaddr_) ;
+        this.setSetting(SCScout.SYNC_PORT, this.port_) ;
         this.sync_client_ = new TCPClient(this.logger_, ipaddr, port) ;
         this.sync_client_.on('close', this.syncDone.bind(this)) ; 
         this.sync_client_.on('error', this.syncError.bind(this)) ;
@@ -1005,7 +1026,7 @@ export class SCScout extends SCBase {
 
         synctcpitem = new MenuItem( {
             type: 'normal',
-            label: 'Sync Event Cable (192.168.1.1)',
+            label: 'Sync Event Cable (Last Sync Address)',
             click: () => { this.executeCommand(SCScout.syncEventRemote)}
         }) ;
         filemenu.submenu?.insert(1, synctcpitem) ;
