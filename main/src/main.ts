@@ -39,6 +39,25 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
 import { runUnitTests } from "./main/units/unittest";
 
 export let scappbase : SCBase | undefined = undefined ;
+let mainWindow : BrowserWindow | undefined = undefined ;
+const allowMultiInstance = !app.isPackaged || process.argv.includes('--allow-multi-instance') ;
+
+if (!allowMultiInstance) {
+    const gotSingleInstanceLock = app.requestSingleInstanceLock() ;
+    if (!gotSingleInstanceLock) {
+        app.quit() ;
+        process.exit(0) ;
+    }
+
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore() ;
+            }
+            mainWindow.focus() ;
+        }
+    }) ;
+}
 
 const Config = require('electron-config') ;
 let config = new Config() ;
@@ -68,6 +87,7 @@ function createWindow() : void {
     }
   
     const win = new BrowserWindow(opts);
+    mainWindow = win ;
 
     bounds = undefined ;
     if (!bounds) {
@@ -137,6 +157,12 @@ function createWindow() : void {
             }
         }
     });
+
+    win.on('closed', () => {
+        if (mainWindow === win) {
+            mainWindow = undefined ;
+        }
+    }) ;
 
     scappbase!.windowCreated() ;
 }

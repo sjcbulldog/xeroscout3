@@ -8,7 +8,7 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr";
 import { kMatchAlliances } from '../../shared/playoffs';
-import { IPCAppType, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -837,12 +837,42 @@ export class SCScout extends SCBase {
         return ret ;
     }
 
+    private normalizeImageName(name: string) : string {
+        let ret = (name ?? '').trim() ;
+        if (ret.length === 0) {
+            return '' ;
+        }
+
+        if (/\.png$/i.test(ret)) {
+            ret = ret.replace(/\.png$/i, '') ;
+        }
+
+        return ret.trim() ;
+    }
+
     private getRequiredImagesFromSection(section: IPCSection) : string[] {
         let ret : string [] = [] ;
         for(let item of section.items) {
             if (item.type === 'image') {
                 let imitem = item as IPCImageItem ;
-                ret.push(imitem.image) ;
+                let img = this.normalizeImageName(imitem.image) ;
+                if (img.length > 0) {
+                    ret.push(img) ;
+                }
+            }
+            else if (item.type === 'autoplan') {
+                let apitem = item as IPCAutoPlanItem ;
+                let img = this.normalizeImageName(apitem.fieldImage) ;
+                if (img.length > 0) {
+                    ret.push(img) ;
+                }
+            }
+            else if (item.type === 'autoselector') {
+                let asitem = item as IPCAutoSelectorItem ;
+                let img = this.normalizeImageName(asitem.fieldImage) ;
+                if (img.length > 0) {
+                    ret.push(img) ;
+                }
             }
         }
 

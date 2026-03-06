@@ -187,12 +187,7 @@ export class DataManager extends Manager {
 
                 if (obj.purpose) {
                     if (obj.purpose === 'match') {
-                        this.info_.match_results_ = [] ;
-                        for(let res of obj.results) {
-                            if (res.item) {
-                                this.info_.match_results_.push(res) ;
-                            }
-                        }
+                        this.mergeScoutResults(this.info_.match_results_, obj.results) ;
 
                         try {
                             let status = await this.matchdb_.processScoutingResults(obj) ;
@@ -210,12 +205,7 @@ export class DataManager extends Manager {
                         }
                     }
                     else {
-                        this.info_.team_results_ = [] ;
-                        for(let res of obj.results) {
-                            if (res.item) {
-                                this.info_.team_results_.push(res) ;
-                            }
-                        }
+                        this.mergeScoutResults(this.info_.team_results_, obj.results) ;
 
                         try {
                             let teams = await this.teamdb_.processScoutingResults(obj) ;
@@ -381,6 +371,22 @@ export class DataManager extends Manager {
     }
 
     // #endregion
+
+    private mergeScoutResults(dest: IPCScoutResult[], updates: IPCScoutResult[]) {
+        for(let res of updates) {
+            if (!res.item) {
+                continue ;
+            }
+
+            let index = dest.findIndex((one) => one.item === res.item) ;
+            if (index >= 0) {
+                dest[index] = res ;
+            }
+            else {
+                dest.push(res) ;
+            }
+        }
+    }
 
     private computeOneConditional(data: DataRecord, formula: string, teamnum: number) : Promise<IPCTypedDataValue> {
 

@@ -1,6 +1,6 @@
 {
   "name": "xeroscout3",
-  "version": "3.0.24",
+  "version": "3.0.27",
   "description": "Electron based scouting program",
   "main": "dist/main.js",
   "scripts": {
