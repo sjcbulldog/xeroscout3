@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog } from "electron";
 import { SCBase } from "./scbase";
-import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCPickListConfig, IPCPickListData, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCMatchPredictorData, IPCMatchPredictorRequest, IPCMatchPredictorTeam, IPCPickListConfig, IPCPickListData, IPCProjColumnsConfig } from "../../shared/ipc";
 import { Project } from "../project/project";
 import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
@@ -568,6 +568,102 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     public async promptString(title: string, message: string, defaultValue?: string, placeholder?: string): Promise<string | undefined> {
         // Coach app does not support user input prompts, always return undefined
         return Promise.resolve(undefined);
+    }
+    public async sendMatchPredictorData(req: IPCMatchPredictorRequest): Promise<void> {
+        const response: IPCMatchPredictorData = {
+            comp_level: req.comp_level,
+            set_number: req.set_number,
+            match_number: req.match_number,
+            formula: req.formula,
+            red: [],
+            blue: [],
+            red_score: 0,
+            blue_score: 0,
+            score_sd: null
+        };
+
+        try {
+            if (!this.project_ || !this.project_.isInitialized()) {
+                response.error = 'Project data is not initialized yet. Load data and try again.';
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            if (!req.formula || req.formula.trim().length === 0) {
+                response.error = 'Select a formula to compute average points.';
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const formulaExpr = this.project_.formula_mgr_?.findFormula(req.formula);
+            if (!formulaExpr) {
+                response.error = `Formula "${req.formula}" not found.`;
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+            if (formulaExpr.hasError()) {
+                response.error = `Formula "${req.formula}" has errors: ${formulaExpr.getErrorMessage()}`;
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const teamCols = this.project_.data_mgr_!.teamColumnNames;
+            const matchCols = this.project_.data_mgr_!.matchColumnNames;
+            const vars = formulaExpr.variables();
+            const invalidVars = vars.filter(v => !teamCols.includes(v) && !matchCols.includes(v));
+            if (invalidVars.length > 0) {
+                response.error = `Formula uses non match/team fields: ${invalidVars.join(', ')}`;
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const match = this.project_.match_mgr_!.findMatchByInfo(req.comp_level, req.set_number, req.match_number);
+            if (!match) {
+                response.error = 'Match not found for selected match.';
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const redTeams = match.alliances.red.team_keys.map(k => SCBase.keyToTeamNumber(k));
+            const blueTeams = match.alliances.blue.team_keys.map(k => SCBase.keyToTeamNumber(k));
+
+            const red: IPCMatchPredictorTeam[] = [];
+            const blue: IPCMatchPredictorTeam[] = [];
+
+            for (const team of redTeams) {
+                const avg = await this.project_.data_mgr_!.getAverageFormulaBeforeMatch(req.formula, team, req);
+                red.push({ team, average: avg.average, matches: avg.count });
+                response.red_score += avg.average;
+            }
+
+            for (const team of blueTeams) {
+                const avg = await this.project_.data_mgr_!.getAverageFormulaBeforeMatch(req.formula, team, req);
+                blue.push({ team, average: avg.average, matches: avg.count });
+                response.blue_score += avg.average;
+            }
+
+            response.red = red;
+            response.blue = blue;
+
+            const scoreDiffs: number[] = [];
+            for (const m of this.project_.match_mgr_!.getMatches()) {
+                const redScore = m.alliances.red.score;
+                const blueScore = m.alliances.blue.score;
+                if (typeof redScore === 'number' && typeof blueScore === 'number') {
+                    scoreDiffs.push(redScore - blueScore);
+                }
+            }
+
+            if (scoreDiffs.length > 1) {
+                const mean = scoreDiffs.reduce((acc, v) => acc + v, 0) / scoreDiffs.length;
+                const variance = scoreDiffs.reduce((acc, v) => acc + (v - mean) * (v - mean), 0) / scoreDiffs.length;
+                response.score_sd = Math.sqrt(variance);
+            }
+        } catch (e: any) {
+            response.error = e?.message ?? 'Failed to compute match predictor data.';
+        }
+
+        this.sendToRenderer('send-match-predictor-data', response);
     }
 
 }

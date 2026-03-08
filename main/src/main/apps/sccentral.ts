@@ -66,6 +66,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
 	private static readonly clearExternalDownload: string = 'clear-external-download' ;
+	private static readonly viewXeroMatchSim: string = 'view-match-sim';
 
 
 	private ba_?: BlueAlliance = undefined;
@@ -1156,6 +1157,14 @@ export class SCCentral extends SCCoachCentralBaseApp {
 					width: dims,
 					height: dims						
 				});
+				treedata.push({  
+					type: "icon",  
+					command: SCCentral.viewXeroMatchSim,  
+					title: "Match-Prediction",  
+					icon: this.getIconData('Prediction.png'),  
+					width: dims,  
+					height: dims  
+				});
 			}
 		}
 
@@ -1274,6 +1283,8 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}
 		else if (cmd === SCCentral.editTeamForm) {
 			this.setFormEdit('team') ;
+		} else if (cmd === SCCentral.viewXeroMatchSim) {
+			this.setView('Match-Prediction') ;
 		}
 	}
 
