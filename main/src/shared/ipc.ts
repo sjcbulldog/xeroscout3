@@ -261,6 +261,12 @@ export interface IPCMatchInfo {
     blue2: number ;
     blue3: number ;
 }
+export interface IPCMatchPredictorRequest {
+    comp_level: string;
+    set_number: number;
+    match_number: number;
+    formula: string;
+}
 
 export interface IPCMatchOutcome {
     winner: number ;
@@ -426,4 +432,54 @@ export interface IPCPromptStringRequest {
 export interface IPCPromptStringResponse {
     id: string ;                                    // The ID from the corresponding request
     value?: string ;                                // The entered string value, undefined if cancelled
+}
+
+
+export interface IPCMatchPredictorData {
+    comp_level: string;
+    set_number: number;
+    match_number: number;
+    formula: string;
+    red: IPCMatchPredictorTeam[];
+    blue: IPCMatchPredictorTeam[];
+    red_score: number;
+    blue_score: number;
+    score_sd: number | null;
+    error?: string;
+}
+export interface IPCPredictConfig {
+    k: number;
+    name: string ;                                  // The name of the graph configuration
+    xlabel: string ;                                // The label to use for the X axis
+    yleft: string ;                                 // The label to use for the Y axis
+    yright: string ;                                // The label to use for the right Y axis
+    title: string ;                                 // The title to use for the graph
+    type: string ;                                  // The type of the graph (e.g. line, bar, etc.)
+    teams: number[] ;                               // The teams to include in the graph
+    leftitems: IPCDataItem[] ;                      // The items to display on the left side of the graph
+    rightitems: IPCDataItem[] ;                     // The items to display on the right side of the graph
+    auto_mean?: IPCDataItem ;                       // Formula for auto mean (per team)
+    auto_std?: IPCDataItem ;                        // Formula for auto std dev (per team)
+    teleop_mean?: IPCDataItem ;                     // Formula for teleop mean (per team)
+    teleop_std?: IPCDataItem ;                      // Formula for teleop std dev (per team)
+    endgame_mean?: IPCDataItem ;                    // Formula for endgame mean (per team)
+    endgame_std?: IPCDataItem ;                     // Formula for endgame std dev (per team)
+    rp1_mean?: IPCDataItem ;                        // Formula for RP1 mean (per team)
+    rp1_std?: IPCDataItem ;                         // Formula for RP1 std dev (per team)
+    rp2_mean?: IPCDataItem ;                        // Formula for RP2 mean (per team)
+    rp2_std?: IPCDataItem ;                         // Formula for RP2 std dev (per team)
+    rp3_mean?: IPCDataItem ;                        // Formula for RP3 mean (per team)
+    rp3_std?: IPCDataItem ;                         // Formula for RP3 std dev (per team)
+    rp1_left?: IPCDataItem ;                        // RP1 formula to compare (left side)
+    rp1_right?: IPCDataItem ;                       // RP1 formula to compare (right side)
+    rp2_left?: IPCDataItem ;                        // RP2 formula to compare (left side)
+    rp2_right?: IPCDataItem ;                       // RP2 formula to compare (right side)
+    rp3_left?: IPCDataItem ;                        // RP3 formula to compare (left side)
+    rp3_right?: IPCDataItem ;                       // RP3 formula to compare (right side)
+    owner: IPCAppType ;                             // The owner of the graph configuration
+}
+export interface IPCMatchPredictorTeam {
+    team: number;
+    average: number;
+    matches: number;
 }
