@@ -3,7 +3,7 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { SCCoach } from "./apps/sccoach";
 import { TabletData } from "./project/tabletmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
 
 function isScoutType() : boolean {
@@ -951,4 +951,16 @@ export async function promptStringResponse(cmd: string, ...args: any[]) {
     }
 }
 
+// get-match-predictor-data
+export async function getMatchPredictorData(cmd: string, ...args: any[]) {
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let central : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            central.sendMatchPredictorData(args[0] as IPCMatchPredictorRequest);//errpr location
+        } else {
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
 
