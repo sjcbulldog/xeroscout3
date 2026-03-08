@@ -187,7 +187,12 @@ export class DataManager extends Manager {
 
                 if (obj.purpose) {
                     if (obj.purpose === 'match') {
-                        this.mergeScoutResults(this.info_.match_results_, obj.results) ;
+                        this.info_.match_results_ = [] ;
+                        for(let res of obj.results) {
+                            if (res.item) {
+                                this.info_.match_results_.push(res) ;
+                            }
+                        }
 
                         try {
                             let status = await this.matchdb_.processScoutingResults(obj) ;
@@ -205,7 +210,12 @@ export class DataManager extends Manager {
                         }
                     }
                     else {
-                        this.mergeScoutResults(this.info_.team_results_, obj.results) ;
+                        this.info_.team_results_ = [] ;
+                        for(let res of obj.results) {
+                            if (res.item) {
+                                this.info_.team_results_.push(res) ;
+                            }
+                        }
 
                         try {
                             let teams = await this.teamdb_.processScoutingResults(obj) ;
@@ -371,22 +381,6 @@ export class DataManager extends Manager {
     }
 
     // #endregion
-
-    private mergeScoutResults(dest: IPCScoutResult[], updates: IPCScoutResult[]) {
-        for(let res of updates) {
-            if (!res.item) {
-                continue ;
-            }
-
-            let index = dest.findIndex((one) => one.item === res.item) ;
-            if (index >= 0) {
-                dest[index] = res ;
-            }
-            else {
-                dest.push(res) ;
-            }
-        }
-    }
 
     private computeOneConditional(data: DataRecord, formula: string, teamnum: number) : Promise<IPCTypedDataValue> {
 
@@ -745,5 +739,78 @@ export class DataManager extends Manager {
     public setMatchFormatFormulas(f: IPCCheckDBViewFormula[]) {
         this.info_.match_formulas_ = f ;
         this.write() ;
+    }
+    public async getAverageFormulaBeforeMatch(
+        formulaName: string,
+        team: number,
+        match: { comp_level: string; set_number: number; match_number: number }
+    ): Promise<{ average: number; count: number }> {
+        const teamkey = 'frc' + team;
+        const query = 'select comp_level, set_number, match_number from ' + this.matchdb_.tableName +
+            ' where team_key = "' + teamkey + '" ;';
+
+        let sum = 0;
+        let count = 0;
+
+        const data = await this.matchdb_.all(query, undefined);
+        if (data.length === 0) {
+            return { average: 0, count: 0 };
+        }
+
+        const sorted = this.sortData(data);
+        for (const record of sorted) {
+            const compLevel = DataValue.toString(record.value('comp_level')!);
+            const setNumber = DataValue.toInteger(record.value('set_number')!);
+            const matchNumber = DataValue.toInteger(record.value('match_number')!);
+            const recordMatch = {
+                comp_level: compLevel,
+                set_number: setNumber,
+                match_number: matchNumber
+            };
+
+            if (this.compareMatchOrder(recordMatch, match) >= 0) {
+                break;
+            }
+
+            const ds: IPCDataSet = {
+                name: '',
+                formula: '',
+                matches: {
+                    kind: 'specific',
+                    comp_level: compLevel,
+                    set_number: setNumber,
+                    match_number: matchNumber
+                }
+            };
+
+            const value = await this.getData(ds, formulaName, team);
+            if (DataValue.isInteger(value) || DataValue.isReal(value)) {
+                sum += DataValue.toReal(value);
+                count++;
+            }
+        }
+
+        if (count === 0) {
+            return { average: 0, count: 0 };
+        }
+
+        return { average: sum / count, count };
+    }
+    private compareMatchOrder(
+        a: { comp_level: string; set_number: number; match_number: number },
+        b: { comp_level: string; set_number: number; match_number: number }
+    ): number {
+        const aLevel = DataManager.matchLevels.indexOf(a.comp_level);
+        const bLevel = DataManager.matchLevels.indexOf(b.comp_level);
+        const aOrder = aLevel === -1 ? 999 : aLevel;
+        const bOrder = bLevel === -1 ? 999 : bLevel;
+
+        if (aOrder !== bOrder) {
+            return aOrder - bOrder;
+        }
+        if (a.set_number !== b.set_number) {
+            return a.set_number - b.set_number;
+        }
+        return a.match_number - b.match_number;
     }
 }
