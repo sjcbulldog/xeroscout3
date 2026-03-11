@@ -69,6 +69,65 @@
     return false;
   }
 
+  function describeRect(rect) {
+    const left = Math.round(rect.left);
+    const top = Math.round(rect.top);
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+    return `${width}x${height} @ ${left},${top}`;
+  }
+
+  function inspectDialog(dialog) {
+    if (!(dialog instanceof HTMLElement)) {
+      return;
+    }
+
+    const rect = dialog.getBoundingClientRect();
+    const offscreen =
+      rect.width <= 0 ||
+      rect.height <= 0 ||
+      rect.right < 0 ||
+      rect.bottom < 0 ||
+      rect.left > window.innerWidth ||
+      rect.top > window.innerHeight;
+
+    dialog.style.outline = '8px solid #32cd32';
+    dialog.style.outlineOffset = '4px';
+    dialog.style.zIndex = '1000000';
+
+    if (offscreen) {
+      dialog.style.position = 'fixed';
+      dialog.style.left = '24px';
+      dialog.style.top = '24px';
+      dialog.style.maxWidth = 'calc(100vw - 48px)';
+      dialog.style.maxHeight = 'calc(100vh - 48px)';
+      dialog.style.overflow = 'auto';
+
+      const forcedRect = dialog.getBoundingClientRect();
+      window.dispatchEvent(
+        new CustomEvent('xero:auto-selector-dialog-layout', {
+          detail: {
+            state: 'forced',
+            originalRect: describeRect(rect),
+            forcedRect: describeRect(forcedRect),
+          },
+        })
+      );
+      showToast(`AUTO SELECTOR FORCED ONSCREEN ${describeRect(forcedRect)}`);
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('xero:auto-selector-dialog-layout', {
+        detail: {
+          state: 'onscreen',
+          rect: describeRect(rect),
+        },
+      })
+    );
+    showToast(`AUTO SELECTOR RECT ${describeRect(rect)}`);
+  }
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
@@ -76,8 +135,15 @@
           continue;
         }
 
+        const dialog =
+          node instanceof HTMLElement && node.classList.contains('xero-popup-form-edit-dialog')
+            ? node
+            : node instanceof HTMLElement
+              ? node.querySelector('.xero-popup-form-edit-dialog')
+              : null;
+
         window.dispatchEvent(new CustomEvent('xero:auto-selector-dialog-added'));
-        showToast('AUTO SELECTOR DIALOG ADDED TO DOM');
+        setTimeout(() => inspectDialog(dialog), 150);
         return;
       }
     }
