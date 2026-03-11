@@ -64,6 +64,7 @@ export class SCScout extends SCBase {
     private sync_client_? : SyncClient ;
     private show_teams_ : boolean = false ;
     private show_full_team_names_ : boolean = false ;
+    private tablet_data_send_timer_?: NodeJS.Timeout ;
 
     private ipaddr_: string = SCScout.defaultSyncIPAddr ;
     private port_ : number = SCScout.defaultSyncPort ;
@@ -1164,9 +1165,22 @@ export class SCScout extends SCBase {
     }    
 
     public sendTabletData() : void {
-        if (this.tablets_) {
-            this.sendToRenderer('send-tablet-data', this.tablets_) ;
+        if (!this.tablets_) {
+            return ;
         }
+
+        if (this.tablet_data_send_timer_) {
+            return ;
+        }
+
+        // Defer the reply one turn so the select-tablet view can finish attaching
+        // its element before the dialog tries to position relative to it.
+        this.tablet_data_send_timer_ = setTimeout(() => {
+            this.tablet_data_send_timer_ = undefined ;
+            if (this.tablets_) {
+                this.sendToRenderer('send-tablet-data', this.tablets_) ;
+            }
+        }, 0) ;
     }
 
     public setTabletNamePurpose(name: string, purpose: string) : void {
