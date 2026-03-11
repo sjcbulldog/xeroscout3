@@ -155,16 +155,16 @@
  * Auto Planner control styles
  */
 .xero-form-autoplan {
-    z-index: 900;
+    z-index: 1000;
 }
 
 .xero-form-edit-autoplan {
-    z-index: 900;
+    z-index: 1000;
     pointer-events: none;
 }
 
 .xero-form-scout-autoplan {
-    z-index: 900;
+    z-index: 1000;
 }
 
 .xero-autoplan-edit-label {
@@ -421,16 +421,16 @@
  * Auto Selector control styles
  */
 .xero-form-autoselector {
-    z-index: 900;
+    z-index: 1000;
 }
 
 .xero-form-edit-autoselector {
-    z-index: 900;
+    z-index: 1000;
     pointer-events: none;
 }
 
 .xero-form-scout-autoselector {
-    z-index: 900;
+    z-index: 1000;
 }
 
 .xero-autoselector-edit-label {
