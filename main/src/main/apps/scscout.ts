@@ -72,6 +72,10 @@ export class SCScout extends SCBase {
 
     private match_results_received_ : boolean = false ;
     private team_results_received_ : boolean = false ;
+    private team_form_received_ : boolean = false ;
+    private match_form_received_ : boolean = false ;
+    private match_list_received_ : boolean = false ;
+    private team_list_received_ : boolean = false ;
     private playoff_assignment_received_ : boolean = false ;
     private playoff_status_received_ : boolean = false ;
 
@@ -371,6 +375,8 @@ export class SCScout extends SCBase {
         }
 
         this.unsetSettings(SCScout.last_event_setting) ;
+        this.tablets_ = undefined ;
+        this.current_scout_ = undefined ;
         this.info_.purpose_ = undefined ;
         this.info_.tablet_ = undefined ;
         this.info_.results_ = [];
@@ -383,6 +389,14 @@ export class SCScout extends SCBase {
         this.info_.matchlist_ = undefined ;
         this.info_.playoff_assignments_ = undefined ;
         this.info_.playoff_status_ = undefined ;
+        this.match_results_received_ = false ;
+        this.team_results_received_ = false ;
+        this.team_form_received_ = false ;
+        this.match_form_received_ = false ;
+        this.match_list_received_ = false ;
+        this.team_list_received_ = false ;
+        this.playoff_assignment_received_ = false ;
+        this.playoff_status_received_ = false ;
 
         this.sendToRenderer('tablet-title', 'NOT ASSIGNED') ;
 
@@ -522,6 +536,9 @@ export class SCScout extends SCBase {
             let teamScoutItem = this.getTeamScoutItemFromMatch(this.current_scout_) ;
             if (teamScoutItem) {
                 ret.activeTeamResult = this.getTeamResultFromCache(teamScoutItem) ;
+                if (!ret.activeTeamResult) {
+                    ret.activeTeamResult = this.getOneScoutResults(teamScoutItem) ;
+                }
             }
         }
         else {
@@ -615,6 +632,10 @@ export class SCScout extends SCBase {
         .then(() => {
             this.match_results_received_ = false ;
             this.team_results_received_ = false ;
+            this.team_form_received_ = false ;
+            this.match_form_received_ = false ;
+            this.match_list_received_ = false ;
+            this.team_list_received_ = false ;
             this.playoff_assignment_received_ = false ;
             this.playoff_status_received_ = false ;
 
@@ -719,19 +740,23 @@ export class SCScout extends SCBase {
         else if (p.type_ === PacketType.ProvideTablets) {
             this.tablets_ = JSON.parse(p.data_.toString()) ;
             this.setView('select-tablet') ;
+            setTimeout(() => this.sendTabletData(), 0) ;
         }
         else if (p.type_ === PacketType.ProvideTeamForm) {
             this.info_.teamform_ = JSON.parse(p.payloadAsString()) ;
+            this.team_form_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;            
         }
         else if (p.type_ === PacketType.ProvideMatchForm) {
             this.info_.matchform_ = JSON.parse(p.payloadAsString()) ;
+            this.match_form_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideTeamList) {
             this.info_.teamlist_ = JSON.parse(p.payloadAsString()) ;
+            this.team_list_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
@@ -759,6 +784,7 @@ export class SCScout extends SCBase {
         }        
         else if (p.type_ === PacketType.ProvideMatchList) {
             this.info_.matchlist_ = JSON.parse(p.payloadAsString()) ;
+            this.match_list_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
@@ -846,6 +872,13 @@ export class SCScout extends SCBase {
     private needTeamResults() : string[] {
         let ret : string[] = [] ;
 
+        if (this.info_.purpose_ === 'match') {
+            for(let t of this.info_.teamlist_!) {
+                ret.push('st-' + t.team) ;
+            }
+            return ret ;
+        }
+
         for(let t of this.info_.teamlist_!) {
             let cmd: string = 'st-' + t.team ;
             if (this.info_.team_results_cache_) {
@@ -929,19 +962,19 @@ export class SCScout extends SCBase {
     private getMissingData() {
         let ret: boolean = false ;
 
-        if (!this.info_.teamform_) {
+        if (!this.team_form_received_) {
             this.conn_?.send(new PacketObj(PacketType.RequestTeamForm)) ;
             ret = true ;
         }
-        else if (!this.info_.matchform_) {
+        else if (!this.match_form_received_) {
             this.conn_?.send(new PacketObj(PacketType.RequestMatchForm)) ;
             ret = true ;
         }
-        else if (!this.info_.matchlist_) {
+        else if (!this.match_list_received_) {
             this.conn_?.send(new PacketObj(PacketType.RequestMatchList)) ;
             ret = true ;
         }
-        else if (!this.info_.teamlist_) {
+        else if (!this.team_list_received_) {
             this.conn_?.send(new PacketObj(PacketType.RequestTeamList)) ;
             ret = true ;
         }

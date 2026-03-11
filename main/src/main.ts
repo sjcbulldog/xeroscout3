@@ -59,6 +59,11 @@ function getRequestedAppType(args: string[]) : string | undefined {
     return undefined ;
 }
 
+function getWindowConfigName(args: string[]) : string {
+    const type = getRequestedAppType(args) ?? 'central' ;
+    return `config-${type}` ;
+}
+
 const requestedAppType = getRequestedAppType(process.argv) ;
 const allowMultiInstance = !app.isPackaged ||
     process.argv.includes('--allow-multi-instance') ||
@@ -82,7 +87,7 @@ if (!allowMultiInstance) {
 }
 
 const Config = require('electron-config') ;
-let config = new Config() ;
+let config = new Config({ name: getWindowConfigName(process.argv) }) ;
 
 function createWindow() : void {
     const args = process.argv;

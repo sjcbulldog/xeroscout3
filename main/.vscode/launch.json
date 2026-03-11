@@ -18,6 +18,21 @@
       "preLaunchTask": "build"
     },
     {
+      "name": "Debug Central (No Build)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "args": [
+        ".",
+        "central"
+      ],
+      "outputCapture": "std"
+    },
+    {
       "name": "Debug Scout",
       "type": "node",
       "request": "launch",
@@ -28,10 +43,25 @@
       },
       "args": [
         ".",
-        "scout",
+        "scout"
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
+    },
+    {
+      "name": "Debug Scout (No Build)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "args": [
+        ".",
+        "scout"
+      ],
+      "outputCapture": "std"
     },
     {
       "name": "Debug Coach",
@@ -48,21 +78,38 @@
       ],
       "outputCapture": "std",
       "preLaunchTask": "build"
+    },
+    {
+      "name": "Debug Coach (No Build)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "args": [
+        ".",
+        "coach"
+      ],
+      "outputCapture": "std"
     }
   ],
   "compounds": [ 
     {
       "name": "Debug Central & Scout",
+      "preLaunchTask": "build",
       "configurations": [
-        "Debug Central",
-        "Debug Scout",
+        "Debug Central (No Build)",
+        "Debug Scout (No Build)"
       ]
     },
     {
       "name": "Debug Central & Coach",
+      "preLaunchTask": "build",
       "configurations": [
-        "Debug Central",
-        "Debug Coach",
+        "Debug Central (No Build)",
+        "Debug Coach (No Build)"
       ]
     }
   ]  
