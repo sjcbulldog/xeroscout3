@@ -77,12 +77,53 @@
     return `${width}x${height} @ ${left},${top}`;
   }
 
+  function describeElementPath(element) {
+    if (!(element instanceof Element)) {
+      return 'none';
+    }
+
+    const parts = [];
+    let current = element;
+    let depth = 0;
+
+    while (current && depth < 5) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += `#${current.id}`;
+      }
+      if (current.className && typeof current.className === 'string') {
+        const classes = current.className.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (classes.length > 0) {
+          part += `.${classes.join('.')}`;
+        }
+      }
+      parts.push(part);
+      current = current.parentElement;
+      depth++;
+    }
+
+    return parts.join(' <- ');
+  }
+
   function inspectDialog(dialog) {
     if (!(dialog instanceof HTMLElement)) {
+        return;
+    }
+
+    if (!dialog.isConnected) {
+      window.dispatchEvent(
+        new CustomEvent('xero:auto-selector-dialog-layout', {
+          detail: {
+            state: 'disconnected',
+          },
+        })
+      );
+      showToast('AUTO SELECTOR DIALOG DISCONNECTED BEFORE LAYOUT');
       return;
     }
 
     const rect = dialog.getBoundingClientRect();
+    const computed = window.getComputedStyle(dialog);
     const offscreen =
       rect.width <= 0 ||
       rect.height <= 0 ||
@@ -94,6 +135,23 @@
     dialog.style.outline = '8px solid #32cd32';
     dialog.style.outlineOffset = '4px';
     dialog.style.zIndex = '1000000';
+
+    if (rect.width === 0 || rect.height === 0) {
+      const parentPath = describeElementPath(dialog.parentElement);
+      window.dispatchEvent(
+        new CustomEvent('xero:auto-selector-dialog-layout', {
+          detail: {
+            state: 'zero-size',
+            rect: describeRect(rect),
+            display: computed.display,
+            visibility: computed.visibility,
+            parentPath,
+          },
+        })
+      );
+      showToast(`AUTO SELECTOR ZERO SIZE ${computed.display} ${computed.visibility}`);
+      return;
+    }
 
     if (offscreen) {
       dialog.style.position = 'fixed';
@@ -130,6 +188,15 @@
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
+      for (const node of mutation.removedNodes) {
+        if (!isAutoSelectorDialog(node)) {
+          continue;
+        }
+
+        showToast('AUTO SELECTOR DIALOG REMOVED FROM DOM');
+        return;
+      }
+
       for (const node of mutation.addedNodes) {
         if (!isAutoSelectorDialog(node)) {
           continue;
