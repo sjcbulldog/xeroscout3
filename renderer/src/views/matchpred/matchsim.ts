@@ -11,7 +11,6 @@ type MatchSimConfig = IPCPredictConfig & {
 };
 
 export class XeroMatchSimView extends XeroView {
-    private all_configs_: any[] = [];
     private configs_: MatchSimConfig[] = [];
     private formulas_: string[] = [];
     private matches_: IPCMatchInfo[] = [];
@@ -45,12 +44,12 @@ export class XeroMatchSimView extends XeroView {
         this.elem.style.display = 'flex';
         this.elem.style.flexDirection = 'column';
 
-        this.registerCallback('send-single-team-configs', this.receivedConfigs.bind(this));
+        this.registerCallback('send-matchsim-configs', this.receivedConfigs.bind(this));
         this.registerCallback('send-formulas', this.receivedFormulas.bind(this));
         this.registerCallback('send-match-data', this.receivedMatches.bind(this));
         this.registerCallback('send-match-predictor-data', this.receivedPredictorData.bind(this));
 
-        this.request('get-single-team-configs');
+        this.request('get-matchsim-configs');
         this.request('get-formulas');
         this.request('get-match-data');
     }
@@ -64,10 +63,8 @@ export class XeroMatchSimView extends XeroView {
     }
 
     private receivedConfigs(configs: IPCPredictConfig[]): void {
-        this.all_configs_ = Array.isArray(configs) ? [...configs] : [];
-        this.configs_ = this.all_configs_
-            .filter((c: any) => c && c.matchsim_mode === 'matchsim')
-            .map((c: any) => this.normalizeConfig(c));
+        const incoming = Array.isArray(configs) ? configs : [];
+        this.configs_ = incoming.map((c: any) => this.normalizeConfig(c));
 
         if (this.configs_.length === 0) {
             this.configs_.push(this.makeDefaultConfig('Default MatchSim'));
@@ -381,9 +378,7 @@ export class XeroMatchSimView extends XeroView {
 
     private saveConfigs(): void {
         this.updateConfigFromEditors();
-        const nonMatchSim = this.all_configs_.filter((c: any) => !(c && c.matchsim_mode === 'matchsim'));
-        this.all_configs_ = [...nonMatchSim, ...this.configs_];
-        this.request('update-single-team-configs', this.all_configs_);
+        this.request('update-matchsim-configs', this.configs_);
     }
 
     private getSelectedMatch(): IPCMatchInfo | undefined {

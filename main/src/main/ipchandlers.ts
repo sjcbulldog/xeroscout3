@@ -3,7 +3,7 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { SCCoach } from "./apps/sccoach";
 import { TabletData } from "./project/tabletmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
+import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
 
 function isScoutType() : boolean {
@@ -903,9 +903,29 @@ export async function getSingleTeamConfigs(cmd: string, ...args: any[]) {
 export async function updateSingleTeamConfigs(cmd: string, ...args: any[]) {
     if (scappbase) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
+        let central : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
         if (args.length === 1 && typeof args[0] === 'object') {       
             central.updateSingleTeamConfigs(args[0] as IPCGraphConfig[]) ;
+        }
+    }
+}
+
+// get-matchsim-configs
+export async function getMatchSimConfigs(cmd: string, ...args: any[]) {
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
+        app.getMatchSimConfigs() ;
+    }
+}
+
+// update-matchsim-configs
+export async function updateMatchSimConfigs(cmd: string, ...args: any[]) {
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            app.updateMatchSimConfigs(args[0] as IPCPredictConfig[]) ;
         }
     }
 }

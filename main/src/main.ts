@@ -30,6 +30,9 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getPicklistData,
          savePicklistConfig,
          getPicklistConfigs,
+         getMatchSimConfigs,
+         updateMatchSimConfigs,
+         getMatchPredictorData,
          promptStringRequest,
          promptStringResponse,
          getPreviewMatchDB,
@@ -244,6 +247,8 @@ app.on("ready", () => {
 
     ipcMain.on('get-single-team-configs', (event, ...args) => { getSingleTeamConfigs('get-single-team-configs', ...args)}) ;
     ipcMain.on('update-single-team-configs', (event, ...args) => { updateSingleTeamConfigs('update-single-team-configs', ...args)}) ;
+    ipcMain.on('get-matchsim-configs', (event, ...args) => { getMatchSimConfigs('get-matchsim-configs', ...args)}) ;
+    ipcMain.on('update-matchsim-configs', (event, ...args) => { updateMatchSimConfigs('update-matchsim-configs', ...args)}) ;
     ipcMain.on('get-multi-team-configs', (event, ...args) => { getSingleTeamConfigs('get-multi-team-configs', ...args)}) ;
     ipcMain.on('update-multi-team-configs', (event, ...args) => { updateSingleTeamConfigs('update-multi-team-configs', ...args)}) ;
     ipcMain.on('get-match-configs', (event, ...args) => { getSingleTeamConfigs('get-match-configs', ...args)}) ;
@@ -253,6 +258,7 @@ app.on("ready", () => {
     ipcMain.on('get-picklist-configs', (event, ...args) => { getPicklistConfigs('get-picklist-config', ...args)}) ;
     ipcMain.on('save-picklist-config', (event, ...args) => { savePicklistConfig('save-picklist-config', ...args)}) ;
     ipcMain.on('get-picklist-data', (event, ...args) => { getPicklistData('get-picklist-data', ...args)}) ;
+    ipcMain.on('get-match-predictor-data', (event, ...args) => { getMatchPredictorData('get-match-predictor-data', ...args)}) ;
 
     ipcMain.on('prompt-string-request', (event, ...args) => { promptStringRequest('prompt-string-request', ...args)}) ;
     ipcMain.on('prompt-string-response', (event, ...args) => { promptStringResponse('prompt-string-response', ...args)}) ;
