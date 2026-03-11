@@ -22,6 +22,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
 	private static readonly viewMatchStatus: string = 'view-match-status';
 	private static readonly viewMatchDB: string = 'view-match-db';
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
+    private static readonly viewXeroMatchSim: string = 'view-match-sim' ;
     private static readonly viewPicklist: string = 'view-picklist' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
     private static readonly resetTablet: string = "reset-tablet" ;    
@@ -213,6 +214,14 @@ export class SCCoach extends SCCoachCentralBaseApp {
                 width: dims,
                 height: dims						
             });
+            treedata.push({
+                type: 'icon',
+                command: SCCoach.viewXeroMatchSim,
+                title: "Match-Prediction",
+                icon: this.getIconData('Prediction.png'),
+                width: dims,
+                height: dims
+            });
 		}
 
 		this.sendToRenderer("send-nav-data", treedata);
@@ -270,6 +279,9 @@ export class SCCoach extends SCCoachCentralBaseApp {
         }
         else if (cmd === SCCoach.viewPicklist) {
             this.setView("picklist");
+        }
+        else if (cmd === SCCoach.viewXeroMatchSim) {
+            this.setView("Match-Prediction");
         }
         else {
             dialog.showErrorBox('Unknown Command', `The command '${cmd}' is not recognized by SCCoach.`) ;

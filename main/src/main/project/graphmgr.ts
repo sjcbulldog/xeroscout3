@@ -1,4 +1,4 @@
-import { IPCGraphConfig, IPCGraphData, IPCDataItemData } from "../../shared/ipc";
+import { IPCDataItemData, IPCGraphConfig, IPCGraphData, IPCPredictConfig } from "../../shared/ipc";
 import { DataManager } from "./datamgr";
 import { DataSetManager } from "./datasetmgr";
 import { Manager } from "./manager";
@@ -7,6 +7,7 @@ import winston from "winston";
 export class GraphInfo {
     public single_team_configs_ : IPCGraphConfig[] = [] ;   
     public coach_configs_ : IPCGraphConfig[] = [] ;
+    public match_sim_configs_ : IPCPredictConfig[] = [] ;
 }
 
 export class GraphManager extends Manager {
@@ -26,6 +27,10 @@ export class GraphManager extends Manager {
 
         if (this.info_.coach_configs_ === undefined) {
             this.info_.coach_configs_ = [] ;
+        }
+
+        if (this.info_.match_sim_configs_ === undefined) {
+            this.info_.match_sim_configs_ = [] ;
         }
     }
 
@@ -48,6 +53,15 @@ export class GraphManager extends Manager {
 
     public set coachConfigs(configs: IPCGraphConfig[]) {
         this.info_.coach_configs_ = configs ;
+        this.write() ;
+    }
+
+    public get matchSimConfigs() : IPCPredictConfig[] {
+        return this.info_.match_sim_configs_ ;
+    }
+
+    public set matchSimConfigs(configs: IPCPredictConfig[]) {
+        this.info_.match_sim_configs_ = configs ;
         this.write() ;
     }
 

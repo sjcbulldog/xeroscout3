@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog } from "electron";
 import { SCBase } from "./scbase";
-import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCPickListConfig, IPCPickListData, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCMatchPredictorData, IPCMatchPredictorRequest, IPCMatchPredictorTeam, IPCPickListConfig, IPCPickListData, IPCPredictConfig, IPCProjColumnsConfig } from "../../shared/ipc";
 import { Project } from "../project/project";
 import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
@@ -110,7 +110,10 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }
 
     public async getSingleTeamConfigs() {
-        this.sendToRenderer('send-single-team-configs', this.project_?.graph_mgr_?.allConfigs);
+        this.migrateLegacyMatchSimConfigs() ;
+
+        const configs = this.project_?.graph_mgr_?.allConfigs.filter((cfg) => !this.isMatchSimConfig(cfg)) || [] ;
+        this.sendToRenderer('send-single-team-configs', configs);
     }    
 
 	public async updateSingleTeamConfigs(configs: IPCGraphConfig[]) {
@@ -119,6 +122,17 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
             this.project!.graph_mgr_!.singleTeamConfigs = configs.filter(c => c.owner === 'central') ;
         }
 	}    
+
+    public async getMatchSimConfigs() {
+        this.migrateLegacyMatchSimConfigs() ;
+        this.sendToRenderer('send-matchsim-configs', this.project_?.graph_mgr_?.matchSimConfigs || []);
+    }
+
+	public async updateMatchSimConfigs(configs: IPCPredictConfig[]) {
+		if (this.project && this.project.isInitialized()) {
+            this.project!.graph_mgr_!.matchSimConfigs = configs ;
+        }
+	}
 
 
 	public sendPlayoffStatus() {
@@ -568,6 +582,166 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     public async promptString(title: string, message: string, defaultValue?: string, placeholder?: string): Promise<string | undefined> {
         // Coach app does not support user input prompts, always return undefined
         return Promise.resolve(undefined);
+    }
+    public async sendMatchPredictorData(req: IPCMatchPredictorRequest): Promise<void> {
+        const response: IPCMatchPredictorData = {
+            comp_level: req.comp_level,
+            set_number: req.set_number,
+            match_number: req.match_number,
+            formula: req.formula,
+            red: [],
+            blue: [],
+            red_score: 0,
+            blue_score: 0,
+            score_sd: null
+        };
+
+        try {
+            if (!this.project_ || !this.project_.isInitialized()) {
+                response.error = 'Project data is not initialized yet. Load data and try again.';
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            if (!req.formula || req.formula.trim().length === 0) {
+                response.error = 'Select a formula to compute average points.';
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const formulaError = this.validateMatchPredictorFormula(req.formula);
+            if (formulaError) {
+                response.error = formulaError;
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const match = this.project_.match_mgr_!.findMatchByInfo(req.comp_level, req.set_number, req.match_number);
+            if (!match) {
+                response.error = 'Match not found for selected match.';
+                this.sendToRenderer('send-match-predictor-data', response);
+                return;
+            }
+
+            const dataMgr = this.project_.data_mgr_! ;
+            const redTeams = match.alliances.red.team_keys.map(k => SCBase.keyToTeamNumber(k));
+            const blueTeams = match.alliances.blue.team_keys.map(k => SCBase.keyToTeamNumber(k));
+
+            const red = await Promise.all(redTeams.map(async (team) => {
+                const avg = await dataMgr.getAverageFormulaBeforeMatch(req.formula, team, req);
+                return { team, average: avg.average, matches: avg.count };
+            }));
+
+            const blue = await Promise.all(blueTeams.map(async (team) => {
+                const avg = await dataMgr.getAverageFormulaBeforeMatch(req.formula, team, req);
+                return { team, average: avg.average, matches: avg.count };
+            }));
+
+            response.red = red;
+            response.blue = blue;
+            response.red_score = red.reduce((sum, team) => sum + team.average, 0);
+            response.blue_score = blue.reduce((sum, team) => sum + team.average, 0);
+
+            const scoreDiffs: number[] = [];
+            for (const m of this.project_.match_mgr_!.getMatches()) {
+                const redScore = m.alliances.red.score;
+                const blueScore = m.alliances.blue.score;
+                if (typeof redScore === 'number' && typeof blueScore === 'number') {
+                    scoreDiffs.push(redScore - blueScore);
+                }
+            }
+
+            if (scoreDiffs.length > 1) {
+                const mean = scoreDiffs.reduce((acc, v) => acc + v, 0) / scoreDiffs.length;
+                const variance = scoreDiffs.reduce((acc, v) => acc + (v - mean) * (v - mean), 0) / scoreDiffs.length;
+                response.score_sd = Math.sqrt(variance);
+            }
+        } catch (e: any) {
+            response.error = e?.message ?? 'Failed to compute match predictor data.';
+        }
+
+        this.sendToRenderer('send-match-predictor-data', response);
+    }
+
+    private validateMatchPredictorFormula(name: string): string | undefined {
+        if (!this.project_ || !this.project_.isInitialized()) {
+            return 'Project data is not initialized yet. Load data and try again.';
+        }
+
+        const teamCols = new Set(this.project_.data_mgr_!.teamColumnNames);
+        const matchCols = new Set(this.project_.data_mgr_!.matchColumnNames);
+        const formulaMgr = this.project_.formula_mgr_!;
+        const visited = new Set<string>();
+        const stack = new Set<string>();
+        const errors = new Set<string>();
+
+        const walk = (formulaName: string) => {
+            const formula = formulaMgr.findFormula(formulaName);
+            if (!formula) {
+                errors.add(`Formula "${formulaName}" not found.`);
+                return;
+            }
+
+            if (formula.hasError()) {
+                errors.add(`Formula "${formulaName}" has errors: ${formula.getErrorMessage()}`);
+                return;
+            }
+
+            if (stack.has(formulaName) || visited.has(formulaName)) {
+                return;
+            }
+
+            stack.add(formulaName);
+            for (const variable of formula.variables()) {
+                if (teamCols.has(variable) || matchCols.has(variable)) {
+                    continue;
+                }
+
+                if (stack.has(variable)) {
+                    errors.add(`Formula cycle detected involving "${variable}".`);
+                    continue;
+                }
+
+                if (formulaMgr.findFormula(variable)) {
+                    walk(variable);
+                } else {
+                    errors.add(`Formula "${formulaName}" uses unknown field "${variable}".`);
+                }
+            }
+            stack.delete(formulaName);
+            visited.add(formulaName);
+        };
+
+        walk(name);
+        return errors.size > 0 ? Array.from(errors).join(' ') : undefined;
+    }
+
+    private isMatchSimConfig(config: IPCGraphConfig | IPCPredictConfig | undefined): config is IPCPredictConfig {
+        return !!config && (config as any).matchsim_mode === 'matchsim';
+    }
+
+    private migrateLegacyMatchSimConfigs(): void {
+        if (!this.project_ || !this.project_.isInitialized()) {
+            return;
+        }
+
+        const graphMgr = this.project_.graph_mgr_!;
+        const legacy = graphMgr.allConfigs.filter((cfg) => this.isMatchSimConfig(cfg));
+        if (legacy.length === 0) {
+            return;
+        }
+
+        const merged = new Map<string, IPCPredictConfig>();
+        for (const cfg of graphMgr.matchSimConfigs) {
+            merged.set(`${cfg.owner}:${cfg.name}`, cfg);
+        }
+        for (const cfg of legacy) {
+            merged.set(`${cfg.owner}:${cfg.name}`, cfg);
+        }
+
+        graphMgr.matchSimConfigs = Array.from(merged.values());
+        graphMgr.coachConfigs = graphMgr.coachConfigs.filter((cfg) => !this.isMatchSimConfig(cfg));
+        graphMgr.singleTeamConfigs = graphMgr.singleTeamConfigs.filter((cfg) => !this.isMatchSimConfig(cfg));
     }
 
 }

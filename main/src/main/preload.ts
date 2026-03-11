@@ -70,6 +70,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 
         'get-single-team-configs',        // views/singleteam/singleteamview.ts
         'update-single-team-configs',     // views/singleteam/singleteamview.ts
+        'get-matchsim-configs',           // views/matchpred/matchsim.ts
+        'update-matchsim-configs',        // views/matchpred/matchsim.ts
         'get-multi-team-configs',         // views/multiteam/multiteamview.ts
         'update-multi-team-configs',      // views/multiteam/multiteamview.ts
         'get-match-configs',              // views/matchgraphs/matchgraphsview.ts
@@ -80,6 +82,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'save-picklist-config',           // views/picklist/picklistview.ts
         'get-picklist-data',              // views/picklist/picklistview.ts
         'prompt-string-response',         // apps/xeroapp.ts
+        'get-match-predictor-data',       // views/matchpred/matchsim.ts
 	      ];
       if (validChannels.includes(channel)) {
         if (data) {
@@ -142,6 +145,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-team-format-formulas',    // main/apps/sccentral.ts
 
         'send-single-team-configs',     // main/apps/sccentral.ts
+        'send-matchsim-configs',        // main/apps/sccoachcentralbase.ts
         'send-multi-team-configs',      // main/apps/sccentral.ts
         'send-match-configs',           // main/apps/sccentral.ts
         'send-chart-data',              // main/apps/sccentral.ts
@@ -149,6 +153,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-picklist-data',           // main/apps/sccentral.ts
         'send-picklist-configs',        // main/apps/sccentral.ts
         'prompt-string-request',        // main/apps/sccentral.ts
+        'send-match-predictor-data',    // main/apps/sccoachcentralbase.ts
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));
