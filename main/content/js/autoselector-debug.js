@@ -31,9 +31,9 @@
     return toast;
   }
 
-  function showToast() {
+  function showToast(message) {
     const toast = ensureToast();
-    toast.textContent = 'AUTO SELECTOR BUTTON CLICKED';
+    toast.textContent = message;
     toast.style.display = 'block';
 
     if (hideTimer) {
@@ -46,29 +46,48 @@
     }, 2000);
   }
 
-  document.addEventListener(
-    'click',
-    (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) {
+  function isAutoSelectorDialog(node) {
+    if (!(node instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (node.classList.contains('xero-popup-form-edit-dialog')) {
+      const topbar = node.querySelector('.xero-popup-form-edit-dialog-topbar');
+      if (topbar && topbar.textContent && topbar.textContent.trim() === 'Auto Selector') {
+        return true;
+      }
+    }
+
+    const dialog = node.querySelector('.xero-popup-form-edit-dialog');
+    if (dialog instanceof HTMLElement) {
+      const topbar = dialog.querySelector('.xero-popup-form-edit-dialog-topbar');
+      if (topbar && topbar.textContent && topbar.textContent.trim() === 'Auto Selector') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!isAutoSelectorDialog(node)) {
+          continue;
+        }
+
+        window.dispatchEvent(new CustomEvent('xero:auto-selector-dialog-added'));
+        showToast('AUTO SELECTOR DIALOG ADDED TO DOM');
         return;
       }
+    }
+  });
 
-      const button = target.closest('.xero-autoselector-button');
-      if (!button) {
-        return;
-      }
-
-      window.dispatchEvent(
-        new CustomEvent('xero:auto-selector-clicked', {
-          detail: {
-            text: button.textContent || '',
-          },
-        })
-      );
-
-      showToast();
-    },
-    true
-  );
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    window.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }, { once: true });
+  }
 })();
