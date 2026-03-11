@@ -740,7 +740,6 @@ export class SCScout extends SCBase {
         else if (p.type_ === PacketType.ProvideTablets) {
             this.tablets_ = JSON.parse(p.data_.toString()) ;
             this.setView('select-tablet') ;
-            setTimeout(() => this.sendTabletData(), 0) ;
         }
         else if (p.type_ === PacketType.ProvideTeamForm) {
             this.info_.teamform_ = JSON.parse(p.payloadAsString()) ;
