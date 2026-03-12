@@ -456,7 +456,7 @@ export class AutoSelectorControl extends FormControl {
         }
         const autos = this.collectAutos(item.showSourceTagInTab !== false);
 
-        const parent = this.ctrl?.parentElement || this.view.elem;
+        const parent = this.view.elem;
         this.dialog_ = new AutoSelectorDialog(
             autos,
             this.image_src_,
