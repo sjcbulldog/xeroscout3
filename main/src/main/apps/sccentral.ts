@@ -2046,6 +2046,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
 			this.project!.data_mgr_?.processResults(obj)
 				.then((count) => {
+					this.logger_.info(`processed ${count} synced ${obj.purpose} results from tablet '${obj.tablet}'`) ;
 					if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
 						this.setView("team-status");
 					} else {

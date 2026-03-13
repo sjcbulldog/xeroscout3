@@ -274,6 +274,9 @@ export class AutoAnalysisView extends XeroView {
         image.style.objectFit = 'contain' ;
         image.style.display = 'block' ;
         canvas.appendChild(image) ;
+        image.addEventListener('load', () => {
+            this.renderAutoPreview(auto, canvas, image, svg, nodesLayer) ;
+        }) ;
         this.loadFieldImage(image, auto.fieldImage) ;
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') ;
@@ -293,7 +296,9 @@ export class AutoAnalysisView extends XeroView {
         nodesLayer.style.height = '100%' ;
         canvas.appendChild(nodesLayer) ;
 
-        this.renderAutoPreview(auto, svg, nodesLayer) ;
+        window.requestAnimationFrame(() => {
+            this.renderAutoPreview(auto, canvas, image, svg, nodesLayer) ;
+        }) ;
         return card ;
     }
 
@@ -314,9 +319,21 @@ export class AutoAnalysisView extends XeroView {
         }
     }
 
-    private renderAutoPreview(auto: IPCAutoAnalysisAuto, svg: SVGSVGElement, nodesLayer: HTMLDivElement) {
+    private renderAutoPreview(auto: IPCAutoAnalysisAuto, canvas: HTMLDivElement, image: HTMLImageElement, svg: SVGSVGElement, nodesLayer: HTMLDivElement) {
         svg.innerHTML = '' ;
         nodesLayer.innerHTML = '' ;
+
+        const fieldRect = this.getContainedImageRect(canvas, image) ;
+        svg.style.left = `${fieldRect.left}px` ;
+        svg.style.top = `${fieldRect.top}px` ;
+        svg.style.width = `${fieldRect.width}px` ;
+        svg.style.height = `${fieldRect.height}px` ;
+        svg.setAttribute('viewBox', `0 0 ${fieldRect.width} ${fieldRect.height}`) ;
+
+        nodesLayer.style.left = `${fieldRect.left}px` ;
+        nodesLayer.style.top = `${fieldRect.top}px` ;
+        nodesLayer.style.width = `${fieldRect.width}px` ;
+        nodesLayer.style.height = `${fieldRect.height}px` ;
 
         const markerId = `auto-analysis-arrow-${auto.key.replace(/[^a-zA-Z0-9_-]/g, '-')}` ;
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs') ;
@@ -341,11 +358,11 @@ export class AutoAnalysisView extends XeroView {
                 continue ;
             }
 
-            const p1 = { x: from.x * 320, y: from.y * 220 } ;
-            const p2 = { x: to.x * 320, y: to.y * 220 } ;
+            const p1 = { x: from.x * fieldRect.width, y: from.y * fieldRect.height } ;
+            const p2 = { x: to.x * fieldRect.width, y: to.y * fieldRect.height } ;
             const cp = {
-                x: (edge.cx !== undefined ? edge.cx : (from.x + to.x) / 2) * 320,
-                y: (edge.cy !== undefined ? edge.cy : (from.y + to.y) / 2) * 220,
+                x: (edge.cx !== undefined ? edge.cx : (from.x + to.x) / 2) * fieldRect.width,
+                y: (edge.cy !== undefined ? edge.cy : (from.y + to.y) / 2) * fieldRect.height,
             } ;
 
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path') ;
@@ -361,8 +378,8 @@ export class AutoAnalysisView extends XeroView {
             const div = document.createElement('div') ;
             div.textContent = node.end ? `${node.action} / End` : node.action ;
             div.style.position = 'absolute' ;
-            div.style.left = `${node.x * 320}px` ;
-            div.style.top = `${node.y * 220}px` ;
+            div.style.left = `${node.x * fieldRect.width}px` ;
+            div.style.top = `${node.y * fieldRect.height}px` ;
             div.style.transform = 'translate(-50%, -50%)' ;
             div.style.padding = '4px 8px' ;
             div.style.borderRadius = '999px' ;
@@ -372,6 +389,41 @@ export class AutoAnalysisView extends XeroView {
             div.style.whiteSpace = 'nowrap' ;
             nodesLayer.appendChild(div) ;
         }
+    }
+
+    private getContainedImageRect(canvas: HTMLDivElement, image: HTMLImageElement) : { left: number, top: number, width: number, height: number } {
+        const width = canvas.clientWidth ;
+        const height = canvas.clientHeight ;
+        if (width <= 0 || height <= 0) {
+            return { left: 0, top: 0, width: 320, height: 220 } ;
+        }
+
+        const naturalWidth = image.naturalWidth ;
+        const naturalHeight = image.naturalHeight ;
+        if (naturalWidth <= 0 || naturalHeight <= 0) {
+            return { left: 0, top: 0, width, height } ;
+        }
+
+        const imageAspect = naturalWidth / naturalHeight ;
+        const canvasAspect = width / height ;
+
+        if (imageAspect > canvasAspect) {
+            const containedHeight = width / imageAspect ;
+            return {
+                left: 0,
+                top: (height - containedHeight) / 2,
+                width,
+                height: containedHeight,
+            } ;
+        }
+
+        const containedWidth = height * imageAspect ;
+        return {
+            left: (width - containedWidth) / 2,
+            top: 0,
+            width: containedWidth,
+            height,
+        } ;
     }
 
     private createMatchesSection(matches: IPCAutoAnalysisMatchRow[]) : HTMLDivElement {

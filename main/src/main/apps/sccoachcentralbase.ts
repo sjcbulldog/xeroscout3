@@ -419,26 +419,53 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
         this.project_?.data_mgr_?.setTeamColConfig(data);
     }     
 
-    public sendMatchDB(): void {
-        if (this.project_ && this.project_.match_mgr_!.hasMatches()) {
-            let cols = this.project_.data_mgr_?.matchColumnDescriptors ;
-            this.project_!.data_mgr_!.getAllMatchData()
-                .then((data) => {
-                    let dataobj : IPCDatabaseData = {
-                        column_configurations: this.project_!.data_mgr_!.getMatchColConfig()!,
-                        column_definitions: cols!,
-                        keycols: ['comp_level', 'set_number', 'match_number', 'team_key'],
-                        data: this.convertDataForDisplay(data),
-                    };
-                    this.sendToRenderer('send-match-db', dataobj);
-                })
-                .catch((err) => {
-                    this.logger_.error(
-                        'error getting data from database for send-match-db',
-                        err
-                    );					
-                });
+    private normalizeColumnConfig(cols: any[], cfg: IPCProjColumnsConfig | undefined) : IPCProjColumnsConfig {
+        let ret : IPCProjColumnsConfig = {
+            columns: [],
+            frozenColumnCount: Math.max(0, cfg?.frozenColumnCount || 0),
+        } ;
+
+        for (let col of cols) {
+            let existing = cfg?.columns.find((one) => one.name === col.name) ;
+            ret.columns.push({
+                name: col.name,
+                width: existing?.width ?? -1,
+                hidden: existing?.hidden ?? false,
+            }) ;
         }
+
+        if (ret.frozenColumnCount > ret.columns.length) {
+            ret.frozenColumnCount = ret.columns.length ;
+        }
+
+        return ret ;
+    }
+
+    public sendMatchDB(): void {
+        if (!this.project_ || !this.project_.isInitialized()) {
+            this.logger_.warn('send-match-db requested before project initialization completed') ;
+            return ;
+        }
+
+        let cols = this.project_.data_mgr_?.matchColumnDescriptors || [] ;
+        this.project_!.data_mgr_!.getAllMatchData()
+            .then((data) => {
+                let colcfg = this.normalizeColumnConfig(cols, this.project_!.data_mgr_!.getMatchColConfig()) ;
+                let dataobj : IPCDatabaseData = {
+                    column_configurations: colcfg,
+                    column_definitions: cols,
+                    keycols: ['comp_level', 'set_number', 'match_number', 'team_key'],
+                    data: this.convertDataForDisplay(data),
+                };
+                this.logger_.silly(`send-match-db returning ${dataobj.data.length} rows`) ;
+                this.sendToRenderer('send-match-db', dataobj);
+            })
+            .catch((err) => {
+                this.logger_.error(
+                    'error getting data from database for send-match-db',
+                    err
+                );					
+            });
     }    
 
     public sendMatchData(): void {
@@ -448,25 +475,30 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }    
 
     public sendTeamDB(): void {
-        if (this.project_ && this.project_.team_mgr_!.hasTeams()) {
-            let cols = this.project_.data_mgr_?.teamColumnDescriptors ;
-            this.project_?.data_mgr_!.getAllTeamData()
-                .then((data) => {
-                    let dataobj = {
-                        column_configurations: this.project_!.data_mgr_!.getTeamColConfig()!,
-                        column_definitions: cols!,
-                        keycols: ['team_number'],
-                        data: this.convertDataForDisplay(data),
-                    };
-                    this.sendToRenderer('send-team-db', dataobj);
-                })
-                .catch((err) => {
-                    this.logger_.error(
-                        'error getting data from database for send-team-db',
-                        err
-                    );
-                });
+        if (!this.project_ || !this.project_.isInitialized()) {
+            this.logger_.warn('send-team-db requested before project initialization completed') ;
+            return ;
         }
+
+        let cols = this.project_.data_mgr_?.teamColumnDescriptors || [] ;
+        this.project_?.data_mgr_!.getAllTeamData()
+            .then((data) => {
+                let colcfg = this.normalizeColumnConfig(cols, this.project_!.data_mgr_!.getTeamColConfig()) ;
+                let dataobj : IPCDatabaseData = {
+                    column_configurations: colcfg,
+                    column_definitions: cols,
+                    keycols: ['team_number'],
+                    data: this.convertDataForDisplay(data),
+                };
+                this.logger_.silly(`send-team-db returning ${dataobj.data.length} rows`) ;
+                this.sendToRenderer('send-team-db', dataobj);
+            })
+            .catch((err) => {
+                this.logger_.error(
+                    'error getting data from database for send-team-db',
+                    err
+                );
+            });
     }    
 
     public sendTeamData(): void {
