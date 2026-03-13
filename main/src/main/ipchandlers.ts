@@ -88,6 +88,19 @@ export async function getMatchFieldList(cmd: string, ...args: any[]) {
     }
 }
 
+// get-auto-analysis-data
+export async function getAutoAnalysisData(cmd: string, ...args: any[]) {
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
+        if (args.length === 0) {
+            await app.sendAutoAnalysisData() ;
+        } else {
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
 // get-formulas
 export async function getFormulas(cmd: string, ...args: any[]) {
     if (isCentralOrCoachType()) {

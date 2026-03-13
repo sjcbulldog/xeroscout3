@@ -1,9 +1,10 @@
 import { BrowserWindow, dialog } from "electron";
 import { SCBase } from "./scbase";
-import { IPCAppType, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCMatchPredictorData, IPCMatchPredictorRequest, IPCMatchPredictorTeam, IPCPickListConfig, IPCPickListData, IPCPredictConfig, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCAppType, IPCAutoAnalysisPayload, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCMatchPredictorData, IPCMatchPredictorRequest, IPCMatchPredictorTeam, IPCPickListConfig, IPCPickListData, IPCPredictConfig, IPCProjColumnsConfig } from "../../shared/ipc";
 import { Project } from "../project/project";
 import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
+import { generateAutoAnalysisData } from "../project/autoanalysis";
 
 export abstract class SCCoachCentralBaseApp extends SCBase {
     private project_?: Project = undefined;
@@ -74,6 +75,22 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     public sendPicklistConfigs() {
         this.sendToRenderer('send-picklist-configs', this.project_?.picklist_mgr_?.allPicklists) ;
     }    
+
+    public async sendAutoAnalysisData() {
+        let payload : IPCAutoAnalysisPayload = {
+            teams: [],
+            autosByTeam: {},
+            matchesByTeam: {},
+            plannerTags: [],
+            selectorTags: [],
+        } ;
+
+        if (this.project_ && this.project_.isInitialized()) {
+            payload = await generateAutoAnalysisData(this.project_) ;
+        }
+
+        this.sendToRenderer('send-auto-analysis-data', payload) ;
+    }
 
 	public savePicklistConfig(config: IPCPickListConfig[]) {
         this.project!.picklist_mgr_!.coachesPicklists = config.filter(c => c.owner === 'coach') ;

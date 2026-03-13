@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 
         'get-match-field-list',           // views/formulas/formulas.ts
         'get-team-field-list',            // views/formulas/formulas.ts
+        'get-auto-analysis-data',         // views/autoanalysis/autoanalysisview.ts
         'get-team-list',                  // views/playoffs/playoffs.ts
         'get-hint-db',                    // apps/hintmgr.ts
         'set-hint-hidden',                // apps/hintmgr.ts
@@ -132,6 +133,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'request-results',              // main/apps/scscout.ts
         'send-team-list',               // main/apps/sccentral.ts
         'send-team-field-list',         // main/apps/sccentral.ts
+        'send-auto-analysis-data',      // main/apps/sccoachcentralbase.ts
         'send-match-field-list',        // main/apps/sccentral.ts
         'send-match-list',              // main/apps/sccentral.ts
         'send-stored-graph-list',       // main/apps/sccentral.ts

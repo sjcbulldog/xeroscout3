@@ -213,6 +213,67 @@ export interface IPCScoutResults {
     results: IPCScoutResult[] ;
 }
 
+export interface IPCAutoAnalysisNode {
+    id: string ;
+    action: string ;
+    x: number ;
+    y: number ;
+    end: boolean ;
+}
+
+export interface IPCAutoAnalysisEdge {
+    id: string ;
+    from: string ;
+    to: string ;
+    cx?: number ;
+    cy?: number ;
+}
+
+export interface IPCAutoAnalysisAuto {
+    key: string ;
+    teamNumber: number ;
+    teamName: string ;
+    sourceTag: string ;
+    fieldImage: string ;
+    autoId: string ;
+    autoName: string ;
+    nodes: IPCAutoAnalysisNode[] ;
+    edges: IPCAutoAnalysisEdge[] ;
+}
+
+export type IPCAutoAnalysisMatchStatus = 'blank' | 'other' | 'matched' | 'ambiguous' | 'unknown' ;
+
+export interface IPCAutoAnalysisSelection {
+    tag: string ;
+    value: string ;
+    status: IPCAutoAnalysisMatchStatus ;
+    matchedAutoKeys: string[] ;
+}
+
+export interface IPCAutoAnalysisMatchRow {
+    teamNumber: number ;
+    comp_level: string ;
+    set_number: number ;
+    match_number: number ;
+    alliance: string ;
+    selections: IPCAutoAnalysisSelection[] ;
+}
+
+export interface IPCAutoAnalysisTeamSummary {
+    teamNumber: number ;
+    teamName: string ;
+    autoCount: number ;
+    matchCount: number ;
+}
+
+export interface IPCAutoAnalysisPayload {
+    teams: IPCAutoAnalysisTeamSummary[] ;
+    autosByTeam: { [teamNumber: string]: IPCAutoAnalysisAuto[] } ;
+    matchesByTeam: { [teamNumber: string]: IPCAutoAnalysisMatchRow[] } ;
+    plannerTags: string[] ;
+    selectorTags: string[] ;
+}
+
 export type IPCAppType = 'central' | 'scout' | 'coach' ;
 
 export interface IPCAppInit {
