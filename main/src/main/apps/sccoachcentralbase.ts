@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog } from "electron";
 import { SCBase } from "./scbase";
-import { IPCAppType, IPCAutoAnalysisPayload, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCMatchPredictorData, IPCMatchPredictorRequest, IPCMatchPredictorTeam, IPCPickListConfig, IPCPickListData, IPCPredictConfig, IPCProjColumnsConfig } from "../../shared/ipc";
+import { IPCAppType, IPCAutoAnalysisConfig, IPCAutoAnalysisPayload, IPCAutoAnalysisRequest, IPCDatabaseData, IPCFormScoutData, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchInfo, IPCMatchPredictorData, IPCMatchPredictorRequest, IPCMatchPredictorTeam, IPCPickListConfig, IPCPickListData, IPCPredictConfig, IPCProjColumnsConfig } from "../../shared/ipc";
 import { Project } from "../project/project";
 import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
@@ -76,20 +76,43 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
         this.sendToRenderer('send-picklist-configs', this.project_?.picklist_mgr_?.allPicklists) ;
     }    
 
-    public async sendAutoAnalysisData() {
+    public async sendAutoAnalysisData(request?: IPCAutoAnalysisRequest) {
         let payload : IPCAutoAnalysisPayload = {
             teams: [],
             autosByTeam: {},
             matchesByTeam: {},
             plannerTags: [],
             selectorTags: [],
+            metricOptions: [],
+            selectedMetrics: [],
+            averageFormulaOptions: [],
+            selectedAverageFormula: '',
         } ;
 
         if (this.project_ && this.project_.isInitialized()) {
-            payload = await generateAutoAnalysisData(this.project_) ;
+            payload = await generateAutoAnalysisData(this.project_, request) ;
         }
 
         this.sendToRenderer('send-auto-analysis-data', payload) ;
+    }
+
+    public getAutoAnalysisConfigs() {
+        const configs = (this.project_?.graph_mgr_?.autoAnalysisConfigs || [])
+            .filter((cfg) => cfg.owner === this.applicationType) ;
+        this.sendToRenderer('send-auto-analysis-configs', configs) ;
+    }
+
+    public updateAutoAnalysisConfigs(configs: IPCAutoAnalysisConfig[]) {
+        if (this.project && this.project.isInitialized()) {
+            const others = (this.project!.graph_mgr_!.autoAnalysisConfigs || [])
+                .filter((cfg) => cfg.owner !== this.applicationType) ;
+            const owned = configs.map((cfg) => ({
+                ...cfg,
+                owner: this.applicationType,
+                selectedMetrics: [...cfg.selectedMetrics],
+            })) ;
+            this.project!.graph_mgr_!.autoAnalysisConfigs = [...others, ...owned] ;
+        }
     }
 
 	public savePicklistConfig(config: IPCPickListConfig[]) {

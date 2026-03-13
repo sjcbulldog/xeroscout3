@@ -5,14 +5,18 @@ import {
     IPCAutoAnalysisAuto,
     IPCAutoAnalysisEdge,
     IPCAutoAnalysisMatchRow,
+    IPCAutoAnalysisMetricOption,
     IPCAutoAnalysisMatchStatus,
     IPCAutoAnalysisNode,
     IPCAutoAnalysisPayload,
+    IPCAutoAnalysisRequest,
     IPCAutoAnalysisSelection,
     IPCAutoAnalysisTeamSummary,
     IPCAutoPlanItem,
     IPCAutoSelectorItem,
+    IPCDataSet,
     IPCForm,
+    IPCTypedDataValue,
 } from "../../shared/ipc";
 import { DataValue } from "../../shared/datavalue";
 
@@ -168,6 +172,14 @@ function compareMatchOrder(a: IPCAutoAnalysisMatchRow, b: IPCAutoAnalysisMatchRo
     return a.match_number - b.match_number ;
 }
 
+function compareMetricOptions(a: IPCAutoAnalysisMetricOption, b: IPCAutoAnalysisMetricOption) : number {
+    if (a.kind !== b.kind) {
+        return a.kind.localeCompare(b.kind) ;
+    }
+
+    return a.value.localeCompare(b.value) ;
+}
+
 function selectionStatus(value: string, matching: IPCAutoAnalysisAuto[]) : { status: IPCAutoAnalysisMatchStatus, matchedAutoKeys: string[] } {
     if (value.length === 0) {
         return { status: 'blank', matchedAutoKeys: [] } ;
@@ -239,13 +251,159 @@ function deriveAlliance(project: Project, record: DataRecord, teamNumber: number
     return '' ;
 }
 
-export async function generateAutoAnalysisData(project: Project) : Promise<IPCAutoAnalysisPayload> {
+function getMetricOptions(project: Project) : IPCAutoAnalysisMetricOption[] {
+    const options = new Map<string, IPCAutoAnalysisMetricOption>() ;
+
+    for (const col of project.data_mgr_?.teamColumnDescriptors || []) {
+        options.set(`team:${col.name}`, {
+            value: col.name,
+            label: `Team Tag: ${col.name}`,
+            kind: 'team-field',
+        }) ;
+    }
+
+    for (const col of project.data_mgr_?.matchColumnDescriptors || []) {
+        options.set(`match:${col.name}`, {
+            value: col.name,
+            label: `Match Tag: ${col.name}`,
+            kind: 'match-field',
+        }) ;
+    }
+
+    for (const formula of project.formula_mgr_?.formulas || []) {
+        options.set(`formula:${formula.name}`, {
+            value: formula.name,
+            label: `Formula: ${formula.name}`,
+            kind: 'formula',
+        }) ;
+    }
+
+    return [...options.values()].sort(compareMetricOptions) ;
+}
+
+function createSpecificDataSet(row: IPCAutoAnalysisMatchRow) : IPCDataSet {
+    return {
+        name: '',
+        formula: '',
+        matches: {
+            kind: 'specific',
+            comp_level: row.comp_level,
+            set_number: row.set_number,
+            match_number: row.match_number,
+        }
+    } ;
+}
+
+async function evaluateMetricValue(
+    project: Project,
+    cache: Map<string, IPCTypedDataValue>,
+    field: string,
+    teamNumber: number,
+    row: IPCAutoAnalysisMatchRow
+) : Promise<IPCTypedDataValue> {
+    const key = `${field}|${teamNumber}|${row.comp_level}|${row.set_number}|${row.match_number}` ;
+    if (cache.has(key)) {
+        return cache.get(key)! ;
+    }
+
+    let value: IPCTypedDataValue ;
+    try {
+        value = await project.data_mgr_!.getData(createSpecificDataSet(row), field, teamNumber) ;
+    }
+    catch(err) {
+        const obj = err instanceof Error ? err : new Error(String(err)) ;
+        value = DataValue.fromError(obj) ;
+    }
+
+    cache.set(key, value) ;
+    return value ;
+}
+
+async function populateSelectedMetrics(
+    project: Project,
+    matchesByTeam: Map<number, IPCAutoAnalysisMatchRow[]>,
+    selectedMetrics: string[],
+    cache: Map<string, IPCTypedDataValue>
+) {
+    if (selectedMetrics.length === 0) {
+        return ;
+    }
+
+    for (const [teamNumber, rows] of matchesByTeam.entries()) {
+        for (const row of rows) {
+            for (const selectedMetric of selectedMetrics) {
+                const value = await evaluateMetricValue(project, cache, selectedMetric, teamNumber, row) ;
+                if (DataValue.isError(value)) {
+                    row.metricErrors[selectedMetric] = DataValue.toDisplayString(value) ;
+                    delete row.metricValues[selectedMetric] ;
+                }
+                else {
+                    row.metricValues[selectedMetric] = DataValue.toDisplayString(value) ;
+                    delete row.metricErrors[selectedMetric] ;
+                }
+            }
+        }
+    }
+}
+
+async function populateAutoAverages(
+    project: Project,
+    autosByTeam: Map<number, IPCAutoAnalysisAuto[]>,
+    matchesByTeam: Map<number, IPCAutoAnalysisMatchRow[]>,
+    averageFormula: string,
+    cache: Map<string, IPCTypedDataValue>
+) {
+    if (averageFormula.length === 0) {
+        return ;
+    }
+
+    for (const [teamNumber, autos] of autosByTeam.entries()) {
+        const rows = matchesByTeam.get(teamNumber) || [] ;
+        for (const auto of autos) {
+            let sum = 0 ;
+            let count = 0 ;
+
+            for (const row of rows) {
+                let matched = false ;
+                for (const selection of row.selections) {
+                    if (selection.matchedAutoKeys.includes(auto.key)) {
+                        matched = true ;
+                        break ;
+                    }
+                }
+
+                if (!matched) {
+                    continue ;
+                }
+
+                const value = await evaluateMetricValue(project, cache, averageFormula, teamNumber, row) ;
+                if (DataValue.isNumber(value)) {
+                    sum += DataValue.toReal(value) ;
+                    count++ ;
+                }
+            }
+
+            auto.averageCount = count ;
+            auto.averageValue = count > 0 ? sum / count : undefined ;
+        }
+    }
+}
+
+export async function generateAutoAnalysisData(project: Project, request?: IPCAutoAnalysisRequest) : Promise<IPCAutoAnalysisPayload> {
     const teamFormObj = project.form_mgr_?.getForm('team') ;
     const matchFormObj = project.form_mgr_?.getForm('match') ;
     const teamForm = teamFormObj instanceof Error ? undefined : teamFormObj ;
     const matchForm = matchFormObj instanceof Error ? undefined : matchFormObj ;
     const plannerItems = getAutoPlanItems(teamForm) ;
     const selectorItems = getAutoSelectorItems(matchForm) ;
+    const metricOptions = getMetricOptions(project) ;
+    const averageFormulaOptions = [...(project.formula_mgr_?.formulaNames || [])].sort((a, b) => a.localeCompare(b)) ;
+    const validMetrics = new Set(metricOptions.map((one) => one.value)) ;
+    const validAverageFormulas = new Set(averageFormulaOptions) ;
+    const selectedMetrics = Array.isArray(request?.selectedMetrics) ?
+        request!.selectedMetrics.filter((one, index, arr) => typeof one === 'string' && validMetrics.has(one) && arr.indexOf(one) === index) :
+        [] ;
+    const selectedAverageFormula = request?.averageFormula && validAverageFormulas.has(request.averageFormula) ? request.averageFormula : '' ;
     const teamRows = await project.data_mgr_!.getAllTeamData() ;
     const matchRows = await project.data_mgr_!.getAllMatchData() as DataRecord[] ;
     const teams = project.team_mgr_?.getTeams() || [] ;
@@ -296,6 +454,7 @@ export async function generateAutoAnalysisData(project: Project) : Promise<IPCAu
                     autoName: auto.name,
                     nodes: auto.nodes,
                     edges: auto.edges,
+                    averageCount: 0,
                 }) ;
             }
         }
@@ -351,9 +510,15 @@ export async function generateAutoAnalysisData(project: Project) : Promise<IPCAu
             match_number: matchNumber,
             alliance: deriveAlliance(project, record, teamNumber),
             selections: selections,
+            metricValues: {},
+            metricErrors: {},
         }) ;
         matchesByTeam.set(teamNumber, rows) ;
     }
+
+    const valueCache = new Map<string, IPCTypedDataValue>() ;
+    await populateSelectedMetrics(project, matchesByTeam, selectedMetrics, valueCache) ;
+    await populateAutoAverages(project, autosByTeam, matchesByTeam, selectedAverageFormula, valueCache) ;
 
     for (const [teamNumber, rows] of matchesByTeam.entries()) {
         rows.sort(compareMatchOrder) ;
@@ -379,6 +544,10 @@ export async function generateAutoAnalysisData(project: Project) : Promise<IPCAu
         matchesByTeam: matchesObj,
         plannerTags: plannerItems.map(item => item.tag),
         selectorTags: selectorItems.map(item => item.tag),
+        metricOptions: metricOptions,
+        selectedMetrics: selectedMetrics,
+        averageFormulaOptions: averageFormulaOptions,
+        selectedAverageFormula: selectedAverageFormula,
     } ;
 
     return ret ;
