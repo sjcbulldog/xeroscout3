@@ -58,6 +58,8 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'get-match-field-list',           // views/formulas/formulas.ts
         'get-team-field-list',            // views/formulas/formulas.ts
         'get-auto-analysis-data',         // views/autoanalysis/autoanalysisview.ts
+        'get-auto-analysis-configs',      // views/autoanalysis/autoanalysisview.ts
+        'update-auto-analysis-configs',   // views/autoanalysis/autoanalysisview.ts
         'get-team-list',                  // views/playoffs/playoffs.ts
         'get-hint-db',                    // apps/hintmgr.ts
         'set-hint-hidden',                // apps/hintmgr.ts
@@ -82,6 +84,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'get-picklist-configs',            // views/picklist/picklistview.ts
         'save-picklist-config',           // views/picklist/picklistview.ts
         'get-picklist-data',              // views/picklist/picklistview.ts
+        'prompt-string-request',          // views/autoanalysis/autoanalysisview.ts
         'prompt-string-response',         // apps/xeroapp.ts
         'get-match-predictor-data',       // views/matchpred/matchsim.ts
 	      ];
@@ -134,6 +137,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-team-list',               // main/apps/sccentral.ts
         'send-team-field-list',         // main/apps/sccentral.ts
         'send-auto-analysis-data',      // main/apps/sccoachcentralbase.ts
+        'send-auto-analysis-configs',   // main/apps/sccoachcentralbase.ts
         'send-match-field-list',        // main/apps/sccentral.ts
         'send-match-list',              // main/apps/sccentral.ts
         'send-stored-graph-list',       // main/apps/sccentral.ts
@@ -155,6 +159,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-picklist-data',           // main/apps/sccentral.ts
         'send-picklist-configs',        // main/apps/sccentral.ts
         'prompt-string-request',        // main/apps/sccentral.ts
+        'prompt-string-response',       // main/ipchandlers.ts
         'send-match-predictor-data',    // main/apps/sccoachcentralbase.ts
       ];
       if (validChannels.includes(channel)) {

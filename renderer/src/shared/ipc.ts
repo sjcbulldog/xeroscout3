@@ -283,6 +283,13 @@ export interface IPCAutoAnalysisRequest {
     averageFormula?: string ;
 }
 
+export interface IPCAutoAnalysisConfig {
+    name: string ;
+    selectedMetrics: string[] ;
+    averageFormula: string ;
+    owner: IPCAppType ;
+}
+
 export interface IPCAutoAnalysisPayload {
     teams: IPCAutoAnalysisTeamSummary[] ;
     autosByTeam: { [teamNumber: string]: IPCAutoAnalysisAuto[] } ;

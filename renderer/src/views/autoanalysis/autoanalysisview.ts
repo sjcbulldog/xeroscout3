@@ -1,11 +1,14 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import {
+    IPCAutoAnalysisConfig,
     IPCAutoAnalysisAuto,
     IPCAutoAnalysisMatchRow,
     IPCAutoAnalysisPayload,
     IPCAutoAnalysisRequest,
     IPCAutoAnalysisSelection,
-    IPCAutoAnalysisTeamSummary
+    IPCAutoAnalysisTeamSummary,
+    IPCPromptStringRequest,
+    IPCPromptStringResponse
 } from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 
@@ -26,11 +29,17 @@ export class AutoAnalysisView extends XeroView {
     private selectedMatchKey_: string | undefined = undefined ;
     private selectedMetrics_: string[] = [] ;
     private selectedAverageFormula_: string = '' ;
+    private configs_: IPCAutoAnalysisConfig[] = [] ;
+    private selectedConfigName_: string = '' ;
+    private promptResolvers_ = new Map<string, (value: string | undefined) => void>() ;
 
     public constructor(app: XeroApp) {
         super(app, 'xero-auto-analysis-view') ;
 
         this.registerCallback('send-auto-analysis-data', this.receivedData.bind(this)) ;
+        this.registerCallback('send-auto-analysis-configs', this.receivedConfigs.bind(this)) ;
+        this.registerCallback('prompt-string-response', this.receivedPromptResponse.bind(this)) ;
+        this.request('get-auto-analysis-configs') ;
         this.requestData() ;
     }
 
@@ -53,6 +62,24 @@ export class AutoAnalysisView extends XeroView {
             this.selectedMatchKey_ = undefined ;
         }
         this.render() ;
+    }
+
+    private receivedConfigs(configs: IPCAutoAnalysisConfig[]) {
+        this.configs_ = Array.isArray(configs) ? [...configs].sort((a, b) => a.name.localeCompare(b.name)) : [] ;
+        if (this.selectedConfigName_.length > 0 && !this.configs_.some((cfg) => cfg.name === this.selectedConfigName_)) {
+            this.selectedConfigName_ = '' ;
+        }
+        this.render() ;
+    }
+
+    private receivedPromptResponse(response: IPCPromptStringResponse) {
+        const resolver = this.promptResolvers_.get(response.id) ;
+        if (!resolver) {
+            return ;
+        }
+
+        this.promptResolvers_.delete(response.id) ;
+        resolver(response.value) ;
     }
 
     private getFilteredTeams() : IPCAutoAnalysisTeamSummary[] {
@@ -218,7 +245,15 @@ export class AutoAnalysisView extends XeroView {
         titleBlock.appendChild(meta) ;
         header.appendChild(titleBlock) ;
 
-        header.appendChild(this.createControlsPanel()) ;
+        const controlStack = document.createElement('div') ;
+        controlStack.style.display = 'flex' ;
+        controlStack.style.flexDirection = 'column' ;
+        controlStack.style.gap = '10px' ;
+        controlStack.style.flex = '1' ;
+        controlStack.style.minWidth = 'min(100%, 560px)' ;
+        controlStack.appendChild(this.createConfigPanel()) ;
+        controlStack.appendChild(this.createControlsPanel()) ;
+        header.appendChild(controlStack) ;
 
         panel.appendChild(header) ;
         panel.appendChild(this.createAutosSection(autos, matches)) ;
@@ -231,8 +266,6 @@ export class AutoAnalysisView extends XeroView {
         panel.style.display = 'grid' ;
         panel.style.gridTemplateColumns = 'repeat(auto-fit, minmax(260px, 1fr))' ;
         panel.style.gap = '10px' ;
-        panel.style.minWidth = 'min(100%, 560px)' ;
-        panel.style.flex = '1' ;
 
         panel.appendChild(
             this.createMetricColumnsControl()
@@ -251,6 +284,141 @@ export class AutoAnalysisView extends XeroView {
         ) ;
 
         return panel ;
+    }
+
+    private createConfigPanel() : HTMLDivElement {
+        const panel = document.createElement('div') ;
+        panel.style.display = 'grid' ;
+        panel.style.gridTemplateColumns = 'minmax(220px, 1fr) auto auto auto' ;
+        panel.style.gap = '8px' ;
+        panel.style.alignItems = 'end' ;
+
+        const label = document.createElement('label') ;
+        label.style.display = 'flex' ;
+        label.style.flexDirection = 'column' ;
+        label.style.gap = '6px' ;
+        label.style.fontSize = '12px' ;
+        label.style.fontWeight = '700' ;
+        label.style.color = '#475569' ;
+        label.textContent = 'Saved Configs' ;
+
+        const select = document.createElement('select') ;
+        select.style.padding = '8px 10px' ;
+        select.style.border = '1px solid #cbd5e1' ;
+        select.style.borderRadius = '8px' ;
+        select.style.background = '#ffffff' ;
+
+        const placeholder = document.createElement('option') ;
+        placeholder.value = '' ;
+        placeholder.textContent = this.configs_.length === 0 ? 'No saved configs' : 'Select saved config' ;
+        placeholder.selected = this.selectedConfigName_.length === 0 ;
+        select.appendChild(placeholder) ;
+
+        for (const cfg of this.configs_) {
+            const option = document.createElement('option') ;
+            option.value = cfg.name ;
+            option.textContent = cfg.name ;
+            option.selected = cfg.name === this.selectedConfigName_ ;
+            select.appendChild(option) ;
+        }
+
+        select.addEventListener('change', () => {
+            this.selectedConfigName_ = select.value ;
+            this.render() ;
+        }) ;
+        label.appendChild(select) ;
+        panel.appendChild(label) ;
+
+        panel.appendChild(this.createActionButton('Apply', () => {
+            this.applySelectedConfig() ;
+        }, this.selectedConfigName_.length === 0)) ;
+        panel.appendChild(this.createActionButton('Save Current', () => {
+            this.saveCurrentConfig().catch(() => {
+            }) ;
+        })) ;
+        panel.appendChild(this.createActionButton('Delete', () => {
+            this.deleteSelectedConfig() ;
+        }, this.selectedConfigName_.length === 0)) ;
+
+        return panel ;
+    }
+
+    private createActionButton(text: string, action: () => void, disabled: boolean = false) : HTMLButtonElement {
+        const button = document.createElement('button') ;
+        button.type = 'button' ;
+        button.textContent = text ;
+        button.disabled = disabled ;
+        button.style.padding = '8px 12px' ;
+        button.style.borderRadius = '8px' ;
+        button.style.border = '1px solid #cbd5e1' ;
+        button.style.background = disabled ? '#f8fafc' : '#ffffff' ;
+        button.style.color = disabled ? '#94a3b8' : '#0f172a' ;
+        button.style.cursor = disabled ? 'default' : 'pointer' ;
+        if (!disabled) {
+            button.addEventListener('click', action) ;
+        }
+        return button ;
+    }
+
+    private applySelectedConfig() {
+        const cfg = this.configs_.find((one) => one.name === this.selectedConfigName_) ;
+        if (!cfg) {
+            return ;
+        }
+
+        this.selectedMetrics_ = [...cfg.selectedMetrics] ;
+        this.selectedAverageFormula_ = cfg.averageFormula || '' ;
+        this.requestData() ;
+    }
+
+    private async saveCurrentConfig() : Promise<void> {
+        const defaultName = this.selectedConfigName_.length > 0 ? this.selectedConfigName_ : '' ;
+        const name = (await this.promptForString('Save Auto Analysis Config', 'Enter a name for this Auto Analysis config.', defaultName, 'Config name'))?.trim() ;
+        if (!name || name.length === 0) {
+            return ;
+        }
+
+        const config: IPCAutoAnalysisConfig = {
+            name: name,
+            selectedMetrics: [...this.selectedMetrics_],
+            averageFormula: this.selectedAverageFormula_,
+            owner: this.app.appType,
+        } ;
+
+        const others = this.configs_.filter((one) => one.name !== name) ;
+        this.configs_ = [...others, config].sort((a, b) => a.name.localeCompare(b.name)) ;
+        this.selectedConfigName_ = name ;
+        this.request('update-auto-analysis-configs', this.configs_) ;
+        this.request('get-auto-analysis-configs') ;
+        this.render() ;
+    }
+
+    private deleteSelectedConfig() {
+        if (this.selectedConfigName_.length === 0) {
+            return ;
+        }
+
+        this.configs_ = this.configs_.filter((one) => one.name !== this.selectedConfigName_) ;
+        this.selectedConfigName_ = '' ;
+        this.request('update-auto-analysis-configs', this.configs_) ;
+        this.request('get-auto-analysis-configs') ;
+        this.render() ;
+    }
+
+    private promptForString(title: string, message: string, defaultValue?: string, placeholder?: string) : Promise<string | undefined> {
+        const id = `auto-analysis-${Date.now()}-${Math.random().toString(16).slice(2)}` ;
+        const request: IPCPromptStringRequest = {
+            id,
+            title,
+            message,
+            defaultValue,
+            placeholder,
+        } ;
+
+        return new Promise<string | undefined>((resolve) => {
+            this.promptResolvers_.set(id, resolve) ;
+            this.request('prompt-string-request', request) ;
+        }) ;
     }
 
     private createSelectControl(

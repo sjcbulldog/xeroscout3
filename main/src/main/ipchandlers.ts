@@ -3,7 +3,7 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { SCCoach } from "./apps/sccoach";
 import { TabletData } from "./project/tabletmgr";
-import { IPCAutoAnalysisRequest, IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
+import { IPCAutoAnalysisConfig, IPCAutoAnalysisRequest, IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
 
 function isScoutType() : boolean {
@@ -97,6 +97,30 @@ export async function getAutoAnalysisData(cmd: string, ...args: any[]) {
             await app.sendAutoAnalysisData() ;
         } else if (args.length === 1 && typeof args[0] === 'object') {
             await app.sendAutoAnalysisData(args[0] as IPCAutoAnalysisRequest) ;
+        } else {
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
+export async function getAutoAnalysisConfigs(cmd: string, ...args: any[]) {
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
+        if (args.length === 0) {
+            app.getAutoAnalysisConfigs() ;
+        } else {
+            scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+        }
+    }
+}
+
+export async function updateAutoAnalysisConfigs(cmd: string, ...args: any[]) {
+    if (isCentralOrCoachType()) {
+        scappbase!.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
+        if (args.length === 1 && typeof args[0] === 'object') {
+            app.updateAutoAnalysisConfigs(args[0] as IPCAutoAnalysisConfig[]) ;
         } else {
             scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }

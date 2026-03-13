@@ -10,6 +10,8 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getTeamList, getForm, getFormulas, deleteFormula,
          renameFormula, updateFormula, getDataSets, updateDataSet, getTeamFieldList, getMatchFieldList,
          getAutoAnalysisData,
+         getAutoAnalysisConfigs,
+         updateAutoAnalysisConfigs,
          saveForm, getImageData, 
          getHintDB,
          setHintHidden,
@@ -217,6 +219,8 @@ app.on("ready", () => {
     ipcMain.on('get-team-data', (event, ...args) => { getTeamData('get-team-data', ...args)}) ;
     ipcMain.on('get-team-field-list', (event, ...args) => { getTeamFieldList('get-team-field-list', ...args)}) ;
     ipcMain.on('get-auto-analysis-data', (event, ...args) => { getAutoAnalysisData('get-auto-analysis-data', ...args)}) ;
+    ipcMain.on('get-auto-analysis-configs', (event, ...args) => { getAutoAnalysisConfigs('get-auto-analysis-configs', ...args)}) ;
+    ipcMain.on('update-auto-analysis-configs', (event, ...args) => { updateAutoAnalysisConfigs('update-auto-analysis-configs', ...args)}) ;
     ipcMain.on('get-match-field-list', (event, ...args) => { getMatchFieldList('get-match-field-list', ...args)}) ;
     ipcMain.on('get-match-db', (event, ...args) => { getMatchDB('get-match-db', ...args)});
     ipcMain.on('update-match-db', (event, ...args) => { updateMatchDB('update-match-db', ...args)}) ;
