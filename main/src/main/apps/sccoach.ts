@@ -22,6 +22,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
 	private static readonly viewMatchStatus: string = 'view-match-status';
 	private static readonly viewMatchDB: string = 'view-match-db';
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
+    private static readonly viewAutoAnalysis: string = 'view-auto-analysis' ;
     private static readonly viewXeroMatchSim: string = 'view-match-sim' ;
     private static readonly viewPicklist: string = 'view-picklist' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
@@ -216,6 +217,14 @@ export class SCCoach extends SCCoachCentralBaseApp {
             });
             treedata.push({
                 type: 'icon',
+                command: SCCoach.viewAutoAnalysis,
+                title: "Auto Analysis",
+                icon: this.getIconData('preview.png'),
+                width: dims,
+                height: dims
+            });
+            treedata.push({
+                type: 'icon',
                 command: SCCoach.viewXeroMatchSim,
                 title: "Match-Prediction",
                 icon: this.getIconData('Prediction.png'),
@@ -276,6 +285,9 @@ export class SCCoach extends SCCoachCentralBaseApp {
         }
         else if (cmd === SCCoach.viewSingleTeamSummary) {
             this.setView("singleteam");
+        }
+        else if (cmd === SCCoach.viewAutoAnalysis) {
+            this.setView("auto-analysis");
         }
         else if (cmd === SCCoach.viewPicklist) {
             this.setView("picklist");

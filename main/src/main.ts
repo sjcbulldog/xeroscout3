@@ -9,6 +9,7 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          provideResult, setEventName, getMatchDB, getTeamDB, sendMatchColConfig, sendTeamColConfig, generateRandomData,
          getTeamList, getForm, getFormulas, deleteFormula,
          renameFormula, updateFormula, getDataSets, updateDataSet, getTeamFieldList, getMatchFieldList,
+         getAutoAnalysisData,
          saveForm, getImageData, 
          getHintDB,
          setHintHidden,
@@ -215,6 +216,7 @@ app.on("ready", () => {
     ipcMain.on('set-tablet-data', (event, ...args) => { setTabletData('set-tablet-data', ...args)}) ;
     ipcMain.on('get-team-data', (event, ...args) => { getTeamData('get-team-data', ...args)}) ;
     ipcMain.on('get-team-field-list', (event, ...args) => { getTeamFieldList('get-team-field-list', ...args)}) ;
+    ipcMain.on('get-auto-analysis-data', (event, ...args) => { getAutoAnalysisData('get-auto-analysis-data', ...args)}) ;
     ipcMain.on('get-match-field-list', (event, ...args) => { getMatchFieldList('get-match-field-list', ...args)}) ;
     ipcMain.on('get-match-db', (event, ...args) => { getMatchDB('get-match-db', ...args)});
     ipcMain.on('update-match-db', (event, ...args) => { updateMatchDB('update-match-db', ...args)}) ;

@@ -28,6 +28,7 @@ import { DataSetEditor } from "../views/dataset/datasetedit.js";
 import { EditTeamsView } from "../views/editteams/editteamsview.js";
 import { EditMatchesView } from "../views/editmatches/editmatchesview.js";
 import { SingleTeamView } from "../views/singleteam/singleteamview.js";
+import { AutoAnalysisView } from "../views/autoanalysis/autoanalysisview.js";
 import { PickListView } from "../views/picklist/picklistview.js";
 import { XeroStringDialog } from "../widgets/xerostringdialog.js";
 import { XeroMatchSimView } from "../views/matchpred/matchsim.js";
@@ -254,6 +255,7 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerView('edit-teams', EditTeamsView, ['central']) ;
         this.registerView('edit-matches', EditMatchesView, ['central']) ;
         this.registerView('singleteam', SingleTeamView, ['central', 'coach']) ;
+        this.registerView('auto-analysis', AutoAnalysisView, ['central', 'coach']) ;
         this.registerView('picklist', PickListView, ['central', 'coach']) ;
         this.registerView('Match-Prediction', XeroMatchSimView, ['central', 'coach']);//
     }
