@@ -3,7 +3,7 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { SCCoach } from "./apps/sccoach";
 import { TabletData } from "./project/tabletmgr";
-import { IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
+import { IPCAutoAnalysisRequest, IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
 
 function isScoutType() : boolean {
@@ -95,6 +95,8 @@ export async function getAutoAnalysisData(cmd: string, ...args: any[]) {
         let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
         if (args.length === 0) {
             await app.sendAutoAnalysisData() ;
+        } else if (args.length === 1 && typeof args[0] === 'object') {
+            await app.sendAutoAnalysisData(args[0] as IPCAutoAnalysisRequest) ;
         } else {
             scappbase!.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }

@@ -239,6 +239,8 @@ export interface IPCAutoAnalysisAuto {
     autoName: string ;
     nodes: IPCAutoAnalysisNode[] ;
     edges: IPCAutoAnalysisEdge[] ;
+    averageValue?: number ;
+    averageCount: number ;
 }
 
 export type IPCAutoAnalysisMatchStatus = 'blank' | 'other' | 'matched' | 'ambiguous' | 'unknown' ;
@@ -257,6 +259,8 @@ export interface IPCAutoAnalysisMatchRow {
     match_number: number ;
     alliance: string ;
     selections: IPCAutoAnalysisSelection[] ;
+    metricValues: { [key: string]: string } ;
+    metricErrors: { [key: string]: string } ;
 }
 
 export interface IPCAutoAnalysisTeamSummary {
@@ -266,12 +270,29 @@ export interface IPCAutoAnalysisTeamSummary {
     matchCount: number ;
 }
 
+export type IPCAutoAnalysisMetricKind = 'team-field' | 'match-field' | 'formula' ;
+
+export interface IPCAutoAnalysisMetricOption {
+    value: string ;
+    label: string ;
+    kind: IPCAutoAnalysisMetricKind ;
+}
+
+export interface IPCAutoAnalysisRequest {
+    selectedMetrics?: string[] ;
+    averageFormula?: string ;
+}
+
 export interface IPCAutoAnalysisPayload {
     teams: IPCAutoAnalysisTeamSummary[] ;
     autosByTeam: { [teamNumber: string]: IPCAutoAnalysisAuto[] } ;
     matchesByTeam: { [teamNumber: string]: IPCAutoAnalysisMatchRow[] } ;
     plannerTags: string[] ;
     selectorTags: string[] ;
+    metricOptions: IPCAutoAnalysisMetricOption[] ;
+    selectedMetrics: string[] ;
+    averageFormulaOptions: string[] ;
+    selectedAverageFormula: string ;
 }
 
 export type IPCAppType = 'central' | 'scout' | 'coach' ;

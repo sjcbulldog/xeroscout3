@@ -1,5 +1,12 @@
 import { XeroApp } from "../../apps/xeroapp.js";
-import { IPCAutoAnalysisAuto, IPCAutoAnalysisMatchRow, IPCAutoAnalysisPayload, IPCAutoAnalysisSelection, IPCAutoAnalysisTeamSummary } from "../../shared/ipc.js";
+import {
+    IPCAutoAnalysisAuto,
+    IPCAutoAnalysisMatchRow,
+    IPCAutoAnalysisPayload,
+    IPCAutoAnalysisRequest,
+    IPCAutoAnalysisSelection,
+    IPCAutoAnalysisTeamSummary
+} from "../../shared/ipc.js";
 import { XeroView } from "../xeroview.js";
 
 export class AutoAnalysisView extends XeroView {
@@ -9,20 +16,37 @@ export class AutoAnalysisView extends XeroView {
         matchesByTeam: {},
         plannerTags: [],
         selectorTags: [],
+        metricOptions: [],
+        selectedMetrics: [],
+        averageFormulaOptions: [],
+        selectedAverageFormula: '',
     } ;
     private filterText_: string = '' ;
     private selectedTeam_: number | undefined = undefined ;
     private selectedMatchKey_: string | undefined = undefined ;
+    private selectedMetrics_: string[] = [] ;
+    private selectedAverageFormula_: string = '' ;
 
     public constructor(app: XeroApp) {
         super(app, 'xero-auto-analysis-view') ;
 
         this.registerCallback('send-auto-analysis-data', this.receivedData.bind(this)) ;
-        this.request('get-auto-analysis-data') ;
+        this.requestData() ;
+    }
+
+    private requestData() {
+        const request: IPCAutoAnalysisRequest = {
+            selectedMetrics: this.selectedMetrics_,
+            averageFormula: this.selectedAverageFormula_,
+        } ;
+        this.request('get-auto-analysis-data', request) ;
     }
 
     private receivedData(data: IPCAutoAnalysisPayload) {
         this.payload_ = data ;
+        this.selectedMetrics_ = data.selectedMetrics || [] ;
+        this.selectedAverageFormula_ = data.selectedAverageFormula || '' ;
+
         const filtered = this.getFilteredTeams() ;
         if (this.selectedTeam_ === undefined || !filtered.some(team => team.teamNumber === this.selectedTeam_)) {
             this.selectedTeam_ = filtered.length > 0 ? filtered[0].teamNumber : undefined ;
@@ -173,26 +197,199 @@ export class AutoAnalysisView extends XeroView {
         const header = document.createElement('div') ;
         header.style.display = 'flex' ;
         header.style.justifyContent = 'space-between' ;
-        header.style.alignItems = 'center' ;
+        header.style.alignItems = 'flex-start' ;
+        header.style.gap = '12px' ;
         header.style.marginBottom = '12px' ;
+        header.style.flexWrap = 'wrap' ;
 
+        const titleBlock = document.createElement('div') ;
         const title = document.createElement('div') ;
         title.textContent = summary && summary.teamName.length > 0 ?
             `Team ${summary.teamNumber} - ${summary.teamName}` :
             `Team ${this.selectedTeam_}` ;
         title.style.fontSize = '24px' ;
         title.style.fontWeight = '700' ;
-        header.appendChild(title) ;
+        titleBlock.appendChild(title) ;
 
         const meta = document.createElement('div') ;
         meta.textContent = `${autos.length} stored autos | ${matches.length} scouted matches` ;
         meta.style.color = '#475569' ;
-        header.appendChild(meta) ;
+        meta.style.marginTop = '4px' ;
+        titleBlock.appendChild(meta) ;
+        header.appendChild(titleBlock) ;
+
+        header.appendChild(this.createControlsPanel()) ;
 
         panel.appendChild(header) ;
         panel.appendChild(this.createAutosSection(autos, matches)) ;
         panel.appendChild(this.createMatchesSection(matches)) ;
         return panel ;
+    }
+
+    private createControlsPanel() : HTMLDivElement {
+        const panel = document.createElement('div') ;
+        panel.style.display = 'grid' ;
+        panel.style.gridTemplateColumns = 'repeat(auto-fit, minmax(260px, 1fr))' ;
+        panel.style.gap = '10px' ;
+        panel.style.minWidth = 'min(100%, 560px)' ;
+        panel.style.flex = '1' ;
+
+        panel.appendChild(
+            this.createMetricColumnsControl()
+        ) ;
+
+        panel.appendChild(
+            this.createSelectControl(
+                'Auto Average Formula',
+                this.selectedAverageFormula_,
+                [{ value: '', label: 'None' }, ...this.payload_.averageFormulaOptions.map((one) => ({ value: one, label: one }))],
+                (value) => {
+                    this.selectedAverageFormula_ = value ;
+                    this.requestData() ;
+                }
+            )
+        ) ;
+
+        return panel ;
+    }
+
+    private createSelectControl(
+        labelText: string,
+        selected: string,
+        options: Array<{ value: string, label: string }>,
+        onChanged: (value: string) => void
+    ) : HTMLLabelElement {
+        const label = document.createElement('label') ;
+        label.style.display = 'flex' ;
+        label.style.flexDirection = 'column' ;
+        label.style.gap = '6px' ;
+        label.style.fontSize = '12px' ;
+        label.style.fontWeight = '700' ;
+        label.style.color = '#475569' ;
+        label.textContent = labelText ;
+
+        const select = document.createElement('select') ;
+        select.style.padding = '8px 10px' ;
+        select.style.border = '1px solid #cbd5e1' ;
+        select.style.borderRadius = '8px' ;
+        select.style.background = '#ffffff' ;
+
+        for (const optionData of options) {
+            const option = document.createElement('option') ;
+            option.value = optionData.value ;
+            option.textContent = optionData.label ;
+            option.selected = optionData.value === selected ;
+            select.appendChild(option) ;
+        }
+
+        select.addEventListener('change', () => {
+            onChanged(select.value) ;
+        }) ;
+
+        label.appendChild(select) ;
+        return label ;
+    }
+
+    private createMetricColumnsControl() : HTMLDivElement {
+        const container = document.createElement('div') ;
+        container.style.display = 'flex' ;
+        container.style.flexDirection = 'column' ;
+        container.style.gap = '6px' ;
+
+        const label = document.createElement('div') ;
+        label.textContent = 'Match History Columns' ;
+        label.style.fontSize = '12px' ;
+        label.style.fontWeight = '700' ;
+        label.style.color = '#475569' ;
+        container.appendChild(label) ;
+
+        const select = document.createElement('select') ;
+        select.style.padding = '8px 10px' ;
+        select.style.border = '1px solid #cbd5e1' ;
+        select.style.borderRadius = '8px' ;
+        select.style.background = '#ffffff' ;
+
+        const placeholder = document.createElement('option') ;
+        placeholder.value = '' ;
+        placeholder.textContent = 'Add formula or tag column' ;
+        placeholder.selected = true ;
+        select.appendChild(placeholder) ;
+
+        for (const optionData of this.payload_.metricOptions) {
+            if (this.selectedMetrics_.includes(optionData.value)) {
+                continue ;
+            }
+
+            const option = document.createElement('option') ;
+            option.value = optionData.value ;
+            option.textContent = optionData.label ;
+            select.appendChild(option) ;
+        }
+
+        select.addEventListener('change', () => {
+            if (select.value.length === 0) {
+                return ;
+            }
+
+            this.selectedMetrics_ = [...this.selectedMetrics_, select.value] ;
+            this.requestData() ;
+        }) ;
+
+        container.appendChild(select) ;
+
+        const chips = document.createElement('div') ;
+        chips.style.display = 'flex' ;
+        chips.style.flexWrap = 'wrap' ;
+        chips.style.gap = '6px' ;
+
+        if (this.selectedMetrics_.length === 0) {
+            const empty = document.createElement('div') ;
+            empty.textContent = 'No extra columns selected.' ;
+            empty.style.fontSize = '12px' ;
+            empty.style.color = '#64748b' ;
+            chips.appendChild(empty) ;
+        }
+        else {
+            for (const metric of this.selectedMetrics_) {
+                chips.appendChild(this.createMetricChip(metric)) ;
+            }
+        }
+
+        container.appendChild(chips) ;
+        return container ;
+    }
+
+    private createMetricChip(metric: string) : HTMLDivElement {
+        const chip = document.createElement('div') ;
+        chip.style.display = 'inline-flex' ;
+        chip.style.alignItems = 'center' ;
+        chip.style.gap = '6px' ;
+        chip.style.padding = '6px 10px' ;
+        chip.style.borderRadius = '999px' ;
+        chip.style.background = '#e2e8f0' ;
+        chip.style.color = '#0f172a' ;
+        chip.style.fontSize = '12px' ;
+        chip.style.fontWeight = '700' ;
+
+        const text = document.createElement('span') ;
+        text.textContent = this.getMetricLabel(metric) ;
+        chip.appendChild(text) ;
+
+        const remove = document.createElement('button') ;
+        remove.type = 'button' ;
+        remove.textContent = 'x' ;
+        remove.style.border = 'none' ;
+        remove.style.background = 'transparent' ;
+        remove.style.cursor = 'pointer' ;
+        remove.style.padding = '0' ;
+        remove.style.color = '#475569' ;
+        remove.addEventListener('click', () => {
+            this.selectedMetrics_ = this.selectedMetrics_.filter(one => one !== metric) ;
+            this.requestData() ;
+        }) ;
+        chip.appendChild(remove) ;
+
+        return chip ;
     }
 
     private createAutosSection(autos: IPCAutoAnalysisAuto[], matches: IPCAutoAnalysisMatchRow[]) : HTMLDivElement {
@@ -256,8 +453,24 @@ export class AutoAnalysisView extends XeroView {
         const title = document.createElement('div') ;
         title.textContent = auto.autoName ;
         title.style.fontWeight = '700' ;
-        title.style.marginBottom = '8px' ;
+        title.style.marginBottom = '4px' ;
         card.appendChild(title) ;
+
+        if (this.selectedAverageFormula_.length > 0) {
+            const average = document.createElement('div') ;
+            average.style.fontSize = '12px' ;
+            average.style.color = '#475569' ;
+            average.style.marginBottom = '8px' ;
+
+            if (auto.averageValue !== undefined) {
+                average.textContent = `${this.selectedAverageFormula_}: ${this.formatAverageValue(auto.averageValue)} across ${auto.averageCount} matches` ;
+            }
+            else {
+                average.textContent = `${this.selectedAverageFormula_}: no matching scored matches yet` ;
+            }
+
+            card.appendChild(average) ;
+        }
 
         const canvas = document.createElement('div') ;
         canvas.style.position = 'relative' ;
@@ -280,7 +493,6 @@ export class AutoAnalysisView extends XeroView {
         this.loadFieldImage(image, auto.fieldImage) ;
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') ;
-        svg.setAttribute('viewBox', '0 0 320 220') ;
         svg.style.position = 'absolute' ;
         svg.style.left = '0' ;
         svg.style.top = '0' ;
@@ -300,6 +512,14 @@ export class AutoAnalysisView extends XeroView {
             this.renderAutoPreview(auto, canvas, image, svg, nodesLayer) ;
         }) ;
         return card ;
+    }
+
+    private formatAverageValue(value: number) : string {
+        if (Math.abs(value - Math.round(value)) < 0.00001) {
+            return Math.round(value).toString() ;
+        }
+
+        return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '') ;
     }
 
     private async loadFieldImage(image: HTMLImageElement, fieldImage: string) {
@@ -451,9 +671,15 @@ export class AutoAnalysisView extends XeroView {
         table.style.borderCollapse = 'collapse' ;
         wrapper.appendChild(table) ;
 
+        const headers = ['Match', 'Alliance'] ;
+        for (const metric of this.selectedMetrics_) {
+            headers.push(this.getMetricLabel(metric)) ;
+        }
+        headers.push(...this.payload_.selectorTags) ;
+
         const thead = document.createElement('thead') ;
         const headRow = document.createElement('tr') ;
-        for (const titleText of ['Match', 'Alliance', ...this.payload_.selectorTags]) {
+        for (const titleText of headers) {
             const th = document.createElement('th') ;
             th.textContent = titleText ;
             th.style.textAlign = 'left' ;
@@ -475,6 +701,11 @@ export class AutoAnalysisView extends XeroView {
         return section ;
     }
 
+    private getMetricLabel(metricValue: string) : string {
+        const metric = this.payload_.metricOptions.find((one) => one.value === metricValue) ;
+        return metric ? metric.label : metricValue ;
+    }
+
     private createMatchRow(row: IPCAutoAnalysisMatchRow) : HTMLTableRowElement {
         const tr = document.createElement('tr') ;
         tr.style.cursor = 'pointer' ;
@@ -486,6 +717,10 @@ export class AutoAnalysisView extends XeroView {
 
         tr.appendChild(this.createTextCell(this.formatMatch(row))) ;
         tr.appendChild(this.createTextCell(row.alliance || '')) ;
+
+        for (const metric of this.selectedMetrics_) {
+            tr.appendChild(this.createMetricCell(row, metric)) ;
+        }
 
         for (const tag of this.payload_.selectorTags) {
             const selection = row.selections.find(one => one.tag === tag) || {
@@ -501,6 +736,25 @@ export class AutoAnalysisView extends XeroView {
         }
 
         return tr ;
+    }
+
+    private createMetricCell(row: IPCAutoAnalysisMatchRow, metric: string) : HTMLTableCellElement {
+        const td = this.createTextCell(row.metricValues[metric] || '') ;
+        const metricError = row.metricErrors[metric] ;
+        if (metricError && metricError.length > 0) {
+            const error = document.createElement('span') ;
+            error.textContent = metricError ;
+            error.style.display = 'inline-block' ;
+            error.style.marginTop = '6px' ;
+            error.style.padding = '2px 8px' ;
+            error.style.borderRadius = '999px' ;
+            error.style.fontSize = '11px' ;
+            error.style.fontWeight = '700' ;
+            error.style.background = '#fee2e2' ;
+            error.style.color = '#991b1b' ;
+            td.appendChild(error) ;
+        }
+        return td ;
     }
 
     private createTextCell(text: string) : HTMLTableCellElement {
