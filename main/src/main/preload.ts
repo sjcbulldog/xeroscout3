@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer,  } from 'electron';
 
+const receiveWrapperMap = new Map<string, Map<any, (event: Electron.IpcRendererEvent, ...args: any[]) => void>>() ;
+
 // Create a type that should contain all the data we need to expose in the
 // renderer process using `contextBridge`.
 
@@ -102,7 +104,15 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
   // These go from the main process to the renderer process
   //
   receiveOff: (channel: string, func:any) => {
-    ipcRenderer.off(channel, func) ;
+    const wrappers = receiveWrapperMap.get(channel) ;
+    const wrapper = wrappers?.get(func) ;
+    if (wrapper) {
+      ipcRenderer.off(channel, wrapper) ;
+      wrappers!.delete(func) ;
+      if (wrappers!.size === 0) {
+        receiveWrapperMap.delete(channel) ;
+      }
+    }
   },
 
 	  receive: (channel: string, func:any) => {
@@ -163,7 +173,19 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'send-match-predictor-data',    // main/apps/sccoachcentralbase.ts
       ];
       if (validChannels.includes(channel)) {
-        ipcRenderer.on(channel, (event, ...args) => func(args[0][0]));
+        let wrappers = receiveWrapperMap.get(channel) ;
+        if (!wrappers) {
+          wrappers = new Map() ;
+          receiveWrapperMap.set(channel, wrappers) ;
+        }
+
+        if (wrappers.has(func)) {
+          return ;
+        }
+
+        const wrapper = (event: Electron.IpcRendererEvent, ...args: any[]) => func(args[0][0]) ;
+        wrappers.set(func, wrapper) ;
+        ipcRenderer.on(channel, wrapper);
       }
   }
 }) ;

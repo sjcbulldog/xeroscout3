@@ -109,6 +109,12 @@ export class XeroScoutFormView extends XeroView {
 
     public close() {
         this.flushDraftNow() ;
+        this.resetAllTimersAndStopwatches() ;
+
+        for (let page of this.section_pages_) {
+            page.close() ;
+        }
+        this.section_pages_ = [] ;
 
         if (this.draft_event_handler_) {
             this.elem.removeEventListener('input', this.draft_event_handler_, true) ;

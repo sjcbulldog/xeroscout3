@@ -41,11 +41,21 @@ export class XeroCBManager extends EventEmitter {
         }
 
         let callbacks = this.cbmap_.get(name) ;
-            if (callbacks) {
+        if (callbacks) {
             let index = callbacks!.indexOf(callback) ;
             if (index >= 0) {
                 callbacks!.splice(index, 1) ;
-                this.cbmap_.set(name, callbacks!) ;
+                if (callbacks!.length === 0) {
+                    let dispatch = this.dispatch_cbs_.get(name) ;
+                    if (dispatch) {
+                        window.scoutingAPI.receiveOff(name, dispatch) ;
+                        this.dispatch_cbs_.delete(name) ;
+                    }
+                    this.cbmap_.delete(name) ;
+                }
+                else {
+                    this.cbmap_.set(name, callbacks!) ;
+                }
             }
         }
     }
