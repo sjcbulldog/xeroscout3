@@ -67,7 +67,6 @@ export class XeroScoutFormView extends XeroView {
     private preview_restored_from_db_ : boolean = false ;
 
     private flip_field_180_ : boolean = false ;
-    private flip_field_button_? : HTMLButtonElement ;
     private draft_update_timer_? : any ;
     private draft_event_handler_? : (ev: Event) => void ;
     private before_unload_handler_? : () => void ;
@@ -369,14 +368,6 @@ export class XeroScoutFormView extends XeroView {
     private initDisplay() {
         this.reset() ;
 
-        try {
-            const v = window.localStorage.getItem('xero-form-flip-field-180') ;
-            this.flip_field_180_ = (v === 'true') ;
-        }
-        catch {
-            this.flip_field_180_ = false ;
-        }
-
         this.titlediv_ = document.createElement('div') ;
         this.titlediv_.className = 'xero-form-title' ;
         this.titlediv_.innerText = this.form_info_!.title || 'Xero Form - Untilted' ;
@@ -384,19 +375,6 @@ export class XeroScoutFormView extends XeroView {
             this.titlediv_.style.color = this.form_info_!.color ;
         }
         this.elem.append(this.titlediv_) ;
-
-        if (this.type_ === 'match') {
-            const toolbar = document.createElement('div') ;
-            toolbar.className = 'xero-form-toolbar' ;
-
-            this.flip_field_button_ = document.createElement('button') ;
-            this.flip_field_button_.className = 'xero-form-toolbar-button' ;
-            this.flip_field_button_.addEventListener('click', this.flipField.bind(this)) ;
-            toolbar.appendChild(this.flip_field_button_) ;
-
-            this.elem.appendChild(toolbar) ;
-        }
-        this.updateFlipButtonText() ;
 
         if (this.isCentralMatchPreview()) {
             this.preview_toolbar_ = document.createElement('div') ;
@@ -437,27 +415,6 @@ export class XeroScoutFormView extends XeroView {
         for(let one of values) {
             this.data_.set(one.tag, one.value) ;
         }
-    }
-
-    private updateFlipButtonText() : void {
-        if (this.flip_field_button_) {
-            this.flip_field_button_.innerText = this.flip_field_180_ ? 'Field: Flipped' : 'Field: Normal' ;
-        }
-    }
-
-    private flipField() : void {
-        this.flip_field_180_ = !this.flip_field_180_ ;
-        try {
-            window.localStorage.setItem('xero-form-flip-field-180', this.flip_field_180_ ? 'true' : 'false') ;
-        }
-        catch {
-        }
-
-        for (let page of this.section_pages_) {
-            page.setFlipField180(this.flip_field_180_) ;
-        }
-        this.updateFlipButtonText() ;
-        this.scheduleDraftSave() ;
     }
 
     private updateControls(section: IPCSection, page: XeroFormScoutSectionPage) : void {
