@@ -198,6 +198,8 @@ export interface IPCFormScoutData {
     mirrory? : boolean ;
     color? : string ;
     title? : string ;
+    draftKey?: string ;
+    initialValues?: IPCNamedDataValue[] ;
     scoutItem?: string ;
     activeTeamResult?: IPCScoutResult ;
 }

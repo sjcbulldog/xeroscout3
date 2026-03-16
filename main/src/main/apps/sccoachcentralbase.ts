@@ -573,12 +573,20 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
                 ret.form = jsonobj ;
                 ret.color = this.color_ ;
                 ret.reversed = this.reversed_ ;
+                ret.draftKey = this.createDraftKey(arg) ;
+                ret.initialValues = [] ;
+                ret.scoutItem = arg ;
                 this.sendToRenderer('send-form', ret);				
             }
         } else {
             ret.message = `No ${arg} form has been set`;
         }
     }   
+
+    private createDraftKey(arg: string) : string {
+        let location = this.project_?.location || 'noproject' ;
+        return ['central', location, arg].join(':') ;
+    }
 
     protected doExportData(table: string) {
         if (!this.project_ || !this.project_.isInitialized()) {

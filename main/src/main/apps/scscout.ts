@@ -520,12 +520,15 @@ export class SCScout extends SCBase {
             throw new Error('No current scout set - cannot send form') ;
         }
 
+        let data: IPCScoutResult | undefined = this.getOneScoutResults(this.current_scout_!) ;
         let good : boolean = true ;
         let ret : IPCFormScoutData = {
             message: undefined,
             reversed: this.reversed_,
             color: this.alliance_,
             title: this.current_scout_,
+            draftKey: this.createDraftKey(type, this.current_scout_),
+            initialValues: data?.data,
             scoutItem: this.current_scout_,
         }
 
@@ -549,12 +552,19 @@ export class SCScout extends SCBase {
 
         if (good) {
             this.sendToRenderer('send-form', ret);
-            let data: IPCScoutResult | undefined = this.getOneScoutResults(this.current_scout_!) ;
-            if (data) {
-                console.log('send-initial-values: ' + JSON.stringify(data.data)) ;
-                this.sendToRenderer('send-initial-values', data.data) ;
-            }
         }
+    }
+
+    private createDraftKey(type: string, scoutItem: string) : string {
+        let parts = [
+            'scout',
+            this.info_.uuid_ || 'nouuid',
+            this.info_.tablet_ || 'notablet',
+            type || 'notype',
+            scoutItem || 'noscoutitem',
+        ] ;
+
+        return parts.join(':') ;
     }
 
     public sendImageData(image: string) {
