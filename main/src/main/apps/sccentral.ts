@@ -15,7 +15,7 @@ import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
 	import { FormManager } from "../project/formmgr";
-	import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCScoutResult, IPCScoutResults, IPCTeamInfo, IPCTypedDataValue } from "../../shared/ipc";
+	import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCRobotPhotoManifestEntry, IPCRobotPhotoUpload, IPCScoutResult, IPCScoutResults, IPCSyncedImageData, IPCTeamInfo, IPCTypedDataValue } from "../../shared/ipc";
 	import { UDPBroadcast } from "../sync/udpbroadcast";
 	import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
@@ -1889,17 +1889,20 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestRequestImages(p: PacketObj): PacketObj {
 		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
-		let retdata : any = {} ;
+		let retdata : { [name: string]: IPCSyncedImageData } = {} ;
 
 		for(let img of obj) {
-			let path = this.image_mgr_.getImage(img) ;
-			let imdata = Buffer.from('') ;
-			if (path) {
-				let imdata2 = fs.readFileSync(path) ;
-				imdata = Buffer.from(imdata2) ;
+			let info = this.image_mgr_.getImageInfo(img) ;
+			if (!info) {
+				info = this.image_mgr_.getImageInfo('missing') ;
 			}
-
-			retdata[img] = imdata.toString('base64') ;
+			if (info) {
+				retdata[img] = {
+					data: fs.readFileSync(info.path).toString('base64'),
+					mimeType: info.mimeType,
+					extension: info.extension,
+				} ;
+			}
 		}
 
 		let data: Uint8Array = new Uint8Array(0);
@@ -2044,6 +2047,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private handleProvideResults(p: PacketObj): PacketObj {
 		try {
 			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
+			this.persistRobotPhotos(obj.robotPhotos || []) ;
 			this.project!.data_mgr_?.processResults(obj)
 				.then((count) => {
 					this.logger_.info(`processed ${count} synced ${obj.purpose} results from tablet '${obj.tablet}'`) ;
@@ -2074,6 +2078,44 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				)
 			);
 		}
+	}
+
+	private persistRobotPhotos(photos: IPCRobotPhotoUpload[]) {
+		if (!this.project || !this.project.info || photos.length === 0) {
+			return ;
+		}
+
+		const dir = path.join(this.project.location, 'robot-photos') ;
+		fs.mkdirSync(dir, { recursive: true }) ;
+
+		for (const photo of photos) {
+			const fileName = `${photo.key}.${photo.extension}` ;
+			const fullPath = path.join(dir, fileName) ;
+			fs.writeFileSync(fullPath, Buffer.from(photo.data, 'base64')) ;
+
+			let entry = this.project.info.robot_photos_.find((one) => one.teamNumber === photo.teamNumber) ;
+			if (!entry) {
+				entry = {
+					teamNumber: photo.teamNumber,
+					key: photo.key,
+					fileName: fileName,
+					mimeType: photo.mimeType,
+					extension: photo.extension,
+					updatedAt: Date.now(),
+				} as IPCRobotPhotoManifestEntry ;
+				this.project.info.robot_photos_.push(entry) ;
+			}
+			else {
+				entry.key = photo.key ;
+				entry.fileName = fileName ;
+				entry.mimeType = photo.mimeType ;
+				entry.extension = photo.extension ;
+				entry.updatedAt = Date.now() ;
+			}
+		}
+
+		this.image_mgr_.setExtraImageDirs([dir]) ;
+		this.project.writeEventFile() ;
 	}
 
 	private handleRequestProject(p: PacketObj): PacketObj | undefined {

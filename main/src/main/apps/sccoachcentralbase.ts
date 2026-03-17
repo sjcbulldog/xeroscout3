@@ -5,6 +5,7 @@ import { Project } from "../project/project";
 import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
 import { generateAutoAnalysisData } from "../project/autoanalysis";
+import * as path from "path";
 
 export abstract class SCCoachCentralBaseApp extends SCBase {
     private project_?: Project = undefined;
@@ -23,6 +24,20 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
 
     protected set project(proj: Project | undefined) {
         this.project_ = proj ;
+        let isCentral = false ;
+        try {
+            isCentral = this.applicationType === 'central' ;
+        }
+        catch {
+            isCentral = false ;
+        }
+
+        if (isCentral && proj) {
+            this.image_mgr_.setExtraImageDirs([path.join(proj.location, 'robot-photos')]) ;
+        }
+        else {
+            this.image_mgr_.setExtraImageDirs([]) ;
+        }
     }
 
     protected get color() : string {

@@ -1,4 +1,4 @@
-import { IPCPlayoffStatus } from "../../shared/ipc";
+import { IPCPlayoffStatus, IPCRobotPhotoManifestEntry } from "../../shared/ipc";
 import { BAEvent, BAMatch, BATeam } from "../extnet/badata";
 import { DataModelInfo } from "../model/datamodel";
 import { DataInfo } from "./datamgr";
@@ -33,6 +33,7 @@ export class ProjectInfo {
         alliances: [ undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined ],
         outcomes: { m1: undefined, m2: undefined, m3: undefined, m4: undefined, m5: undefined, m6: undefined, m7: undefined, m8: undefined, m9: undefined, m10: undefined, m11: undefined, m12: undefined, m13: undefined, m14: undefined, m15: undefined, m16: undefined }
     } ;
+    public robot_photos_ : IPCRobotPhotoManifestEntry[] = [] ;          // Per-event manifest for canonical robot photos
 
     constructor() {
         this.locked_ = false ;

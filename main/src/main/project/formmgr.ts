@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { DataManager } from "./datamgr";
 import { dialog } from "electron";
-import { IPCChoice, IPCChoicesItem, IPCColumnDesc, IPCForm, IPCFormControlType, IPCFormItem, IPCFormPurpose } from "../../shared/ipc";
+import { IPCChoice, IPCChoicesItem, IPCColumnDesc, IPCForm, IPCFormControlType, IPCFormItem, IPCFormPurpose, IPCRobotPhotoItem } from "../../shared/ipc";
 import { TabletDB } from "../../shared/tabletdb";
 import { RulesEngine } from "../../shared/rulesengine";
 
@@ -314,6 +314,9 @@ export class FormManager extends Manager {
 							if (item.type === "image" || item.type === "label" || item.type === "box") {
 								// Skip any control that does not provide data, as these are not stored in the database
 								continue;
+							}
+							if (item.type === "robotphoto" && (item as IPCRobotPhotoItem).mode === 'display') {
+								continue ;
 							}
 
 						let choices: IPCChoice[] | undefined = undefined ;

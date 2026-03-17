@@ -12,7 +12,7 @@ export class ImageDataSource extends XeroMainProcessInterface {
     private static kMissingImageName = 'missing' ;    
 
     private image_names: string[] = [] ;                            // List of image names
-    private nameToImageMap_: Map<string, string> = new Map() ;      // Map of image name to base64 data
+    private nameToImageMap_: Map<string, IPCImageResponse> = new Map() ;
     private waiters: ImageWaiters[] = [] ;                          // List of promises waiting on images data
 
     constructor() {
@@ -33,12 +33,7 @@ export class ImageDataSource extends XeroMainProcessInterface {
     public getImageData(name: string) : Promise<IPCImageResponse> {
         let ret = new Promise<IPCImageResponse>((resolve, reject) => {
             if (this.nameToImageMap_.has(name)) {
-                let resp : IPCImageResponse = {
-                    name: name,
-                    data: this.nameToImageMap_.get(name)!,
-                    newname: undefined
-                };
-                resolve(resp) ;
+                resolve(this.nameToImageMap_.get(name)!) ;
             }
             else {
                 this.request('get-image-data', name) ;
@@ -61,6 +56,10 @@ export class ImageDataSource extends XeroMainProcessInterface {
         return this.getImageData(ImageDataSource.kMissingImageName) ;
     }
 
+    public buildDataUrl(image: IPCImageResponse) : string {
+        return `data:${image.mimeType};base64,${image.data}` ;
+    }
+
     private receivedImageNames(args: string[]) : void {
         this.image_names = args ;
         this.emit('image-names-updated', this.image_names) ;
@@ -68,10 +67,10 @@ export class ImageDataSource extends XeroMainProcessInterface {
 
     private receivedImageData(args:IPCImageResponse) : void {
         if (args.newname) {
-            this.nameToImageMap_.set(args.newname, args.data) ;
+            this.nameToImageMap_.set(args.newname, args) ;
         }
         else {
-            this.nameToImageMap_.set(args.name, args.data) ;
+            this.nameToImageMap_.set(args.name, args) ;
         }
         
         let processed = true ;
