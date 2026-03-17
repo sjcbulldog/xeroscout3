@@ -207,7 +207,7 @@ class AutoSelectorDialog extends XeroDialog {
                     if (data.newname) {
                         this.field_image_name_ = data.newname;
                     }
-                    this.field_.src = `data:image/png;base64,${data.data}`;
+                    this.field_.src = this.image_src_.buildDataUrl(data);
                 }
             })
             .catch(() => {

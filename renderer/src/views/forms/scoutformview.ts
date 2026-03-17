@@ -18,6 +18,7 @@ import { StopwatchControl } from "./controls/stopwatchctrl.js";
 import {  TimerControl  } from "./controls/timerctrl.js";
 import { AutoPlanControl } from "./controls/autoplanctrl.js";
 import { AutoSelectorControl } from "./controls/autoselectorctrl.js";
+import { RobotPhotoControl } from "./controls/robotphotoctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
@@ -169,6 +170,10 @@ export class XeroScoutFormView extends XeroView {
 
     public getScoutItemId(): string | undefined {
         return this.form_info_?.scoutItem ;
+    }
+
+    public getFormInfo(): IPCFormScoutData | undefined {
+        return this.form_info_ ;
     }
 
     private isCentralMatchPreview() : boolean {
@@ -477,6 +482,10 @@ export class XeroScoutFormView extends XeroView {
                 }
                 else if (item.type === 'autoselector') {
                     formctrl = new AutoSelectorControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'robotphoto') {
+                    formctrl = new RobotPhotoControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else {

@@ -7,7 +7,7 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
-import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem, IPCSyncedImageData } from "../../shared/ipc";
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
@@ -450,8 +450,8 @@ export class SCCoach extends SCCoachCentralBaseApp {
             return '' ;
         }
 
-        if (/\.png$/i.test(ret)) {
-            ret = ret.replace(/\.png$/i, '') ;
+        if (/\.(png|webp)$/i.test(ret)) {
+            ret = ret.replace(/\.(png|webp)$/i, '') ;
         }
 
         return ret.trim() ;
@@ -619,12 +619,17 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
             case PacketType.ProvideImages:
                 try {
-                    let obj = JSON.parse(p.payloadAsString()) as { [name: string]: string } ;
+                    let obj = JSON.parse(p.payloadAsString()) as { [name: string]: string | IPCSyncedImageData } ;
                     for (let imname of Object.keys(obj)) {
                         let imdata = obj[imname] ;
                         let norm = this.normalizeImageName(imname) ;
                         if (norm.length > 0) {
-                            this.image_mgr_.addImageWithData(norm, imdata) ;
+                            if (typeof imdata === 'string') {
+                                this.image_mgr_.addImageWithData(norm, imdata, 'png') ;
+                            }
+                            else {
+                                this.image_mgr_.addImageWithData(norm, imdata.data, imdata.extension) ;
+                            }
                         }
                     }
                 }

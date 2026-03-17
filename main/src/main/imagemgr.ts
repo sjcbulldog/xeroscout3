@@ -1,23 +1,22 @@
-import { app }  from  'electron' ;
+import { app } from 'electron' ;
 import * as path from 'path' ;
 import * as fs from 'fs' ;
+import { IPCImageExtension } from '../shared/ipc' ;
+
+export interface ImageInfo {
+    path: string ;
+    extension: IPCImageExtension ;
+    mimeType: string ;
+}
 
 export class ImageManager {
     private imagedir_? : string ;
     private appimagedir_? : string ;
-    private imagemap_ : Map<string, string> = new Map() ;
+    private extraimagedirs_ : string[] = [] ;
+    private imagemap_ : Map<string, ImageInfo> = new Map() ;
 
     constructor(appname: string, appimagedir?: string) {
-        //
-        // This is for the central (server).  The application comes installed with the blank image
-        // and a set of field images.
-        //
         this.appimagedir_ = appimagedir ;
-
-        //
-        // This is for any user imported images.  This is also used on the scouter side to store all
-        // images received during the sync from the central server.
-        //
         this.imagedir_ = this.findUserImageDir(appname) ;
         if (this.imagedir_) {
             this.createImageDir() ;
@@ -36,6 +35,15 @@ export class ImageManager {
         if (this.appimagedir_) {
             this.scanImageDir(this.appimagedir_) ;
         }
+
+        for (const dir of this.extraimagedirs_) {
+            this.scanImageDir(dir) ;
+        }
+    }
+
+    public setExtraImageDirs(dirs: string[]) {
+        this.extraimagedirs_ = dirs.filter((dir) => typeof dir === 'string' && dir.length > 0) ;
+        this.rescanImageDirs() ;
     }
 
     public getImageNames() : string[] {
@@ -47,40 +55,42 @@ export class ImageManager {
     }
 
     public getImage(name : string) : string | undefined {
-        // Get the image path for the given name
-        if (this.imagemap_.has(name)) {
-            return this.imagemap_.get(name) ;
-        }
-        return undefined ;
+        return this.imagemap_.get(name)?.path ;
+    }
+
+    public getImageInfo(name : string) : ImageInfo | undefined {
+        return this.imagemap_.get(name) ;
     }
 
     public addImage(imagePath : string) : boolean | string {
-        // Add an image to the image directory
         if (this.imagedir_) {
             let name = path.basename(imagePath) ;
             let mname = path.parse(name).name ;
             const destPath = path.join(this.imagedir_, name) ;
             fs.copyFileSync(imagePath, destPath) ;
-            this.imagemap_.set(mname, destPath) ;
+            const info = this.createImageInfo(destPath) ;
+            if (!info) {
+                return false ;
+            }
+            this.imagemap_.set(mname, info) ;
             return mname ;
         }
         return false ;
     }
 
-    public addImageWithData(name : string, data : string) {
+    public addImageWithData(name : string, data : string, extension : IPCImageExtension = 'png') {
         if (this.imagedir_) {
-            const destPath = path.join(this.imagedir_, name) + '.png' ;
+            const destPath = path.join(this.imagedir_, name) + '.' + extension ;
             let buf = Buffer.from(data, 'base64') ;
             fs.writeFileSync(destPath, buf) ;
-            this.imagemap_.set(name, destPath) ;
+            const info = this.createImageInfo(destPath) ;
+            if (info) {
+                this.imagemap_.set(name, info) ;
+            }
         }
     }
 
-    private findUserImageDir(appname: string) : string | undefined{
-        //
-        // Use Electron's per-user app data directory (cross-platform) instead of
-        // relying on environment variables like HOMEDIR (which is not set on macOS).
-        //
+    private findUserImageDir(appname: string) : string | undefined {
         try {
             return path.join(app.getPath('userData'), 'images', appname) ;
         }
@@ -90,9 +100,8 @@ export class ImageManager {
     }
 
     private createImageDir() {
-        // Create the image directory if it doesn't exist
         if (this.imagedir_ && !fs.existsSync(this.imagedir_)) {
-            fs.mkdirSync(this.imagedir_, { recursive : true}) ;
+            fs.mkdirSync(this.imagedir_, { recursive : true }) ;
             if (!fs.existsSync(this.imagedir_)) {
                 this.imagedir_ = undefined ;
             }
@@ -100,13 +109,17 @@ export class ImageManager {
     }
 
     private scanImageDir(dir: string) {
-        // Scan the image directory for images
         if (dir && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
             const files = fs.readdirSync(dir) ;
             for (const file of files) {
-                const filePath = path.join(dir!, file) ;
-                if (fs.statSync(filePath).isFile() && file.toLowerCase().endsWith('.png')) {
-                    this.imagemap_.set(path.parse(file).name, filePath) ;
+                const filePath = path.join(dir, file) ;
+                if (!fs.statSync(filePath).isFile()) {
+                    continue ;
+                }
+
+                const info = this.createImageInfo(filePath) ;
+                if (info) {
+                    this.imagemap_.set(path.parse(file).name, info) ;
                 }
             }
         }
@@ -114,12 +127,43 @@ export class ImageManager {
 
     public removeAllImages() {
         if (this.imagedir_ && fs.existsSync(this.imagedir_) && fs.statSync(this.imagedir_).isDirectory()) {
-            for(let file of fs.readdirSync(this.imagedir_!)) {
-                const filePath = path.join(this.imagedir_!, file) ;
+            for (let file of fs.readdirSync(this.imagedir_)) {
+                const filePath = path.join(this.imagedir_, file) ;
                 fs.unlinkSync(filePath) ;
             }
         }
 
-        this.rescanImageDirs() ;        
+        this.rescanImageDirs() ;
+    }
+
+    private createImageInfo(filePath: string) : ImageInfo | undefined {
+        const extension = this.extensionFromPath(filePath) ;
+        if (!extension) {
+            return undefined ;
+        }
+
+        return {
+            path: filePath,
+            extension: extension,
+            mimeType: this.mimeTypeFromExtension(extension),
+        } ;
+    }
+
+    private extensionFromPath(filePath: string) : IPCImageExtension | undefined {
+        const ext = path.extname(filePath).toLowerCase() ;
+        if (ext === '.png') {
+            return 'png' ;
+        }
+        if (ext === '.webp') {
+            return 'webp' ;
+        }
+        return undefined ;
+    }
+
+    private mimeTypeFromExtension(extension: IPCImageExtension) : string {
+        if (extension === 'webp') {
+            return 'image/webp' ;
+        }
+        return 'image/png' ;
     }
 }

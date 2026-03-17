@@ -439,7 +439,7 @@ export class AutoPlanControl extends FormControl {
                     if (data.newname) {
                         item.fieldImage = data.newname;
                     }
-                    this.field_image_!.src = `data:image/png;base64,${data.data}`;
+                    this.field_image_!.src = this.image_src_.buildDataUrl(data);
                 }
             });
     }

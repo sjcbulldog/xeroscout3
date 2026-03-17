@@ -28,7 +28,7 @@ export interface IPCTabletDefn {
     purpose: IPCFormPurpose | undefined;
 }
 
-export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'stopwatch' | 'box' | 'image' | 'autoplan' | 'autoselector' ;
+export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'stopwatch' | 'box' | 'image' | 'autoplan' | 'autoselector' | 'robotphoto' ;
 
 export interface IPCFormItem {
     type: IPCFormControlType ;
@@ -57,6 +57,14 @@ export interface IPCImageItem extends IPCFormItem {
     field: boolean ;
     mirrorx: boolean ;
     mirrory: boolean ;
+}
+
+export type IPCRobotPhotoMode = 'capture' | 'display' ;
+export type IPCImageExtension = 'png' | 'webp' ;
+
+export interface IPCRobotPhotoItem extends IPCFormItem {
+    mode: IPCRobotPhotoMode ;
+    sourceTag?: string ;
 }
 
 export interface IPCAutoPlanItem extends IPCFormItem {
@@ -200,6 +208,7 @@ export interface IPCFormScoutData {
     title? : string ;
     draftKey?: string ;
     initialValues?: IPCNamedDataValue[] ;
+    eventUuid?: string ;
     scoutItem?: string ;
     activeTeamResult?: IPCScoutResult ;
 }
@@ -213,6 +222,7 @@ export interface IPCScoutResults {
     tablet: string ;
     purpose: string ;
     results: IPCScoutResult[] ;
+    robotPhotos?: IPCRobotPhotoUpload[] ;
 }
 
 export interface IPCAutoAnalysisNode {
@@ -315,6 +325,51 @@ export interface IPCImageResponse {
     name: string ;
     newname: string | undefined ;
     data: string ;
+    mimeType: string ;
+    extension: IPCImageExtension ;
+}
+
+export interface IPCSyncedImageData {
+    data: string ;
+    mimeType: string ;
+    extension: IPCImageExtension ;
+}
+
+export interface IPCRobotPhotoCaptureRequest {
+    item: string ;
+    key: string ;
+    teamNumber: number ;
+    data: string ;
+    mimeType: string ;
+    extension: IPCImageExtension ;
+}
+
+export interface IPCRobotPhotoUpload {
+    item: string ;
+    key: string ;
+    teamNumber: number ;
+    data: string ;
+    mimeType: string ;
+    extension: IPCImageExtension ;
+}
+
+export interface IPCRobotPhotoState {
+    item: string ;
+    key: string ;
+    teamNumber: number ;
+    mimeType: string ;
+    extension: IPCImageExtension ;
+    uploaded: boolean ;
+    updatedAt: number ;
+}
+
+export interface IPCRobotPhotoManifestEntry {
+    teamNumber: number ;
+    key: string ;
+    fileName: string ;
+    mimeType: string ;
+    extension: IPCImageExtension ;
+    updatedAt: number ;
 }
 
 export interface IPCCheckDBViewFormula {

@@ -134,15 +134,9 @@ export abstract class SCBase {
 	}
 
 	public sendImageData(image: string) {
-		let ret : IPCImageResponse = {
-			newname: undefined,
-			name: image, 
-			data: this.getImageData(image)
-		}
-
+		let ret = this.getImageResponse(image) ;
 		if (!ret.data) {
-			ret.newname = 'missing' ;
-			ret.data = this.getImageData('missing') ;
+			ret = this.getImageResponse('missing', image) ;
 		}
 		this.sendToRenderer('send-image-data', ret) ;
 	}	
@@ -384,6 +378,17 @@ export abstract class SCBase {
 		
 		let data: string  = fs.readFileSync(datafile).toString('base64');
 		return data ;
+	}
+
+	protected getImageResponse(name: string, requestedName?: string) : IPCImageResponse {
+		const info = this.image_mgr_.getImageInfo(name) ;
+		return {
+			newname: requestedName && requestedName !== name ? name : undefined,
+			name: requestedName ?? name,
+			data: info ? fs.readFileSync(info.path).toString('base64') : '',
+			mimeType: info?.mimeType ?? 'image/png',
+			extension: info?.extension ?? 'png',
+		} ;
 	}
 
 	public splitterChanged(value: number) {

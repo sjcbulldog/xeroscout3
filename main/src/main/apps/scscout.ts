@@ -8,7 +8,7 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr";
 import { kMatchAlliances } from '../../shared/playoffs';
-import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCRobotPhotoCaptureRequest, IPCRobotPhotoItem, IPCRobotPhotoState, IPCRobotPhotoUpload, IPCScoutResult, IPCScoutResults, IPCSection, IPCSyncedImageData, IPCTabletDefn } from "../../shared/ipc";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -21,12 +21,14 @@ export class SCScoutInfo {
     public matchlist_? : MatchTablet[] ;
     public results_ : IPCScoutResult[] ;
     public team_results_cache_ : IPCScoutResult[] ;
+    public robot_photos_ : IPCRobotPhotoState[] ;
     public playoff_assignments_? : PlayoffAssignment[] ;
     public playoff_status_? : IPCPlayoffStatus ;
 
     constructor() {
         this.results_ = [] ;
         this.team_results_cache_ = [] ;
+        this.robot_photos_ = [] ;
     }
 }
 
@@ -68,6 +70,7 @@ export class SCScout extends SCBase {
 
     private ipaddr_: string = SCScout.defaultSyncIPAddr ;
     private port_ : number = SCScout.defaultSyncPort ;
+    private last_robot_photo_sync_keys_ : string[] = [] ;
 
     private team_number_ : number = 1425 ;
 
@@ -382,6 +385,7 @@ export class SCScout extends SCBase {
         this.info_.tablet_ = undefined ;
         this.info_.results_ = [];
         this.info_.team_results_cache_ = [] ;
+        this.info_.robot_photos_ = [] ;
         this.info_.uuid_ = undefined ;
         this.info_.evname_ = undefined ;
         this.info_.teamform_ = undefined ;
@@ -398,6 +402,7 @@ export class SCScout extends SCBase {
         this.team_list_received_ = false ;
         this.playoff_assignment_received_ = false ;
         this.playoff_status_received_ = false ;
+        this.last_robot_photo_sync_keys_ = [] ;
 
         this.sendToRenderer('tablet-title', 'NOT ASSIGNED') ;
 
@@ -529,6 +534,7 @@ export class SCScout extends SCBase {
             title: this.current_scout_,
             draftKey: this.createDraftKey(type, this.current_scout_),
             initialValues: data?.data,
+            eventUuid: this.info_.uuid_,
             scoutItem: this.current_scout_,
         }
 
@@ -568,8 +574,34 @@ export class SCScout extends SCBase {
     }
 
     public sendImageData(image: string) {
-		this.sendToRenderer('send-image-data', { name: image, data: this.getImageData(image) }) ;
+		super.sendImageData(image) ;
 	}
+
+    public storeRobotPhoto(request: IPCRobotPhotoCaptureRequest) {
+        this.image_mgr_.addImageWithData(request.key, request.data, request.extension) ;
+        const updatedAt = Date.now() ;
+        const existing = this.info_.robot_photos_.find((entry) => entry.key === request.key) ;
+        if (existing) {
+            existing.item = request.item ;
+            existing.teamNumber = request.teamNumber ;
+            existing.mimeType = request.mimeType ;
+            existing.extension = request.extension ;
+            existing.uploaded = false ;
+            existing.updatedAt = updatedAt ;
+        }
+        else {
+            this.info_.robot_photos_.push({
+                item: request.item,
+                key: request.key,
+                teamNumber: request.teamNumber,
+                mimeType: request.mimeType,
+                extension: request.extension,
+                uploaded: false,
+                updatedAt: updatedAt,
+            }) ;
+        }
+        this.writeEventFile() ;
+    }
 
     public sendMatchForm() {
         let ret = {
@@ -801,8 +833,13 @@ export class SCScout extends SCBase {
         else if (p.type_ === PacketType.ProvideImages) {
             let obj = JSON.parse(p.payloadAsString()) ;
             for(let imname of Object.keys(obj)) {
-                let imdata = obj[imname] ;
-                this.image_mgr_.addImageWithData(imname, imdata) ;
+                let imdata = obj[imname] as string | IPCSyncedImageData ;
+                if (typeof imdata === 'string') {
+                    this.image_mgr_.addImageWithData(imname, imdata, 'png') ;
+                }
+                else {
+                    this.image_mgr_.addImageWithData(imname, imdata.data, imdata.extension) ;
+                }
             }
             ret = this.getMissingData() ;  
         }
@@ -840,6 +877,8 @@ export class SCScout extends SCBase {
             this.conn_?.close() ;
         }
         else if (p.type_ === PacketType.ReceivedResults) {
+            this.markRobotPhotosUploaded(this.last_robot_photo_sync_keys_) ;
+            this.last_robot_photo_sync_keys_ = [] ;
             this.conn_?.send(new PacketObj(PacketType.GoodbyeFromScouter, Buffer.from(this.info_.tablet_!))) ;
             this.conn_?.close() ;
         }
@@ -855,12 +894,11 @@ export class SCScout extends SCBase {
         let obj : IPCScoutResults = {
             tablet: this.info_.tablet_!,
             purpose: this.info_.purpose_!,
-            results: this.info_.results_
+            results: this.info_.results_,
+            robotPhotos: this.collectPendingRobotPhotos()
         } ;
 
         let jsonstr = JSON.stringify(obj) ;
-        let buffer = Buffer.from(jsonstr) ;
-        let jsonstr2 = buffer.toString() ;
         this.conn_?.send(new PacketObj(PacketType.ProvideResults, Buffer.from(jsonstr))) ;
     }
 
@@ -907,8 +945,8 @@ export class SCScout extends SCBase {
             return '' ;
         }
 
-        if (/\.png$/i.test(ret)) {
-            ret = ret.replace(/\.png$/i, '') ;
+        if (/\.(png|webp)$/i.test(ret)) {
+            ret = ret.replace(/\.(png|webp)$/i, '') ;
         }
 
         return ret.trim() ;
@@ -955,7 +993,8 @@ export class SCScout extends SCBase {
     private needImages() : string [] {
         let images: string[] = [ 
                 ...this.getRequiredImagesFromForm(this.info_.teamform_), 
-                ... this.getRequiredImagesFromForm(this.info_.matchform_)] ;
+                ... this.getRequiredImagesFromForm(this.info_.matchform_),
+                ... this.getNeededRobotPhotoKeys()] ;
 
         let imlist = [...new Set(images)];
         let ret: string[] = [] ;
@@ -1233,6 +1272,9 @@ export class SCScout extends SCBase {
         if (!this.info_.team_results_cache_) {
             this.info_.team_results_cache_ = [] ;
         }
+        if (!this.info_.robot_photos_) {
+            this.info_.robot_photos_ = [] ;
+        }
 
         return ret ;
     }
@@ -1267,6 +1309,102 @@ export class SCScout extends SCBase {
         }
 
         this.info_.team_results_cache_.push(result) ;
+    }
+
+    private collectPendingRobotPhotos() : IPCRobotPhotoUpload[] {
+        let ret : IPCRobotPhotoUpload[] = [] ;
+        this.last_robot_photo_sync_keys_ = [] ;
+
+        for (const entry of this.info_.robot_photos_) {
+            if (entry.uploaded) {
+                continue ;
+            }
+
+            const info = this.image_mgr_.getImageInfo(entry.key) ;
+            if (!info || !fs.existsSync(info.path)) {
+                continue ;
+            }
+
+            ret.push({
+                item: entry.item,
+                key: entry.key,
+                teamNumber: entry.teamNumber,
+                data: fs.readFileSync(info.path).toString('base64'),
+                mimeType: entry.mimeType,
+                extension: entry.extension,
+            }) ;
+            this.last_robot_photo_sync_keys_.push(entry.key) ;
+        }
+
+        return ret ;
+    }
+
+    private markRobotPhotosUploaded(keys: string[]) {
+        if (!keys || keys.length === 0) {
+            return ;
+        }
+
+        for (const entry of this.info_.robot_photos_) {
+            if (keys.includes(entry.key)) {
+                entry.uploaded = true ;
+            }
+        }
+        this.writeEventFile() ;
+    }
+
+    private getRobotPhotoCaptureTags(form: IPCForm | undefined) : string[] {
+        if (!form || !form.sections) {
+            return [] ;
+        }
+
+        let tags: string[] = [] ;
+        for (const section of form.sections) {
+            for (const item of section.items) {
+                if (item.type === 'robotphoto') {
+                    const robot = item as IPCRobotPhotoItem ;
+                    if (robot.mode === 'capture' && robot.tag.length > 0) {
+                        tags.push(robot.tag) ;
+                    }
+                }
+            }
+        }
+
+        return [...new Set(tags)] ;
+    }
+
+    private getNeededRobotPhotoKeys() : string[] {
+        const photoTags = this.getRobotPhotoCaptureTags(this.info_.teamform_) ;
+        if (photoTags.length === 0) {
+            return [] ;
+        }
+
+        const ret = new Set<string>() ;
+        const inspect = (result: IPCScoutResult | undefined) => {
+            if (!result || !Array.isArray(result.data)) {
+                return ;
+            }
+
+            for (const one of result.data) {
+                if (!photoTags.includes(one.tag) || one.value.type !== 'string' || typeof one.value.value !== 'string') {
+                    continue ;
+                }
+
+                const key = this.normalizeImageName(one.value.value) ;
+                if (key.length > 0 && !this.image_mgr_.hasImage(key)) {
+                    ret.add(key) ;
+                }
+            }
+        } ;
+
+        for (const result of this.info_.team_results_cache_) {
+            inspect(result) ;
+        }
+
+        for (const result of this.info_.results_) {
+            inspect(result) ;
+        }
+
+        return [...ret] ;
     }
 
     private writeEventFile() : Error | undefined {
