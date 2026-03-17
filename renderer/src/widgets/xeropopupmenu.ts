@@ -66,6 +66,7 @@ export class XeroPopupMenuItem {
 
 export class XeroPopupMenu extends EventEmitter {
     private static MenuItemTopDivClassName = 'xero-popup-menu-item-div' ;
+    private static MaxVisibleItems = 6 ;
 
     //
     // There can only be one menu open at a time, so we use a static variable to track the current menu
@@ -312,6 +313,18 @@ export class XeroPopupMenu extends EventEmitter {
         }
 
         this.parent_.appendChild(this.popup_) ; 
+
+        if (this.items_.length > XeroPopupMenu.MaxVisibleItems) {
+            const firstItem = this.items_[0].topdiv ;
+            if (firstItem) {
+                const itemHeight = firstItem.getBoundingClientRect().height ;
+                if (itemHeight > 0) {
+                    this.popup_.style.maxHeight = `${itemHeight * XeroPopupMenu.MaxVisibleItems}px` ;
+                    this.popup_.style.overflowY = 'auto' ;
+                    this.popup_.style.overflowX = 'hidden' ;
+                }
+            }
+        }
 
         if (!child) {
             XeroPopupMenu.top_most_menu_ = this ;

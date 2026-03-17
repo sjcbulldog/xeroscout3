@@ -67,9 +67,9 @@ export class ImageControl extends FormControl {
         return (this.item as IPCImageItem).field ;
     }
 
-    public setImageData(image: string) : void {
+    public setImageData(dataUrl: string) : void {
         if (this.image_) {
-            this.image_.src = `data:image/png;base64,${image}`
+            this.image_.src = dataUrl ;
         }
     }
 
@@ -87,7 +87,7 @@ export class ImageControl extends FormControl {
                         if (data.newname) {
                             item.image = data.newname ;
                         }
-                        this.setImageData(data.data) ;
+                        this.setImageData(this.image_src_.buildDataUrl(data)) ;
                         this.updateImageScale() ;
      
                     }

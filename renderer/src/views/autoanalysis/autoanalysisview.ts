@@ -700,7 +700,7 @@ export class AutoAnalysisView extends XeroView {
         try {
             const data = await this.app.imageSource!.getImageData(normalized) ;
             if (data && data.data) {
-                image.src = `data:image/png;base64,${data.data}` ;
+                image.src = this.app.imageSource!.buildDataUrl(data) ;
             }
         }
         catch {
