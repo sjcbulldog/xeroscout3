@@ -42,6 +42,7 @@ export class XeroMainProcessInterface extends EventEmitter {
                 XeroMainProcessInterface.cbmgr_.unregisterCallback(name, callback) ;
             }
         }
+        this.cbs_registered_ = [] ;
     }
 
     public request(name: string, arg?: any) {

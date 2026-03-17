@@ -25,9 +25,14 @@ export class TCPClient extends SyncClient {
 
     public connect() : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
+            this.socket_.removeAllListeners('connect') ;
+            this.socket_.removeAllListeners('data') ;
+            this.socket_.removeAllListeners('error') ;
+            this.socket_.removeAllListeners('close') ;
 
-            this.socket_.on('connect', () => {
+            this.socket_.once('connect', () => {
                 this.emit('connected') ;
+                resolve() ;
             }) ;
 
             this.socket_.on('data', (data) => {
@@ -37,6 +42,10 @@ export class TCPClient extends SyncClient {
 
             this.socket_.on('error', (err) => {
                 this.emit('error', err) ;
+                if (!this.socket_.connecting) {
+                    return ;
+                }
+                reject(err) ;
             }) ;
 
             this.socket_.on('close', () => {
@@ -44,8 +53,6 @@ export class TCPClient extends SyncClient {
             }) ;
 
             this.socket_.connect(this.port_, this.host_) ;
-
-            resolve() ;
         }) ;
 
         return ret ;

@@ -43,6 +43,11 @@ export class XeroFormScoutSectionPage extends XeroWidget {
         return this.controls_ ;
     }
 
+    public close() : void {
+        this.observer_.disconnect() ;
+        super.close() ;
+    }
+
     public addControl(control: FormControl) : void {
         this.controls_.push(control) ;
         this.addControlToLayout(control) ;

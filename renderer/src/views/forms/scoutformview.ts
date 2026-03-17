@@ -28,9 +28,19 @@ import { TimerStatus } from "./timerstatus.js";
 import { ConfirmScoutDialog } from "./dialogs/confirmscoutdialog.js";
 import { PreviewTempDBDialog } from "./dialogs/previewtempdbdialog.js";
 
+type XeroScoutFormDraft = {
+    version: 1 ;
+    savedAt: number ;
+    sectionIndex: number ;
+    values: IPCNamedDataValue[] ;
+    timers: { [key: string]: { value: number ; running: boolean ; } } ;
+    stopwatches: { [key: string]: string } ;
+} ;
+
 export class XeroScoutFormView extends XeroView {
     static buttonClassUnselected = 'xero-form-tab-button-unselected' ;
     static buttonClassSelected = 'xero-form-tab-button-selected' ;
+    private static readonly draftStoragePrefix = 'xero-form-draft:' ;
 
     private form_? : FormObject ;
     private data_ : XeroFormDataValues ;
@@ -58,7 +68,14 @@ export class XeroScoutFormView extends XeroView {
     private preview_restored_from_db_ : boolean = false ;
 
     private flip_field_180_ : boolean = false ;
-    private flip_field_button_? : HTMLButtonElement ;
+    private draft_update_timer_? : any ;
+    private draft_event_handler_? : (ev: Event) => void ;
+    private before_unload_handler_? : () => void ;
+    private page_hide_handler_? : () => void ;
+    private visibility_change_handler_? : () => void ;
+    private restored_draft_ : boolean = false ;
+    private restored_draft_section_index_ : number = 0 ;
+    private draft_cleared_ : boolean = false ;
 
     public constructor(app: XeroApp, type: any) {
         super(app, 'xero-form-view');
@@ -67,11 +84,21 @@ export class XeroScoutFormView extends XeroView {
 
         this.registerCallback('send-form', this.receivedForm.bind(this));
         this.registerCallback('request-results', this.provideResults.bind(this)) ;
-        this.registerCallback('send-initial-values', this.initForm.bind(this)) ;
         this.registerCallback('send-preview-match-db', this.receivedPreviewMatchDB.bind(this)) ;
         this.request('get-form', this.type_);        
 
         this.data_ = new XeroFormDataValues() ;
+        this.draft_event_handler_ = this.formInteracted.bind(this) ;
+        this.elem.addEventListener('input', this.draft_event_handler_, true) ;
+        this.elem.addEventListener('change', this.draft_event_handler_, true) ;
+        this.elem.addEventListener('click', this.draft_event_handler_, true) ;
+
+        this.before_unload_handler_ = this.flushDraftNow.bind(this) ;
+        this.page_hide_handler_ = this.flushDraftNow.bind(this) ;
+        this.visibility_change_handler_ = this.documentVisibilityChanged.bind(this) ;
+        window.addEventListener('beforeunload', this.before_unload_handler_) ;
+        window.addEventListener('pagehide', this.page_hide_handler_) ;
+        document.addEventListener('visibilitychange', this.visibility_change_handler_) ;
 
         if (this.isCentralMatchPreview()) {
             this.preview_event_handler_ = this.previewInteracted.bind(this) ;
@@ -82,11 +109,46 @@ export class XeroScoutFormView extends XeroView {
     }
 
     public close() {
+        this.flushDraftNow() ;
+        this.resetAllTimersAndStopwatches() ;
+
+        for (let page of this.section_pages_) {
+            page.close() ;
+        }
+        this.section_pages_ = [] ;
+
+        if (this.draft_event_handler_) {
+            this.elem.removeEventListener('input', this.draft_event_handler_, true) ;
+            this.elem.removeEventListener('change', this.draft_event_handler_, true) ;
+            this.elem.removeEventListener('click', this.draft_event_handler_, true) ;
+            this.draft_event_handler_ = undefined ;
+        }
+
+        if (this.before_unload_handler_) {
+            window.removeEventListener('beforeunload', this.before_unload_handler_) ;
+            this.before_unload_handler_ = undefined ;
+        }
+
+        if (this.page_hide_handler_) {
+            window.removeEventListener('pagehide', this.page_hide_handler_) ;
+            this.page_hide_handler_ = undefined ;
+        }
+
+        if (this.visibility_change_handler_) {
+            document.removeEventListener('visibilitychange', this.visibility_change_handler_) ;
+            this.visibility_change_handler_ = undefined ;
+        }
+
         if (this.preview_event_handler_) {
             this.elem.removeEventListener('input', this.preview_event_handler_, true) ;
             this.elem.removeEventListener('change', this.preview_event_handler_, true) ;
             this.elem.removeEventListener('click', this.preview_event_handler_, true) ;
             this.preview_event_handler_ = undefined ;
+        }
+
+        if (this.draft_update_timer_) {
+            clearTimeout(this.draft_update_timer_) ;
+            this.draft_update_timer_ = undefined ;
         }
 
         if (this.preview_update_timer_) {
@@ -241,22 +303,13 @@ export class XeroScoutFormView extends XeroView {
 
     private scoutDataConfirmed(changed: boolean) {
         this.request('provide-result', this.data_!.values) ;
+        this.clearDraft() ;
     }
 
     private provideResults() {
         // This extracts the results from the current section
         this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;     
         this.scoutDataConfirmed(true) ;   
-    }
-
-    private initForm(values: IPCNamedDataValue[]) : void {
-        for(let one of values) {
-            this.data_.set(one.tag, one.value) ;
-        }
-        let page = this.tabbed_ctrl_!.selectedPageNumber ;
-        if (page >= 0 && page < this.section_pages_.length) {
-            this.section_pages_[page].doLayout() ;
-        }
     }
 
     private setCurrentSectionByIndex(sectionIndex: number) : boolean {
@@ -270,13 +323,24 @@ export class XeroScoutFormView extends XeroView {
 
     private receivedForm(args: IPCFormScoutData) : void {
         this.form_info_ = args ;
+        this.data_ = new XeroFormDataValues() ;
+        this.preview_restored_from_db_ = false ;
+        this.preview_open_dialog_requested_ = false ;
+        this.restored_draft_ = false ;
+        this.restored_draft_section_index_ = 0 ;
+        this.draft_cleared_ = false ;
+
+        this.loadInitialData(args.initialValues) ;
+        this.restoreDraft() ;
         this.initDisplay() ;
 
         if (this.form_info_.form) {
             this.form_ = new FormObject(args.form!) ;
             if (this.form_) {
                 this.createSectionPages() ;
-                this.setCurrentSectionByIndex(0) ;
+                if (!this.setCurrentSectionByIndex(this.restored_draft_section_index_)) {
+                    this.setCurrentSectionByIndex(0) ;
+                }
             }        
         }
 
@@ -315,14 +379,6 @@ export class XeroScoutFormView extends XeroView {
     private initDisplay() {
         this.reset() ;
 
-        try {
-            const v = window.localStorage.getItem('xero-form-flip-field-180') ;
-            this.flip_field_180_ = (v === 'true') ;
-        }
-        catch {
-            this.flip_field_180_ = false ;
-        }
-
         this.titlediv_ = document.createElement('div') ;
         this.titlediv_.className = 'xero-form-title' ;
         this.titlediv_.innerText = this.form_info_!.title || 'Xero Form - Untilted' ;
@@ -330,19 +386,6 @@ export class XeroScoutFormView extends XeroView {
             this.titlediv_.style.color = this.form_info_!.color ;
         }
         this.elem.append(this.titlediv_) ;
-
-        if (this.type_ === 'match') {
-            const toolbar = document.createElement('div') ;
-            toolbar.className = 'xero-form-toolbar' ;
-
-            this.flip_field_button_ = document.createElement('button') ;
-            this.flip_field_button_.className = 'xero-form-toolbar-button' ;
-            this.flip_field_button_.addEventListener('click', this.flipField.bind(this)) ;
-            toolbar.appendChild(this.flip_field_button_) ;
-
-            this.elem.appendChild(toolbar) ;
-        }
-        this.updateFlipButtonText() ;
 
         if (this.isCentralMatchPreview()) {
             this.preview_toolbar_ = document.createElement('div') ;
@@ -375,24 +418,14 @@ export class XeroScoutFormView extends XeroView {
         this.tabbed_ctrl_.on('afterSelectPage', this.afterSectionChanged.bind(this)) ;        
     }
 
-    private updateFlipButtonText() : void {
-        if (this.flip_field_button_) {
-            this.flip_field_button_.innerText = this.flip_field_180_ ? 'Field: Flipped' : 'Field: Normal' ;
-        }
-    }
-
-    private flipField() : void {
-        this.flip_field_180_ = !this.flip_field_180_ ;
-        try {
-            window.localStorage.setItem('xero-form-flip-field-180', this.flip_field_180_ ? 'true' : 'false') ;
-        }
-        catch {
+    private loadInitialData(values?: IPCNamedDataValue[]) : void {
+        if (!values) {
+            return ;
         }
 
-        for (let page of this.section_pages_) {
-            page.setFlipField180(this.flip_field_180_) ;
+        for(let one of values) {
+            this.data_.set(one.tag, one.value) ;
         }
-        this.updateFlipButtonText() ;
     }
 
     private updateControls(section: IPCSection, page: XeroFormScoutSectionPage) : void {
@@ -486,6 +519,8 @@ export class XeroScoutFormView extends XeroView {
         if (this.isCentralMatchPreview()) {
             this.sendPreviewTempDBUpdate() ;
         }
+
+        this.scheduleDraftSave() ;
     }    
 
     private afterSectionChanged(oldpage: number, newpage: number) : void {
@@ -507,6 +542,170 @@ export class XeroScoutFormView extends XeroView {
         }
 
         this.schedulePreviewTempDBUpdate() ;
+    }
+
+    private formInteracted(ev: Event) {
+        let target = ev.target as any ;
+        if (target instanceof HTMLElement) {
+            if (target.closest('.xero-form-preview-toolbar')) {
+                return ;
+            }
+        }
+
+        this.scheduleDraftSave() ;
+    }
+
+    private documentVisibilityChanged() {
+        if (document.visibilityState === 'hidden') {
+            this.flushDraftNow() ;
+        }
+    }
+
+    private scheduleDraftSave() {
+        this.draft_cleared_ = false ;
+
+        if (this.draft_update_timer_) {
+            clearTimeout(this.draft_update_timer_) ;
+        }
+
+        this.draft_update_timer_ = setTimeout(this.flushDraftNow.bind(this), 200) ;
+    }
+
+    private flushDraftNow() {
+        if (this.draft_update_timer_) {
+            clearTimeout(this.draft_update_timer_) ;
+            this.draft_update_timer_ = undefined ;
+        }
+
+        let key = this.getDraftStorageKey() ;
+        if (!key) {
+            return ;
+        }
+
+        if (this.draft_cleared_) {
+            return ;
+        }
+
+        let draft = this.captureDraft() ;
+        if (!draft) {
+            return ;
+        }
+
+        try {
+            window.localStorage.setItem(key, JSON.stringify(draft)) ;
+        }
+        catch {
+        }
+    }
+
+    private captureDraft() : XeroScoutFormDraft | undefined {
+        if (!this.tabbed_ctrl_) {
+            return undefined ;
+        }
+
+        this.captureCurrentSectionToDataValues() ;
+
+        let timers: { [key: string]: { value: number ; running: boolean ; } } = {} ;
+        for (let [key, timer] of this.timer_map_) {
+            timers[key] = {
+                value: timer.value,
+                running: timer.running,
+            } ;
+        }
+
+        let stopwatches: { [key: string]: string } = {} ;
+        for (let [key] of this.stopwatch_map_) {
+            stopwatches[key] = this.getStopwatchSerialized(key) ;
+        }
+
+        return {
+            version: 1,
+            savedAt: Date.now(),
+            sectionIndex: this.tabbed_ctrl_.selectedPageNumber,
+            values: this.data_.values.map((value) => ({ tag: value.tag, value: value.value })),
+            timers: timers,
+            stopwatches: stopwatches,
+        } ;
+    }
+
+    private restoreDraft() {
+        this.restored_draft_ = false ;
+        this.restored_draft_section_index_ = 0 ;
+
+        let key = this.getDraftStorageKey() ;
+        if (!key) {
+            return ;
+        }
+
+        let raw: string | null = null ;
+        try {
+            raw = window.localStorage.getItem(key) ;
+        }
+        catch {
+            raw = null ;
+        }
+
+        if (!raw) {
+            return ;
+        }
+
+        try {
+            let draft = JSON.parse(raw) as XeroScoutFormDraft ;
+            if (!draft || draft.version !== 1) {
+                return ;
+            }
+
+            this.data_ = new XeroFormDataValues() ;
+            this.loadInitialData(this.form_info_?.initialValues) ;
+            this.loadInitialData(draft.values) ;
+
+            this.restoreTimersFromDraft(draft) ;
+            this.restoreStopwatchesFromDraft(draft) ;
+
+            this.restored_draft_ = true ;
+            this.restored_draft_section_index_ = draft.sectionIndex >= 0 ? draft.sectionIndex : 0 ;
+        }
+        catch {
+        }
+    }
+
+    private restoreTimersFromDraft(draft: XeroScoutFormDraft) {
+        let elapsedSeconds = Math.max(0, Date.now() - draft.savedAt) / 1000.0 ;
+        for (let key of Object.keys(draft.timers)) {
+            let timer = draft.timers[key] ;
+            this.setTimerValue(key, timer.value + (timer.running ? elapsedSeconds : 0.0)) ;
+            if (timer.running) {
+                this.startTimer(key, () => {}) ;
+            }
+        }
+    }
+
+    private restoreStopwatchesFromDraft(draft: XeroScoutFormDraft) {
+        for (let key of Object.keys(draft.stopwatches)) {
+            this.setStopwatchSerialized(key, draft.stopwatches[key]) ;
+        }
+    }
+
+    private getDraftStorageKey() : string | undefined {
+        if (!this.form_info_?.draftKey) {
+            return undefined ;
+        }
+
+        return XeroScoutFormView.draftStoragePrefix + this.form_info_.draftKey ;
+    }
+
+    private clearDraft() {
+        this.draft_cleared_ = true ;
+        let key = this.getDraftStorageKey() ;
+        if (!key) {
+            return ;
+        }
+
+        try {
+            window.localStorage.removeItem(key) ;
+        }
+        catch {
+        }
     }
 
     private schedulePreviewTempDBUpdate() {
@@ -570,6 +769,8 @@ export class XeroScoutFormView extends XeroView {
         }
 
         this.request('reset-preview-match-db') ;
+        this.clearDraft() ;
+        this.restored_draft_ = false ;
 
         this.data_.clear() ;
         this.resetAllTimersAndStopwatches() ;
@@ -624,12 +825,29 @@ export class XeroScoutFormView extends XeroView {
     }
 
     private applyPreviewMatchDBToForm(data: IPCDatabaseData) {
+        this.clearDraft() ;
+        this.restored_draft_ = false ;
+        this.data_.clear() ;
+        this.resetAllTimersAndStopwatches() ;
+
         if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
+            if (this.tabbed_ctrl_) {
+                let page = this.tabbed_ctrl_.selectedPageNumber ;
+                if (page >= 0 && page < this.section_pages_.length) {
+                    this.section_pages_[page].doLayout() ;
+                }
+            }
             return ;
         }
 
         let row = data.data[0] ;
         if (!row || typeof row !== 'object') {
+            if (this.tabbed_ctrl_) {
+                let page = this.tabbed_ctrl_.selectedPageNumber ;
+                if (page >= 0 && page < this.section_pages_.length) {
+                    this.section_pages_[page].doLayout() ;
+                }
+            }
             return ;
         }
 

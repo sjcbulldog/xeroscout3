@@ -206,6 +206,8 @@ export interface IPCFormScoutData {
     mirrory? : boolean ;
     color? : string ;
     title? : string ;
+    draftKey?: string ;
+    initialValues?: IPCNamedDataValue[] ;
     eventUuid?: string ;
     scoutItem?: string ;
     activeTeamResult?: IPCScoutResult ;
