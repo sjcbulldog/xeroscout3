@@ -220,6 +220,9 @@ export abstract class XeroDialog extends EventEmitter {
 
     public close(changed: boolean) {
         document.removeEventListener('keydown', this.key_down_handler_) ;
+        document.removeEventListener('mousemove', this.mouse_move_handler_) ;
+        document.removeEventListener('mouseup', this.mouse_up_handler_) ;
+        this.moving_ = false ;
 
         if (this.popup_ && this.parent_ && this.parent_.contains(this.popup_)) {
             this.parent_.removeChild(this.popup_) ;

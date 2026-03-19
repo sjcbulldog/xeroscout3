@@ -180,6 +180,24 @@ export class XeroEditFormView extends XeroView {
     }
 
     public close() {
+        if (this.edit_dialog_) {
+            this.edit_dialog_.close(false) ;
+            this.edit_dialog_ = undefined ;
+        }
+
+        if (this.popup_menu_) {
+            this.popup_menu_.closeMenu() ;
+            this.popup_menu_ = undefined ;
+        }
+
+        if (this.dragging_ === 'area-select') {
+            this.stopAreaSelect() ;
+        }
+        else {
+            this.dragging_ = 'none' ;
+        }
+
+        this.elem.style.cursor = 'default' ;
         super.close() ;
 
         this.observer_.unobserve(this.elem) ;   

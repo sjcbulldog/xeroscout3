@@ -64,7 +64,6 @@ export type IPCImageExtension = 'png' | 'webp' ;
 
 export interface IPCRobotPhotoItem extends IPCFormItem {
     mode: IPCRobotPhotoMode ;
-    sourceTag?: string ;
 }
 
 export interface IPCAutoPlanItem extends IPCFormItem {

@@ -91,7 +91,80 @@ export class FormManager extends Manager {
 
 		let rulesengine = new RulesEngine(fobj) ;
 		rulesengine.doRulesWork(Number.MAX_SAFE_INTEGER) ;
-		return rulesengine.errors ;
+		ret.push(...rulesengine.errors) ;
+
+		let captureCount = 0 ;
+		let displayCount = 0 ;
+		for (let section of fobj.sections) {
+			if (!section.items || !Array.isArray(section.items)) {
+				continue ;
+			}
+
+			for (let obj of section.items) {
+				let item = obj as IPCFormItem ;
+				if (item.type !== 'robotphoto') {
+					continue ;
+				}
+
+				let robot = item as IPCRobotPhotoItem ;
+				if (robot.mode === 'capture') {
+					captureCount++ ;
+				}
+				else if (robot.mode === 'display') {
+					displayCount++ ;
+				}
+			}
+		}
+
+		if (type === 'team') {
+			if (captureCount > 1) {
+				ret.push(filename + ": team forms may contain at most one robotphoto control in capture mode") ;
+			}
+			if (displayCount > 0) {
+				ret.push(filename + ": team forms cannot contain robotphoto controls in display mode") ;
+			}
+		}
+		else if (type === 'match') {
+			if (displayCount > 1) {
+				ret.push(filename + ": match forms may contain at most one robotphoto control in display mode") ;
+			}
+			if (captureCount > 0) {
+				ret.push(filename + ": match forms cannot contain robotphoto controls in capture mode") ;
+			}
+		}
+
+		return ret ;
+	}
+
+	private static countRobotPhotoControls(form: IPCForm | undefined) : { capture: number, display: number } {
+		let counts = { capture: 0, display: 0 } ;
+
+		if (!form || !form.sections) {
+			return counts ;
+		}
+
+		for (let section of form.sections) {
+			if (!section.items || !Array.isArray(section.items)) {
+				continue ;
+			}
+
+			for (let obj of section.items) {
+				let item = obj as IPCFormItem ;
+				if (item.type !== 'robotphoto') {
+					continue ;
+				}
+
+				let robot = item as IPCRobotPhotoItem ;
+				if (robot.mode === 'capture') {
+					counts.capture++ ;
+				}
+				else if (robot.mode === 'display') {
+					counts.display++ ;
+				}
+			}
+		}
+
+		return counts ;
 	}
 
 	public setMatchForm(filename: string): Error | undefined {
@@ -355,12 +428,19 @@ export class FormManager extends Manager {
 
 	public  checkFormsValid() : string[] {
 		let ret: string[] = [] ;
+		let teamForm : IPCForm | undefined = undefined ;
+		let matchForm : IPCForm | undefined = undefined ;
 
 		if (this.info_.teamform_ && this.info_.teamform_.length > 0) {
 			let form = path.join(this.location_, this.info_.teamform_);
 			let err = FormManager.validateForm(form, "team");
 			for(let e of err) {
 				ret.push('team form: ' + e);
+			}
+
+			let loaded = this.getForm('team') ;
+			if (!(loaded instanceof Error)) {
+				teamForm = loaded ;
 			}
 		}
 
@@ -370,6 +450,17 @@ export class FormManager extends Manager {
 			for(let e of err) {
 				ret.push('match form: ' + e);
 			}
+
+			let loaded = this.getForm('match') ;
+			if (!(loaded instanceof Error)) {
+				matchForm = loaded ;
+			}
+		}
+
+		let teamCounts = FormManager.countRobotPhotoControls(teamForm) ;
+		let matchCounts = FormManager.countRobotPhotoControls(matchForm) ;
+		if (matchCounts.display > 0 && teamCounts.capture !== 1) {
+			ret.push('match form: a robotphoto display control requires exactly one robotphoto capture control in the team form');
 		}
 
 		return ret ;	

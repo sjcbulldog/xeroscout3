@@ -4,7 +4,6 @@ import { EditFormControlDialog } from "./editformctrldialog.js";
 
 export class EditRobotPhotoDialog extends EditFormControlDialog {
     private mode_? : HTMLSelectElement ;
-    private source_tag_? : HTMLInputElement ;
 
     constructor(formctrl: FormControl) {
         super('Edit Robot Photo', formctrl) ;
@@ -35,15 +34,6 @@ export class EditRobotPhotoDialog extends EditFormControlDialog {
         label.appendChild(this.mode_) ;
         div.appendChild(label) ;
 
-        this.source_tag_ = document.createElement('input') ;
-        this.source_tag_.type = 'text' ;
-        this.source_tag_.className = 'xero-popup-form-edit-dialog-input' ;
-        this.source_tag_.value = item.sourceTag || '' ;
-        label = document.createElement('label') ;
-        label.className = 'xero-popup-form-edit-dialog-label' ;
-        label.innerText = 'Source Tag' ;
-        label.appendChild(this.source_tag_) ;
-        div.appendChild(label) ;
 
         pdiv.appendChild(div) ;
     }
@@ -52,7 +42,6 @@ export class EditRobotPhotoDialog extends EditFormControlDialog {
         const item = this.formctrl_.item as IPCRobotPhotoItem ;
         item.tag = this.tag_!.value ;
         item.mode = this.mode_!.value as 'capture' | 'display' ;
-        item.sourceTag = this.source_tag_!.value.trim() ;
         item.datatype = 'string' ;
     }
 

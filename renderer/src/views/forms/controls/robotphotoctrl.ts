@@ -23,7 +23,6 @@ export class RobotPhotoControl extends FormControl {
         datatype: 'string',
         transparent: false,
         mode: 'capture',
-        sourceTag: '',
     } ;
 
     private image_src_ : ImageDataSource ;
@@ -92,7 +91,7 @@ export class RobotPhotoControl extends FormControl {
         this.setPosition(scale, xoff, yoff, 900) ;
         if (editing) {
             if (this.status_) {
-                this.status_.innerText = this.robotItem.mode === 'capture' ? 'Robot Photo Capture' : `Robot Photo Display (${this.robotItem.sourceTag || 'unset'})` ;
+                this.status_.innerText = this.robotItem.mode === 'capture' ? 'Robot Photo Capture' : 'Robot Photo Display' ;
             }
             return ;
         }
@@ -322,8 +321,7 @@ export class RobotPhotoControl extends FormControl {
 
     private refreshFromActiveTeamResult() {
         const result = this.getActiveTeamResult() ;
-        const sourceTag = (this.robotItem.sourceTag || '').trim() ;
-        if (!result || sourceTag.length === 0) {
+        if (!result) {
             this.current_key_ = undefined ;
             this.local_data_url_ = undefined ;
             this.renderState() ;
@@ -331,7 +329,7 @@ export class RobotPhotoControl extends FormControl {
         }
 
         for (const one of result.data) {
-            if (one.tag === sourceTag && one.value.type === 'string' && typeof one.value.value === 'string' && one.value.value.length > 0) {
+            if (one.value.type === 'string' && typeof one.value.value === 'string' && this.isRobotPhotoKey(one.value.value)) {
                 this.current_key_ = one.value.value ;
                 this.local_data_url_ = undefined ;
                 this.loadImageForKey(this.current_key_) ;
@@ -342,6 +340,10 @@ export class RobotPhotoControl extends FormControl {
         this.current_key_ = undefined ;
         this.local_data_url_ = undefined ;
         this.renderState() ;
+    }
+
+    private isRobotPhotoKey(value: string) : boolean {
+        return value.startsWith('robot-photo-') ;
     }
 
     private getActiveTeamResult() : IPCScoutResult | undefined {
