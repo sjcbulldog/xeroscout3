@@ -7,7 +7,7 @@
 
 ## Feature Shape
 - Team Scouting uses a new `robotphoto` form control in `capture` mode.
-- Match Scouting uses the same `robotphoto` control in `display` mode, reading the configured source tag from the active team result.
+- Match Scouting uses the same `robotphoto` control in `display` mode, reading the active team's single captured robot photo.
 - Robot photo binaries stay out of SQLite and out of raw event JSON payloads. Only the stable photo key is stored in scouting results and DB fields.
 
 ## Storage
