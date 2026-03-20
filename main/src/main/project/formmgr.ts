@@ -94,7 +94,7 @@ export class FormManager extends Manager {
 		ret.push(...rulesengine.errors) ;
 
 		let captureCount = 0 ;
-		let displayCount = 0 ;
+		let viewerCount = 0 ;
 		for (let section of fobj.sections) {
 			if (!section.items || !Array.isArray(section.items)) {
 				continue ;
@@ -102,6 +102,11 @@ export class FormManager extends Manager {
 
 			for (let obj of section.items) {
 				let item = obj as IPCFormItem ;
+				if (item.type === 'robotviewer') {
+					viewerCount++ ;
+					continue ;
+				}
+
 				if (item.type !== 'robotphoto') {
 					continue ;
 				}
@@ -110,9 +115,6 @@ export class FormManager extends Manager {
 				if (robot.mode === 'capture') {
 					captureCount++ ;
 				}
-				else if (robot.mode === 'display') {
-					displayCount++ ;
-				}
 			}
 		}
 
@@ -120,13 +122,13 @@ export class FormManager extends Manager {
 			if (captureCount > 1) {
 				ret.push(filename + ": team forms may contain at most one robotphoto control in capture mode") ;
 			}
-			if (displayCount > 0) {
-				ret.push(filename + ": team forms cannot contain robotphoto controls in display mode") ;
+			if (viewerCount > 0) {
+				ret.push(filename + ": team forms cannot contain robotviewer controls") ;
 			}
 		}
 		else if (type === 'match') {
-			if (displayCount > 1) {
-				ret.push(filename + ": match forms may contain at most one robotphoto control in display mode") ;
+			if (viewerCount > 1) {
+				ret.push(filename + ": match forms may contain at most one robotviewer control") ;
 			}
 			if (captureCount > 0) {
 				ret.push(filename + ": match forms cannot contain robotphoto controls in capture mode") ;
@@ -136,8 +138,8 @@ export class FormManager extends Manager {
 		return ret ;
 	}
 
-	private static countRobotPhotoControls(form: IPCForm | undefined) : { capture: number, display: number } {
-		let counts = { capture: 0, display: 0 } ;
+	private static countRobotImageControls(form: IPCForm | undefined) : { capture: number, viewer: number } {
+		let counts = { capture: 0, viewer: 0 } ;
 
 		if (!form || !form.sections) {
 			return counts ;
@@ -150,6 +152,11 @@ export class FormManager extends Manager {
 
 			for (let obj of section.items) {
 				let item = obj as IPCFormItem ;
+				if (item.type === 'robotviewer') {
+					counts.viewer++ ;
+					continue ;
+				}
+
 				if (item.type !== 'robotphoto') {
 					continue ;
 				}
@@ -157,9 +164,6 @@ export class FormManager extends Manager {
 				let robot = item as IPCRobotPhotoItem ;
 				if (robot.mode === 'capture') {
 					counts.capture++ ;
-				}
-				else if (robot.mode === 'display') {
-					counts.display++ ;
 				}
 			}
 		}
@@ -388,6 +392,9 @@ export class FormManager extends Manager {
 								// Skip any control that does not provide data, as these are not stored in the database
 								continue;
 							}
+							if (item.type === "robotviewer") {
+								continue ;
+							}
 							if (item.type === "robotphoto" && (item as IPCRobotPhotoItem).mode === 'display') {
 								continue ;
 							}
@@ -405,7 +412,8 @@ export class FormManager extends Manager {
 								type: item.datatype,
 								choices: choices,
 								editable: true,
-								source: 'form'
+								source: 'form',
+								hiddenByDefault: item.type === 'robotphoto'
 							});
 
 							if (item.type === 'stopwatch') {
@@ -457,10 +465,10 @@ export class FormManager extends Manager {
 			}
 		}
 
-		let teamCounts = FormManager.countRobotPhotoControls(teamForm) ;
-		let matchCounts = FormManager.countRobotPhotoControls(matchForm) ;
-		if (matchCounts.display > 0 && teamCounts.capture !== 1) {
-			ret.push('match form: a robotphoto display control requires exactly one robotphoto capture control in the team form');
+		let teamCounts = FormManager.countRobotImageControls(teamForm) ;
+		let matchCounts = FormManager.countRobotImageControls(matchForm) ;
+		if (matchCounts.viewer > 0 && teamCounts.capture !== 1) {
+			ret.push('match form: a robotviewer control requires exactly one robotphoto capture control in the team form');
 		}
 
 		return ret ;	

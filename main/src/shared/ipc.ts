@@ -28,7 +28,7 @@ export interface IPCTabletDefn {
     purpose: IPCFormPurpose | undefined;
 }
 
-export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'stopwatch' | 'box' | 'image' | 'autoplan' | 'autoselector' | 'robotphoto' ;
+export type IPCFormControlType = 'label' | 'text' | 'textarea' | 'boolean' | 'updown' | 'choice' | 'select' | 'timer' | 'stopwatch' | 'box' | 'image' | 'autoplan' | 'autoselector' | 'robotphoto' | 'robotviewer' ;
 
 export interface IPCFormItem {
     type: IPCFormControlType ;
@@ -64,6 +64,9 @@ export type IPCImageExtension = 'png' | 'webp' ;
 
 export interface IPCRobotPhotoItem extends IPCFormItem {
     mode: IPCRobotPhotoMode ;
+}
+
+export interface IPCRobotViewerItem extends IPCFormItem {
 }
 
 export interface IPCAutoPlanItem extends IPCFormItem {
@@ -180,6 +183,7 @@ export interface IPCColumnDesc
     type: IPCDataValueType ;        // The type of data in the column
     source: IPCColumnDefnSource ;   // Where the column definition comes from2
     editable: boolean ;             // If true, the column can be edited in the database view
+    hiddenByDefault?: boolean ;     // If true, the column starts hidden in database views
     choices?: IPCChoice[] ;         // For some string columns, the set of choices that are allowed
 } ;
 
@@ -221,7 +225,6 @@ export interface IPCScoutResults {
     tablet: string ;
     purpose: string ;
     results: IPCScoutResult[] ;
-    robotPhotos?: IPCRobotPhotoUpload[] ;
 }
 
 export interface IPCAutoAnalysisNode {
@@ -332,43 +335,6 @@ export interface IPCSyncedImageData {
     data: string ;
     mimeType: string ;
     extension: IPCImageExtension ;
-}
-
-export interface IPCRobotPhotoCaptureRequest {
-    item: string ;
-    key: string ;
-    teamNumber: number ;
-    data: string ;
-    mimeType: string ;
-    extension: IPCImageExtension ;
-}
-
-export interface IPCRobotPhotoUpload {
-    item: string ;
-    key: string ;
-    teamNumber: number ;
-    data: string ;
-    mimeType: string ;
-    extension: IPCImageExtension ;
-}
-
-export interface IPCRobotPhotoState {
-    item: string ;
-    key: string ;
-    teamNumber: number ;
-    mimeType: string ;
-    extension: IPCImageExtension ;
-    uploaded: boolean ;
-    updatedAt: number ;
-}
-
-export interface IPCRobotPhotoManifestEntry {
-    teamNumber: number ;
-    key: string ;
-    fileName: string ;
-    mimeType: string ;
-    extension: IPCImageExtension ;
-    updatedAt: number ;
 }
 
 export interface IPCCheckDBViewFormula {

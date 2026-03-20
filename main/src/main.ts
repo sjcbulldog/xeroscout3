@@ -38,7 +38,6 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getMatchPredictorData,
          promptStringRequest,
          promptStringResponse,
-         storeRobotPhoto,
          getPreviewMatchDB,
          updatePreviewMatchDB,
          resetPreviewMatchDB
@@ -122,6 +121,12 @@ function createWindow() : void {
   
     const win = new BrowserWindow(opts);
     mainWindow = win ;
+    win.webContents.session.setPermissionCheckHandler((_webContents, permission) => {
+        return permission === 'media' ;
+    }) ;
+    win.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
+        callback(permission === 'media') ;
+    }) ;
 
     bounds = undefined ;
     if (!bounds) {
@@ -242,7 +247,6 @@ app.on("ready", () => {
     ipcMain.on('execute-command', (event, ...args) => { executeCommand('execute-command', ...args)}) ;
     ipcMain.on('set-tablet-name-purpose', (event, ...args) => { setTabletNamePurpose('set-table-name-purpose', ...args)}) ;
     ipcMain.on('provide-result', (event, ...args) => { provideResult('provide-result', ...args)}) ;
-    ipcMain.on('store-robot-photo', (event, ...args) => { storeRobotPhoto('store-robot-photo', ...args)}) ;
     ipcMain.on('send-match-col-config', (event, ...args) => { sendMatchColConfig('send-match-col-config', ...args)}) ;
     ipcMain.on('send-team-col-config', (event, ...args) => { sendTeamColConfig('send-team-col-config', ...args)}) ;
     ipcMain.on('get-team-list', (event, ...args) => { getTeamList('get-team-list', ...args)}) ;

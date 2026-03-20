@@ -3,7 +3,7 @@ import { SCCentral } from "./apps/sccentral";
 import { SCScout } from "./apps/scscout";
 import { SCCoach } from "./apps/sccoach";
 import { TabletData } from "./project/tabletmgr";
-import { IPCAutoAnalysisConfig, IPCAutoAnalysisRequest, IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCRobotPhotoCaptureRequest, IPCTeamInfo } from "../shared/ipc";
+import { IPCAutoAnalysisConfig, IPCAutoAnalysisRequest, IPCCheckDBViewFormula, IPCDataSet, IPCGetTeamsOptions, IPCGraphConfig, IPCMatchPredictorRequest, IPCNamedDataValue, IPCPickListConfig, IPCPredictConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCTeamInfo } from "../shared/ipc";
 import { SCCoachCentralBaseApp } from "./apps/sccoachcentralbase";
 
 function isScoutType() : boolean {
@@ -649,20 +649,6 @@ export async function provideResult(cmd: string, ...args: any[]) {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});             
         }
     } 
-}
-
-// store-robot-photo data:IPCRobotPhotoCaptureRequest
-export async function storeRobotPhoto(cmd: string, ...args: any[]) {
-    if (scappbase && isScoutType()) {
-        scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let scout : SCScout = scappbase as SCScout ;
-        if (args.length === 1 && typeof args[0] === 'object') {
-            scout.storeRobotPhoto(args[0] as IPCRobotPhotoCaptureRequest) ;
-        }
-        else {
-            scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
-        }
-    }
 }
 
 // set-team-data data:ProjColConfig

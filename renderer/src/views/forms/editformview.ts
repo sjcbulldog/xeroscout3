@@ -26,6 +26,7 @@ import { KeybindingDialog } from "./dialogs/keybindingdialog.js";
 import { TextAreaControl } from "./controls/textareactrl.js";
 import { ImageControl } from "./controls/imagectrl.js";
 import { RobotPhotoControl } from "./controls/robotphotoctrl.js";
+import { RobotViewerControl } from "./controls/robotviewerctrl.js";
 import { UndoDeleteControlArgs, UndoDeleteSectionArgs, UndoEditArgs, UndoLockContorlArgs, UndoMoveResizeArgs, UndoMoveSectionArgs, UndoRenameSectionArgs, UndoStackEntry } from "./undo.js";
 import { RulesEngine } from "../../shared/rulesengine.js";
 import { IPCFormItem, IPCSection, IPCTablet } from "../../shared/ipc.js";
@@ -131,6 +132,7 @@ export class XeroEditFormView extends XeroView {
             new XeroPopupMenuItem('Box', this.addNewBoxCtrl.bind(this)),
             new XeroPopupMenuItem('Image', this.addNewImageCtrl.bind(this)),
             new XeroPopupMenuItem('Robot Photo', this.addNewRobotPhotoCtrl.bind(this)),
+            new XeroPopupMenuItem('Robot Viewer', this.addNewRobotViewerCtrl.bind(this)),
             new XeroPopupMenuItem('Text Field', this.addNewTextCtrl.bind(this)),
             new XeroPopupMenuItem('Text Area', this.addNewTextAreaCtrl.bind(this)),
             new XeroPopupMenuItem('Up/Down Field', this.addNewUpDownCtrl.bind(this)),
@@ -343,6 +345,7 @@ export class XeroEditFormView extends XeroView {
         this.keybindings_.addKeybinding('F11', false, false, false, 'Insert a new image control', this.addNewImageCtrl.bind(this));
         this.keybindings_.addKeybinding('F12', false, false, false, 'Insert a new stopwatch control', this.addNewStopwatchCtrl.bind(this));
         this.keybindings_.addKeybinding('F12', true, false, false, 'Insert a new robot photo control', this.addNewRobotPhotoCtrl.bind(this));
+        this.keybindings_.addKeybinding('F12', false, true, false, 'Insert a new robot viewer control', this.addNewRobotViewerCtrl.bind(this));
     }
 
     private showErrors() {
@@ -460,6 +463,18 @@ export class XeroEditFormView extends XeroView {
         }
         else {
             alert('You cannot create a robot photo control without a section. Use the "Section" menu to add a section first.') ;
+        }
+    }
+
+    private addNewRobotViewerCtrl() {
+        if (this.tabbed_ctrl_?.selectedPageNumber !== -1) {
+            let formctrl = new RobotViewerControl(this, this.getUniqueTagName(), XeroRect.fromPointSize(this.context_menu_cursor_, new XeroSize(280, 220))) ;
+            this.addItemToCurrentSection(formctrl.item) ;
+            this.section_pages_[this.tabbed_ctrl_!.selectedPageNumber].addControl(formctrl) ;
+            this.modified(new UndoStackEntry('add', 'control', [formctrl])) ;
+        }
+        else {
+            alert('You cannot create a robot viewer control without a section. Use the "Section" menu to add a section first.') ;
         }
     }
 
@@ -662,6 +677,10 @@ export class XeroEditFormView extends XeroView {
         }
         else if (item.type === 'robotphoto') {
             formctrl = new RobotPhotoControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+            formctrl.update(item) ;
+        }
+        else if (item.type === 'robotviewer') {
+            formctrl = new RobotViewerControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
             formctrl.update(item) ;
         }
         else if (item.type === 'box') {

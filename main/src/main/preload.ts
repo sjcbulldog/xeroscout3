@@ -52,7 +52,6 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'get-match-status',               // views/matchstatus.ts
         'set-tablet-name-purpose',        // views/selecttablet/selecttablet.ts
 	        'provide-result',                 // views/forms/scoutformview.ts
-        'store-robot-photo',              // views/forms/controls/robotphotoctrl.ts
 
 	        'get-preview-match-db',           // views/forms/scoutformview.ts (central match form preview)
 	        'update-preview-match-db',        // views/forms/scoutformview.ts (central match form preview)

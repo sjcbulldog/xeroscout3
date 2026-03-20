@@ -1,12 +1,32 @@
-import { IPCFormScoutData, IPCImageResponse, IPCRobotPhotoCaptureRequest, IPCRobotPhotoItem, IPCScoutResult, IPCTypedDataValue } from "../../../shared/ipc.js";
+import { IPCRobotPhotoItem, IPCScoutResult, IPCTypedDataValue } from "../../../shared/ipc.js";
 import { XeroRect } from "../../../shared/xerogeom.js";
 import { XeroView } from "../../xeroview.js";
 import { ImageDataSource } from "../../../apps/imagesrc.js";
 import { EditFormControlDialog } from "../dialogs/editformctrldialog.js";
 import { EditRobotPhotoDialog } from "../dialogs/editrobotphotodialog.js";
+import { RobotPhotoCaptureDialog } from "../dialogs/robotphotocapturedialog.js";
 import { FormControl } from "./formctrl.js";
 
 export class RobotPhotoControl extends FormControl {
+    private static readonly acceptedImageTypes_ = [
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.webp',
+        '.gif',
+        '.bmp',
+        '.tif',
+        '.tiff',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'image/bmp',
+        'image/tiff',
+    ].join(',') ;
+    private static readonly maxLongEdge_ = 960 ;
+    private static readonly webpQuality_ = 0.85 ;
+
     private static readonly item_desc_ : IPCRobotPhotoItem = {
         type: 'robotphoto',
         tag: '',
@@ -28,10 +48,11 @@ export class RobotPhotoControl extends FormControl {
     private image_src_ : ImageDataSource ;
     private image_? : HTMLImageElement ;
     private status_? : HTMLDivElement ;
-    private button_? : HTMLButtonElement ;
+    private camera_button_? : HTMLButtonElement ;
+    private pick_button_? : HTMLButtonElement ;
     private input_? : HTMLInputElement ;
-    private current_key_? : string ;
-    private local_data_url_? : string ;
+    private current_value_? : string ;
+    private capture_dialog_? : RobotPhotoCaptureDialog ;
 
     constructor(imsrc: ImageDataSource, view: XeroView, tag: string, bounds: XeroRect) {
         super(view, RobotPhotoControl.item_desc_) ;
@@ -53,10 +74,10 @@ export class RobotPhotoControl extends FormControl {
             return undefined ;
         }
 
-        if (this.current_key_ && this.current_key_.length > 0) {
+        if (this.current_value_ && this.current_value_.length > 0) {
             return {
                 type: 'string',
-                value: this.current_key_,
+                value: this.current_value_,
             } ;
         }
 
@@ -72,15 +93,13 @@ export class RobotPhotoControl extends FormControl {
         }
 
         if (data.type === 'string' && typeof data.value === 'string' && data.value.length > 0) {
-            this.current_key_ = data.value ;
-            this.local_data_url_ = undefined ;
-            this.loadImageForKey(this.current_key_) ;
+            this.current_value_ = data.value ;
         }
         else {
-            this.current_key_ = undefined ;
-            this.local_data_url_ = undefined ;
-            this.renderState() ;
+            this.current_value_ = undefined ;
         }
+
+        this.renderState() ;
     }
 
     public updateFromItem(editing: boolean, scale: number, xoff: number, yoff: number) : void {
@@ -98,9 +117,6 @@ export class RobotPhotoControl extends FormControl {
 
         if (this.robotItem.mode === 'display') {
             this.refreshFromActiveTeamResult() ;
-        }
-        else if (this.current_key_ && !this.local_data_url_) {
-            this.loadImageForKey(this.current_key_) ;
         }
         else {
             this.renderState() ;
@@ -133,18 +149,22 @@ export class RobotPhotoControl extends FormControl {
         this.ctrl.style.display = 'flex' ;
         this.ctrl.style.flexDirection = 'column' ;
         this.ctrl.style.alignItems = 'stretch' ;
-        this.ctrl.style.justifyContent = 'space-between' ;
         this.ctrl.style.borderRadius = '12px' ;
         this.ctrl.style.overflow = 'hidden' ;
         this.ctrl.style.border = '1px solid #cbd5e1' ;
         this.ctrl.style.background = '#f8fafc' ;
 
+        const image_frame = document.createElement('div') ;
+        image_frame.style.flex = '1 1 auto' ;
+        image_frame.style.minHeight = '0' ;
+        image_frame.style.background = '#e2e8f0' ;
+
         this.image_ = document.createElement('img') ;
         this.image_.style.width = '100%' ;
-        this.image_.style.height = 'calc(100% - 42px)' ;
+        this.image_.style.height = '100%' ;
         this.image_.style.objectFit = 'contain' ;
-        this.image_.style.background = '#e2e8f0' ;
-        this.ctrl.appendChild(this.image_) ;
+        image_frame.appendChild(this.image_) ;
+        this.ctrl.appendChild(image_frame) ;
 
         this.status_ = document.createElement('div') ;
         this.status_.style.fontSize = '14px' ;
@@ -153,22 +173,32 @@ export class RobotPhotoControl extends FormControl {
         this.ctrl.appendChild(this.status_) ;
 
         if (this.robotItem.mode === 'capture') {
-            this.button_ = document.createElement('button') ;
-            this.button_.type = 'button' ;
-            this.button_.addEventListener('click', this.choosePhoto.bind(this)) ;
-            this.button_.style.margin = '0 10px 10px 10px' ;
-            this.button_.style.padding = '8px 10px' ;
-            this.button_.style.borderRadius = '8px' ;
-            this.button_.style.border = '1px solid #2563eb' ;
-            this.button_.style.background = '#2563eb' ;
-            this.button_.style.color = 'white' ;
-            this.button_.style.cursor = 'pointer' ;
-            this.ctrl.appendChild(this.button_) ;
+            const button_row = document.createElement('div') ;
+            button_row.style.display = 'flex' ;
+            button_row.style.gap = '8px' ;
+            button_row.style.padding = '0 10px 10px 10px' ;
+
+            this.camera_button_ = document.createElement('button') ;
+            this.camera_button_.type = 'button' ;
+            this.camera_button_.innerText = 'Take a Photo' ;
+            this.camera_button_.addEventListener('click', this.openCamera.bind(this)) ;
+            this.camera_button_.style.flex = '7 1 0%' ;
+            this.stylePrimaryButton(this.camera_button_) ;
+            button_row.appendChild(this.camera_button_) ;
+
+            this.pick_button_ = document.createElement('button') ;
+            this.pick_button_.type = 'button' ;
+            this.pick_button_.innerText = 'Pick' ;
+            this.pick_button_.addEventListener('click', this.pickPhoto.bind(this)) ;
+            this.pick_button_.style.flex = '3 1 0%' ;
+            this.styleSecondaryButton(this.pick_button_) ;
+            button_row.appendChild(this.pick_button_) ;
+
+            this.ctrl.appendChild(button_row) ;
 
             this.input_ = document.createElement('input') ;
             this.input_.type = 'file' ;
-            this.input_.accept = 'image/*' ;
-            this.input_.setAttribute('capture', 'environment') ;
+            this.input_.accept = RobotPhotoControl.acceptedImageTypes_ ;
             this.input_.style.display = 'none' ;
             this.input_.addEventListener('change', this.photoSelected.bind(this)) ;
             this.ctrl.appendChild(this.input_) ;
@@ -182,8 +212,48 @@ export class RobotPhotoControl extends FormControl {
         return this.item as IPCRobotPhotoItem ;
     }
 
-    private choosePhoto() : void {
+    private stylePrimaryButton(button: HTMLButtonElement) {
+        button.style.padding = '8px 10px' ;
+        button.style.borderRadius = '8px' ;
+        button.style.border = '1px solid #2563eb' ;
+        button.style.background = '#2563eb' ;
+        button.style.color = 'white' ;
+        button.style.cursor = 'pointer' ;
+        button.style.fontWeight = '600' ;
+    }
+
+    private styleSecondaryButton(button: HTMLButtonElement) {
+        button.style.padding = '8px 10px' ;
+        button.style.borderRadius = '8px' ;
+        button.style.border = '1px solid #94a3b8' ;
+        button.style.background = 'white' ;
+        button.style.color = '#0f172a' ;
+        button.style.cursor = 'pointer' ;
+        button.style.fontWeight = '600' ;
+    }
+
+    private pickPhoto() : void {
         this.input_?.click() ;
+    }
+
+    private openCamera() : void {
+        if (this.capture_dialog_) {
+            return ;
+        }
+
+        this.capture_dialog_ = new RobotPhotoCaptureDialog() ;
+        this.capture_dialog_.on('closed', (ok: boolean) => {
+            const dialog = this.capture_dialog_ ;
+            this.capture_dialog_ = undefined ;
+            if (!ok || !dialog?.capturedBlob) {
+                return ;
+            }
+
+            void this.applyBlob(dialog.capturedBlob) ;
+        }) ;
+
+        const parent = this.ctrl?.parentElement ?? document.body ;
+        this.capture_dialog_.showCentered(parent) ;
     }
 
     private async photoSelected() {
@@ -192,80 +262,110 @@ export class RobotPhotoControl extends FormControl {
         }
 
         const file = this.input_.files[0] ;
-        const compressed = await this.compressImage(file) ;
-        const context = this.getCaptureContext() ;
-        if (!compressed || !context) {
-            return ;
-        }
-
-        this.current_key_ = `robot-photo-${context.eventUuid}-${context.teamNumber}` ;
-        this.local_data_url_ = compressed.dataUrl ;
-        this.renderState() ;
-
-        const payload : IPCRobotPhotoCaptureRequest = {
-            item: context.item,
-            key: this.current_key_,
-            teamNumber: context.teamNumber,
-            data: compressed.base64,
-            mimeType: 'image/webp',
-            extension: 'webp',
-        } ;
-        this.view.app.request('store-robot-photo', payload) ;
+        await this.applyBlob(file) ;
         this.input_.value = '' ;
     }
 
-    private async compressImage(file: File) : Promise<{ dataUrl: string, base64: string } | undefined> {
-        const image = await this.loadFileImage(file) ;
-        const canvas = document.createElement('canvas') ;
-        const ctx = canvas.getContext('2d') ;
-        if (!ctx) {
-            return undefined ;
+    private async applyBlob(blob: Blob) : Promise<void> {
+        try {
+            this.current_value_ = await this.convertBlobToWebP(blob) ;
+            this.renderState() ;
         }
-
-        const dims = this.fitWithin(image.naturalWidth || image.width, image.naturalHeight || image.height, 1280, 720) ;
-        canvas.width = dims.width ;
-        canvas.height = dims.height ;
-        ctx.drawImage(image, 0, 0, dims.width, dims.height) ;
-        const dataUrl = canvas.toDataURL('image/webp', 0.85) ;
-        const comma = dataUrl.indexOf(',') ;
-        if (comma === -1) {
-            return undefined ;
+        catch (err) {
+            const message = err instanceof Error ? err.message : 'Unable to process the selected image.' ;
+            alert(message) ;
         }
-
-        return {
-            dataUrl: dataUrl,
-            base64: dataUrl.substring(comma + 1),
-        } ;
     }
 
-    private loadFileImage(file: File) : Promise<HTMLImageElement> {
+    private loadBlobImage(blob: Blob) : Promise<HTMLImageElement> {
         return new Promise((resolve, reject) => {
             const image = new Image() ;
+            const object_url = URL.createObjectURL(blob) ;
             image.onload = () => {
-                URL.revokeObjectURL(image.src) ;
+                URL.revokeObjectURL(object_url) ;
                 resolve(image) ;
             } ;
             image.onerror = () => {
-                URL.revokeObjectURL(image.src) ;
-                reject(new Error('Failed to load image')) ;
+                URL.revokeObjectURL(object_url) ;
+                reject(new Error('The selected image format could not be opened.')) ;
             } ;
-            image.src = URL.createObjectURL(file) ;
+            image.src = object_url ;
         }) ;
     }
 
-    private fitWithin(width: number, height: number, maxLandscapeWidth: number, maxLandscapeHeight: number) : { width: number, height: number } {
+    private async convertBlobToWebP(blob: Blob) : Promise<string> {
+        if (typeof createImageBitmap === 'function') {
+            try {
+                const bitmap = await createImageBitmap(blob) ;
+                try {
+                    return await this.convertDrawableToWebP(bitmap, bitmap.width, bitmap.height) ;
+                }
+                finally {
+                    bitmap.close() ;
+                }
+            }
+            catch {
+                // Fall back to HTMLImageElement decoding below.
+            }
+        }
+
+        const image = await this.loadBlobImage(blob) ;
+        return this.convertDrawableToWebP(image, image.naturalWidth || image.width, image.naturalHeight || image.height) ;
+    }
+
+    private async convertDrawableToWebP(source: CanvasImageSource, width: number, height: number) : Promise<string> {
+        const canvas = document.createElement('canvas') ;
+        const ctx = canvas.getContext('2d') ;
+        if (!ctx) {
+            throw new Error('Unable to process the image.') ;
+        }
+
+        const dims = this.fitWithin(width, height, RobotPhotoControl.maxLongEdge_) ;
+        canvas.width = dims.width ;
+        canvas.height = dims.height ;
+        ctx.drawImage(source, 0, 0, dims.width, dims.height) ;
+
+        const blob = await new Promise<Blob | undefined>((resolve) => {
+            canvas.toBlob((created) => {
+                resolve(created ?? undefined) ;
+            }, 'image/webp', RobotPhotoControl.webpQuality_) ;
+        }) ;
+
+        if (blob) {
+            return this.readBlobAsDataUrl(blob) ;
+        }
+
+        const fallback = canvas.toDataURL('image/webp', RobotPhotoControl.webpQuality_) ;
+        if (!this.isImageDataUrl(fallback)) {
+            throw new Error('Unable to convert the image for storage.') ;
+        }
+        return fallback ;
+    }
+
+    private readBlobAsDataUrl(blob: Blob) : Promise<string> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader() ;
+            reader.onload = () => {
+                if (typeof reader.result === 'string' && this.isImageDataUrl(reader.result)) {
+                    resolve(reader.result) ;
+                }
+                else {
+                    reject(new Error('Unable to convert the image for storage.')) ;
+                }
+            } ;
+            reader.onerror = () => {
+                reject(new Error('Unable to convert the image for storage.')) ;
+            } ;
+            reader.readAsDataURL(blob) ;
+        }) ;
+    }
+
+    private fitWithin(width: number, height: number, maxLongEdge: number) : { width: number, height: number } {
         if (width <= 0 || height <= 0) {
             return { width: 1, height: 1 } ;
         }
 
-        let maxWidth = maxLandscapeWidth ;
-        let maxHeight = maxLandscapeHeight ;
-        if (height > width) {
-            maxWidth = maxLandscapeHeight ;
-            maxHeight = maxLandscapeWidth ;
-        }
-
-        const scale = Math.min(maxWidth / width, maxHeight / height, 1.0) ;
+        const scale = Math.min(maxLongEdge / Math.max(width, height), 1.0) ;
         return {
             width: Math.max(1, Math.round(width * scale)),
             height: Math.max(1, Math.round(height * scale)),
@@ -277,12 +377,16 @@ export class RobotPhotoControl extends FormControl {
             return ;
         }
 
-        if (this.local_data_url_) {
-            this.image_.src = this.local_data_url_ ;
+        this.image_.onerror = () => {
+            this.image_?.removeAttribute('src') ;
+            if (this.status_) {
+                this.status_.innerText = 'Unable to display robot photo' ;
+            }
+        } ;
+
+        if (this.current_value_ && this.isImageDataUrl(this.current_value_)) {
+            this.image_.src = this.current_value_ ;
             this.status_.innerText = 'Robot photo ready' ;
-        }
-        else if (this.current_key_) {
-            this.status_.innerText = 'Robot photo loading...' ;
         }
         else if (this.robotItem.mode === 'display') {
             this.image_.removeAttribute('src') ;
@@ -292,58 +396,34 @@ export class RobotPhotoControl extends FormControl {
             this.image_.removeAttribute('src') ;
             this.status_.innerText = 'No robot photo selected' ;
         }
-
-        if (this.button_) {
-            this.button_.innerText = this.current_key_ ? 'Retake Photo' : 'Take Photo' ;
-        }
-    }
-
-    private loadImageForKey(key: string) {
-        this.image_src_.getImageData(key)
-            .then((data: IPCImageResponse) => {
-                if (data.data && this.image_) {
-                    this.local_data_url_ = this.image_src_.buildDataUrl(data) ;
-                    this.image_.src = this.local_data_url_ ;
-                    if (this.status_) {
-                        this.status_.innerText = 'Robot photo ready' ;
-                    }
-                    if (this.button_) {
-                        this.button_.innerText = 'Retake Photo' ;
-                    }
-                }
-            })
-            .catch(() => {
-                if (this.status_) {
-                    this.status_.innerText = this.robotItem.mode === 'display' ? 'No robot photo available' : 'Unable to load robot photo' ;
-                }
-            }) ;
     }
 
     private refreshFromActiveTeamResult() {
         const result = this.getActiveTeamResult() ;
         if (!result) {
-            this.current_key_ = undefined ;
-            this.local_data_url_ = undefined ;
+            this.current_value_ = undefined ;
             this.renderState() ;
             return ;
         }
 
         for (const one of result.data) {
-            if (one.value.type === 'string' && typeof one.value.value === 'string' && this.isRobotPhotoKey(one.value.value)) {
-                this.current_key_ = one.value.value ;
-                this.local_data_url_ = undefined ;
-                this.loadImageForKey(this.current_key_) ;
+            if (one.value.type !== 'string' || typeof one.value.value !== 'string') {
+                continue ;
+            }
+
+            if (this.isImageDataUrl(one.value.value)) {
+                this.current_value_ = one.value.value ;
+                this.renderState() ;
                 return ;
             }
         }
 
-        this.current_key_ = undefined ;
-        this.local_data_url_ = undefined ;
+        this.current_value_ = undefined ;
         this.renderState() ;
     }
 
-    private isRobotPhotoKey(value: string) : boolean {
-        return value.startsWith('robot-photo-') ;
+    private isImageDataUrl(value: string) : boolean {
+        return /^data:image\/[a-z0-9.+-]+;base64,/i.test(value) ;
     }
 
     private getActiveTeamResult() : IPCScoutResult | undefined {
@@ -352,25 +432,5 @@ export class RobotPhotoControl extends FormControl {
             return view.getActiveTeamResult() ;
         }
         return undefined ;
-    }
-
-    private getCaptureContext() : { item: string, teamNumber: number, eventUuid: string } | undefined {
-        const view = this.view as any ;
-        if (!view || typeof view.getScoutItemId !== 'function') {
-            return undefined ;
-        }
-
-        const item = view.getScoutItemId() as string | undefined ;
-        const formInfo = view.getFormInfo ? view.getFormInfo() as IPCFormScoutData | undefined : undefined ;
-        const eventUuid = formInfo?.eventUuid ;
-        if (!item || !eventUuid || !item.startsWith('st-')) {
-            return undefined ;
-        }
-
-        return {
-            item: item,
-            teamNumber: +item.substring(3),
-            eventUuid: eventUuid,
-        } ;
     }
 }

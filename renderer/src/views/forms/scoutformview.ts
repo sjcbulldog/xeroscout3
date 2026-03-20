@@ -19,6 +19,7 @@ import {  TimerControl  } from "./controls/timerctrl.js";
 import { AutoPlanControl } from "./controls/autoplanctrl.js";
 import { AutoSelectorControl } from "./controls/autoselectorctrl.js";
 import { RobotPhotoControl } from "./controls/robotphotoctrl.js";
+import { RobotViewerControl } from "./controls/robotviewerctrl.js";
 import {  UpDownControl  } from "./controls/updownctrl.js";
 import { XeroFormDataValues } from "./formdatavalues.js";
 import {  FormObject  } from "./formobj.js";
@@ -486,6 +487,10 @@ export class XeroScoutFormView extends XeroView {
                 }
                 else if (item.type === 'robotphoto') {
                     formctrl = new RobotPhotoControl(this.app.imageSource!, this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
+                    formctrl.update(item) ;
+                }
+                else if (item.type === 'robotviewer') {
+                    formctrl = new RobotViewerControl(this, item.tag, new XeroRect(item.x, item.y, item.width, item.height)) ;
                     formctrl.update(item) ;
                 }
                 else {

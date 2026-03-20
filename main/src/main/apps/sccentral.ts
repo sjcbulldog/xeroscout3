@@ -15,7 +15,7 @@ import { StatBotics } from "../extnet/statbotics";
 import { TabletData } from "../project/tabletmgr";
 import { ManualMatchData } from "../project/matchmgr";
 	import { FormManager } from "../project/formmgr";
-	import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCRobotPhotoManifestEntry, IPCRobotPhotoUpload, IPCScoutResult, IPCScoutResults, IPCSyncedImageData, IPCTeamInfo, IPCTypedDataValue } from "../../shared/ipc";
+import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCScoutResult, IPCScoutResults, IPCSyncedImageData, IPCTeamInfo, IPCTypedDataValue } from "../../shared/ipc";
 	import { UDPBroadcast } from "../sync/udpbroadcast";
 	import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 
@@ -2047,7 +2047,6 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private handleProvideResults(p: PacketObj): PacketObj {
 		try {
 			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
-			this.persistRobotPhotos(obj.robotPhotos || []) ;
 			this.project!.data_mgr_?.processResults(obj)
 				.then((count) => {
 					this.logger_.info(`processed ${count} synced ${obj.purpose} results from tablet '${obj.tablet}'`) ;
@@ -2078,44 +2077,6 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				)
 			);
 		}
-	}
-
-	private persistRobotPhotos(photos: IPCRobotPhotoUpload[]) {
-		if (!this.project || !this.project.info || photos.length === 0) {
-			return ;
-		}
-
-		const dir = path.join(this.project.location, 'robot-photos') ;
-		fs.mkdirSync(dir, { recursive: true }) ;
-
-		for (const photo of photos) {
-			const fileName = `${photo.key}.${photo.extension}` ;
-			const fullPath = path.join(dir, fileName) ;
-			fs.writeFileSync(fullPath, Buffer.from(photo.data, 'base64')) ;
-
-			let entry = this.project.info.robot_photos_.find((one) => one.teamNumber === photo.teamNumber) ;
-			if (!entry) {
-				entry = {
-					teamNumber: photo.teamNumber,
-					key: photo.key,
-					fileName: fileName,
-					mimeType: photo.mimeType,
-					extension: photo.extension,
-					updatedAt: Date.now(),
-				} as IPCRobotPhotoManifestEntry ;
-				this.project.info.robot_photos_.push(entry) ;
-			}
-			else {
-				entry.key = photo.key ;
-				entry.fileName = fileName ;
-				entry.mimeType = photo.mimeType ;
-				entry.extension = photo.extension ;
-				entry.updatedAt = Date.now() ;
-			}
-		}
-
-		this.image_mgr_.setExtraImageDirs([dir]) ;
-		this.project.writeEventFile() ;
 	}
 
 	private handleRequestProject(p: PacketObj): PacketObj | undefined {
