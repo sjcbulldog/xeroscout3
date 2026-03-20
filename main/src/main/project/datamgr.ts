@@ -469,7 +469,7 @@ export class DataManager extends Manager {
                             let sorted = this.sortData(data) ;                        
                             if (ds && ds.formula && ds.formula.length > 0) {
                                 try {
-                                    condvals = await this.computeConditionalsPerMatch(data, ds.formula!, team) ;
+                                    condvals = await this.computeConditionalsPerMatch(sorted, ds.formula!, team) ;
                                 }
                                 catch(err) {
                                     reject(err) ;
@@ -658,8 +658,8 @@ export class DataManager extends Manager {
             // We want the first N entries
             //
             start = 0 ;
-            if (ds.matches.last - 1 < end) {
-                end = ds.matches.last - 1 ;
+            if (ds.matches.first - 1 < end) {
+                end = ds.matches.first - 1 ;
             }
         }
         else if (ds.matches.kind == 'last') {
@@ -667,7 +667,7 @@ export class DataManager extends Manager {
             // We want the last N entries
             //
             end = conddata.length - 1 ;
-            start = conddata.length - ds.matches.first ;
+            start = conddata.length - ds.matches.last ;
             if (start < 0) {
                 start = 0 ;
             }
@@ -699,8 +699,15 @@ export class DataManager extends Manager {
 
     private sortData(data: any[]) : any[] {
         data = data.sort((a, b) => {
-            let am = DataManager.matchLevels.indexOf(a.comp_level) ;
-            let bm = DataManager.matchLevels.indexOf(b.comp_level) ;
+            let acomp = DataValue.toString(a.value('comp_level')!) ;
+            let bcomp = DataValue.toString(b.value('comp_level')!) ;
+            let aset = DataValue.toInteger(a.value('set_number')!) ;
+            let bset = DataValue.toInteger(b.value('set_number')!) ;
+            let amatch = DataValue.toInteger(a.value('match_number')!) ;
+            let bmatch = DataValue.toInteger(b.value('match_number')!) ;
+
+            let am = DataManager.matchLevels.indexOf(acomp) ;
+            let bm = DataManager.matchLevels.indexOf(bcomp) ;
             if (am < bm) {
                 return -1 ;
             }
@@ -708,17 +715,17 @@ export class DataManager extends Manager {
                 return 1 ;
             }
             else {
-                if (a.set_number < b.set_number) {
+                if (aset < bset) {
                     return -1 ;
                 }
-                else if (a.set_number > b.set_number) {
+                else if (aset > bset) {
                     return 1 ;
                 }
                 else {
-                    if (a.match_number < b.match_number) {
+                    if (amatch < bmatch) {
                         return -1 ;
                     }
-                    else if (a.match_number > b.match_number) {
+                    else if (amatch > bmatch) {
                         return 1 ;
                     }
                     else {
