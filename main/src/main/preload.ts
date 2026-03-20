@@ -145,6 +145,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
         'set-status-visible',           // main/apps/sccentral.ts, main/apps/scscout.ts
         'set-status-close-button-visible', // main/apps/sccentral.ts, main/apps/scscout.ts
         'request-results',              // main/apps/scscout.ts
+        'reset-current-scout',         // main/apps/scscout.ts
         'send-team-list',               // main/apps/sccentral.ts
         'send-team-field-list',         // main/apps/sccentral.ts
         'send-auto-analysis-data',      // main/apps/sccoachcentralbase.ts

@@ -48,7 +48,7 @@ export class SCScout extends SCBase {
     private static readonly resizeWindow: string = "resize-window" ;
     private static readonly showTeams: string = 'show-teams' ;
     private static readonly showFullTeamNames: string = 'show-full-team-names' ;
-    private static readonly reverseImage: string = 'reverse' ;
+    private static readonly resetCurrentMatch: string = 'reset-current-match' ;
 
 
     private info_ : SCScoutInfo = new SCScoutInfo() ;
@@ -59,8 +59,6 @@ export class SCScout extends SCBase {
     private current_scout_? : string ;
     private alliance_? : string ;
     private next_cmd_? : string ;
-    private reversed_ : boolean = false ;
-    private reverseImage_: MenuItem | undefined ;
     private show_teams_item_ : MenuItem | undefined ;
     private show_full_team_names_item_ : MenuItem | undefined ;
     private sync_client_? : SyncClient ;
@@ -335,8 +333,8 @@ export class SCScout extends SCBase {
             this.setSetting(SCScout.showFullTeamNames, this.show_full_team_names_) ;
             this.sendNavData() ;
         }
-        else if (cmd === SCScout.reverseImage) {
-            this.reverseImage() ;
+        else if (cmd === SCScout.resetCurrentMatch) {
+            this.resetCurrentMatchCmd() ;
         }
         else if (cmd === SCScout.viewPlayoffs) {
             this.setView('playoffs', this.info_.playoff_status_)
@@ -529,7 +527,7 @@ export class SCScout extends SCBase {
         let good : boolean = true ;
         let ret : IPCFormScoutData = {
             message: undefined,
-            reversed: this.reversed_,
+            reversed: false,
             color: this.alliance_,
             title: this.current_scout_,
             draftKey: this.createDraftKey(type, this.current_scout_),
@@ -1079,15 +1077,34 @@ export class SCScout extends SCBase {
         }
     }
 
-    private reverseImage() {
-        this.reversed_ = this.reverseImage_!.checked ;
-        this.current_scout_ = undefined ;
-        if (this.info_.uuid_) {
-            this.setViewString() ;
+    private resetCurrentMatchCmd() {
+        if (!this.current_scout_ || !this.current_scout_.startsWith('sm-')) {
+            dialog.showMessageBoxSync(this.win_, {
+                title: 'Reset Current Match',
+                type: 'info',
+                buttons: ['OK'],
+                message: 'No match is currently being scouted.',
+            }) ;
+            return ;
         }
-        else {
-            this.setView('empty') ;
+
+        let ans = dialog.showMessageBoxSync(this.win_, {
+            title: 'Reset Current Match',
+            type: 'question',
+            buttons: ['Reset Match', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1,
+            message: 'Reset the current match view?',
+            detail: 'This only clears the current match being scouted. All other previously scouted match data will be preserved.',
+        }) ;
+
+        if (ans !== 0) {
+            return ;
         }
+
+        this.deleteResults(this.current_scout_) ;
+        this.writeEventFile() ;
+        this.sendToRenderer('reset-current-scout') ;
     }
 
     public createMenu() : Menu | null {
@@ -1151,13 +1168,11 @@ export class SCScout extends SCBase {
             submenu: new Menu()
         }) ;
     
-        this.reverseImage_ = new MenuItem({
-            type: 'checkbox',
-            label: 'Reverse',
-            checked: false,
-            click: () => { this.executeCommand(SCScout.reverseImage)}
-          }) ;
-        optionmenu.submenu!.append(this.reverseImage_) ;
+        optionmenu.submenu!.append(new MenuItem({
+            type: 'normal',
+            label: 'Reset Current Match',
+            click: () => { this.executeCommand(SCScout.resetCurrentMatch)}
+          })) ;
         ret.append(optionmenu);        
         
         let viewmenu: MenuItem = new MenuItem( {
