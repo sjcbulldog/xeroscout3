@@ -466,10 +466,11 @@ export class DataManager extends Manager {
                         let condvals : boolean[] = [] ;
                         if (data.length !== 0) {
 
-                            let sorted = this.sortData(data) ;                        
+                            let sorted = this.sortData(data) ;
+                            let scouted = sorted.filter((record) => this.isScoutedMatchRecord(record, team)) ;
                             if (ds && ds.formula && ds.formula.length > 0) {
                                 try {
-                                    condvals = await this.computeConditionalsPerMatch(sorted, ds.formula!, team) ;
+                                    condvals = await this.computeConditionalsPerMatch(scouted, ds.formula!, team) ;
                                 }
                                 catch(err) {
                                     reject(err) ;
@@ -478,16 +479,19 @@ export class DataManager extends Manager {
 
                             let filtered : any[] ;
                             if (ds) {
-                                filtered = this.filterMatchData(ds, condvals, sorted) ;
+                                filtered = this.filterMatchData(ds, condvals, scouted) ;
                             }
                             else {
-                                filtered = sorted ;
+                                filtered = scouted ;
                             }
 
                             let value : DataValue[] = [] ;
                             for(let row of filtered) {
                                 if (row.has(field)) {
-                                    value.push(row.value(field)) ;
+                                    let rowvalue = row.value(field) ;
+                                    if (rowvalue && !DataValue.isNull(rowvalue)) {
+                                        value.push(rowvalue) ;
+                                    }
                                 }
                             }
                             resolve (
@@ -736,6 +740,13 @@ export class DataManager extends Manager {
         }) ;
         
         return data ;
+    }
+
+    private isScoutedMatchRecord(record: DataRecord, team: number) : boolean {
+        let comp = DataValue.toString(record.value('comp_level')!) ;
+        let set = DataValue.toInteger(record.value('set_number')!) ;
+        let match = DataValue.toInteger(record.value('match_number')!) ;
+        return this.hasMatchScoutingResult(comp, set, match, team) === 'Y' ;
     }
 
     public setTeamFormatFormulas(f: IPCCheckDBViewFormula[]) {
