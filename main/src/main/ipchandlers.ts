@@ -707,17 +707,18 @@ export async function getPicklistConfigs(cmd: string, ...args: any[]) {
 }
 
 export async function savePicklistConfig(cmd: string, ...args: any[]) {
-    if (scappbase && isCentralType()) {
+    if (scappbase && isCentralOrCoachType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
-        let central : SCCentral = scappbase as SCCentral ;
+        let app : SCCoachCentralBaseApp = scappbase as SCCoachCentralBaseApp ;
         if (args.length === 1 && typeof args[0] === 'object') {
-            central.savePicklistConfig(args[0] as IPCPickListConfig[]) ;   
+            app.savePicklistConfig(args[0] as IPCPickListConfig[]) ;   
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
         }
     } 
 }
+
 
 export async function getSingleTeamData(cmd: string, ...args: any[]) {
     if (isCentralOrCoachType()) {

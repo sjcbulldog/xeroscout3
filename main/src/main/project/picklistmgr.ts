@@ -118,9 +118,16 @@ export class PicklistMgr extends Manager {
     }
 
     public findPicklistByName(name: string) : IPCPickListConfig | undefined {
-        for(let picklist of this.info_.picklist_) {
-            if (picklist.name === name)
+        for (let picklist of this.info_.picklist_) {
+            if (picklist.name === name) {
                 return picklist ;
+            }
+        }
+
+        for (let picklist of this.info_.coaches_picklist_) {
+            if (picklist.name === name) {
+                return picklist ;
+            }
         }
 
         return undefined ;

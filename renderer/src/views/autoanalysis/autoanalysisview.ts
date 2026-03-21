@@ -30,8 +30,33 @@ export class AutoAnalysisView extends XeroView {
     private selectedMetrics_: string[] = [] ;
     private selectedAverageFormula_: string = '' ;
     private configs_: IPCAutoAnalysisConfig[] = [] ;
-    private selectedConfigName_: string = '' ;
+    private selectedConfigKey_: string = '' ;
     private promptResolvers_ = new Map<string, (value: string | undefined) => void>() ;
+
+    private getConfigKey(config: IPCAutoAnalysisConfig) : string {
+        return `${config.owner}::${config.name}` ;
+    }
+
+    private getConfigLabel(config: IPCAutoAnalysisConfig) : string {
+        if (config.owner === this.app.appType) {
+            return config.name ;
+        }
+        const ownerLabel = config.owner === 'central' ? 'Central' : 'Coach' ;
+        return `${config.name} (${ownerLabel})` ;
+    }
+
+    private getSelectedConfig() : IPCAutoAnalysisConfig | undefined {
+        return this.configs_.find((cfg) => this.getConfigKey(cfg) === this.selectedConfigKey_) ;
+    }
+
+    private getConfigsForAppType() : IPCAutoAnalysisConfig[] {
+        return this.configs_.filter((cfg) => cfg.owner === this.app.appType) ;
+    }
+
+    private canModifySelectedConfig() : boolean {
+        const cfg = this.getSelectedConfig() ;
+        return !!cfg && cfg.owner === this.app.appType ;
+    }
 
     public constructor(app: XeroApp) {
         super(app, 'xero-auto-analysis-view') ;
@@ -66,8 +91,8 @@ export class AutoAnalysisView extends XeroView {
 
     private receivedConfigs(configs: IPCAutoAnalysisConfig[]) {
         this.configs_ = Array.isArray(configs) ? [...configs].sort((a, b) => a.name.localeCompare(b.name)) : [] ;
-        if (this.selectedConfigName_.length > 0 && !this.configs_.some((cfg) => cfg.name === this.selectedConfigName_)) {
-            this.selectedConfigName_ = '' ;
+        if (this.selectedConfigKey_.length > 0 && !this.configs_.some((cfg) => this.getConfigKey(cfg) === this.selectedConfigKey_)) {
+            this.selectedConfigKey_ = '' ;
         }
         this.render() ;
     }
@@ -311,19 +336,19 @@ export class AutoAnalysisView extends XeroView {
         const placeholder = document.createElement('option') ;
         placeholder.value = '' ;
         placeholder.textContent = this.configs_.length === 0 ? 'No saved configs' : 'Select saved config' ;
-        placeholder.selected = this.selectedConfigName_.length === 0 ;
+        placeholder.selected = this.selectedConfigKey_.length === 0 ;
         select.appendChild(placeholder) ;
 
         for (const cfg of this.configs_) {
             const option = document.createElement('option') ;
-            option.value = cfg.name ;
-            option.textContent = cfg.name ;
-            option.selected = cfg.name === this.selectedConfigName_ ;
+            option.value = this.getConfigKey(cfg) ;
+            option.textContent = this.getConfigLabel(cfg) ;
+            option.selected = this.getConfigKey(cfg) === this.selectedConfigKey_ ;
             select.appendChild(option) ;
         }
 
         select.addEventListener('change', () => {
-            this.selectedConfigName_ = select.value ;
+            this.selectedConfigKey_ = select.value ;
             this.render() ;
         }) ;
         label.appendChild(select) ;
@@ -331,14 +356,14 @@ export class AutoAnalysisView extends XeroView {
 
         panel.appendChild(this.createActionButton('Apply', () => {
             this.applySelectedConfig() ;
-        }, this.selectedConfigName_.length === 0)) ;
+        }, this.selectedConfigKey_.length === 0)) ;
         panel.appendChild(this.createActionButton('Save Current', () => {
             this.saveCurrentConfig().catch(() => {
             }) ;
         })) ;
         panel.appendChild(this.createActionButton('Delete', () => {
             this.deleteSelectedConfig() ;
-        }, this.selectedConfigName_.length === 0)) ;
+        }, !this.canModifySelectedConfig())) ;
 
         return panel ;
     }
@@ -361,7 +386,7 @@ export class AutoAnalysisView extends XeroView {
     }
 
     private applySelectedConfig() {
-        const cfg = this.configs_.find((one) => one.name === this.selectedConfigName_) ;
+        const cfg = this.getSelectedConfig() ;
         if (!cfg) {
             return ;
         }
@@ -372,7 +397,8 @@ export class AutoAnalysisView extends XeroView {
     }
 
     private async saveCurrentConfig() : Promise<void> {
-        const defaultName = this.selectedConfigName_.length > 0 ? this.selectedConfigName_ : '' ;
+        const selectedConfig = this.getSelectedConfig() ;
+        const defaultName = selectedConfig ? selectedConfig.name : '' ;
         const name = (await this.promptForString('Save Auto Analysis Config', 'Enter a name for this Auto Analysis config.', defaultName, 'Config name'))?.trim() ;
         if (!name || name.length === 0) {
             return ;
@@ -385,22 +411,23 @@ export class AutoAnalysisView extends XeroView {
             owner: this.app.appType,
         } ;
 
-        const others = this.configs_.filter((one) => one.name !== name) ;
-        this.configs_ = [...others, config].sort((a, b) => a.name.localeCompare(b.name)) ;
-        this.selectedConfigName_ = name ;
-        this.request('update-auto-analysis-configs', this.configs_) ;
+        const ownedConfigs = this.configs_.filter((one) => one.owner === this.app.appType && one.name !== name) ;
+        const otherConfigs = this.configs_.filter((one) => one.owner !== this.app.appType) ;
+        this.configs_ = [...otherConfigs, ...ownedConfigs, config].sort((a, b) => a.name.localeCompare(b.name)) ;
+        this.selectedConfigKey_ = this.getConfigKey(config) ;
+        this.request('update-auto-analysis-configs', this.getConfigsForAppType()) ;
         this.request('get-auto-analysis-configs') ;
         this.render() ;
     }
 
     private deleteSelectedConfig() {
-        if (this.selectedConfigName_.length === 0) {
+        const selectedConfig = this.getSelectedConfig() ;
+        if (!selectedConfig || selectedConfig.owner !== this.app.appType) {
             return ;
         }
-
-        this.configs_ = this.configs_.filter((one) => one.name !== this.selectedConfigName_) ;
-        this.selectedConfigName_ = '' ;
-        this.request('update-auto-analysis-configs', this.configs_) ;
+        this.configs_ = this.configs_.filter((one) => this.getConfigKey(one) !== this.selectedConfigKey_) ;
+        this.selectedConfigKey_ = '' ;
+        this.request('update-auto-analysis-configs', this.getConfigsForAppType()) ;
         this.request('get-auto-analysis-configs') ;
         this.render() ;
     }

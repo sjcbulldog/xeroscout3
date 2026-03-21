@@ -112,9 +112,9 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
     }
 
     public getAutoAnalysisConfigs() {
-        const configs = (this.project_?.graph_mgr_?.autoAnalysisConfigs || [])
-            .filter((cfg) => cfg.owner === this.applicationType) ;
-        this.sendToRenderer('send-auto-analysis-configs', configs) ;
+        const configs = this.project_?.graph_mgr_?.autoAnalysisConfigs || [] ;
+        const visible = configs.filter((cfg) => cfg.owner === this.applicationType || (this.applicationType === 'coach' && cfg.owner === 'central')) ;
+        this.sendToRenderer('send-auto-analysis-configs', visible) ;
     }
 
     public updateAutoAnalysisConfigs(configs: IPCAutoAnalysisConfig[]) {

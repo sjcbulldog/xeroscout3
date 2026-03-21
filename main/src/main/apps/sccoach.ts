@@ -7,12 +7,13 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
-import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem, IPCPickListConfig, IPCSyncedImageData } from "../../shared/ipc";
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
     private static readonly syncIPAddrSetting: string = 'coach-sync-ipaddr' ;
     private static readonly syncPortSetting: string = 'coach-sync-port' ;
+    private static readonly picklistCacheSetting: string = 'coach-picklist-config-cache' ;
     private static readonly defaultSyncIPAddr = '192.168.1.1' ;
     private static readonly defaultSyncPort = 45455 ;
 
@@ -85,8 +86,9 @@ export class SCCoach extends SCCoachCentralBaseApp {
         let ret = new Promise<void>( (resolve, reject) => {
             let d = new Date() ;
             Project.openEvent(this.logger_, evfile, d.getFullYear(), this.applicationType)
-                .then( (proj: Project) => {
+            .then( (proj: Project) => {
                     this.project = proj ;
+                    this.applyCachedPicklistConfigs() ;
                     resolve() ;
                 } )
                 .catch( (err: Error) => {
@@ -705,6 +707,16 @@ export class SCCoach extends SCCoachCentralBaseApp {
         fs.writeFileSync(path.join(this.sync_project_file_, 'event.json'), str) ;
     }
 
+    public override savePicklistConfig(configs: IPCPickListConfig[]) {
+        if (this.project) {
+            super.savePicklistConfig(configs) ;
+            this.clearCoachPicklistCache() ;
+        }
+        else {
+            this.cacheCoachPicklistConfigs(configs) ;
+        }
+    }
+
     private receiveTeamDB(p: PacketObj) : void {
         this.logger_.debug('SyncTablet: received ProvideTeamDB packet') ;        
         let fname = path.join(this.sync_project_file_, 'team.db') ;
@@ -720,5 +732,68 @@ export class SCCoach extends SCCoachCentralBaseApp {
     private getProjectDir(info:any) : string {
         let dir : string = path.join(this.appdir_, 'projects', info.uuid_) ;
         return dir ;
+    }
+
+    private cacheCoachPicklistConfigs(configs: IPCPickListConfig[]) : void {
+        const coachConfigs = configs.filter((cfg) => cfg.owner === 'coach') ;
+        if (coachConfigs.length === 0) {
+            return ;
+        }
+
+        const cache = this.readCoachPicklistCache() ;
+        for (const cfg of coachConfigs) {
+            cache[cfg.name] = JSON.parse(JSON.stringify(cfg)) as IPCPickListConfig ;
+        }
+        this.writeCoachPicklistCache(cache) ;
+    }
+
+    private readCoachPicklistCache() : Record<string, IPCPickListConfig> {
+        const stored = this.getSetting(SCCoach.picklistCacheSetting) ;
+        if (stored && typeof stored === 'object') {
+            try {
+                return JSON.parse(JSON.stringify(stored)) as Record<string, IPCPickListConfig> ;
+            }
+            catch {
+            }
+        }
+        return {} ;
+    }
+
+    private writeCoachPicklistCache(cache: Record<string, IPCPickListConfig>) : void {
+        this.setSetting(SCCoach.picklistCacheSetting, cache) ;
+    }
+
+    private clearCoachPicklistCache() : void {
+        this.writeCoachPicklistCache({}) ;
+    }
+
+    private applyCachedPicklistConfigs() : void {
+        if (!this.project || !this.project.picklist_mgr_) {
+            return ;
+        }
+
+        const cache = this.readCoachPicklistCache() ;
+        const names = Object.keys(cache) ;
+        if (names.length === 0) {
+            return ;
+        }
+
+        const coachCacheConfigs = names
+            .map((name) => cache[name])
+            .filter((cfg): cfg is IPCPickListConfig => !!cfg && cfg.owner === 'coach') ;
+
+        if (coachCacheConfigs.length === 0) {
+            this.clearCoachPicklistCache() ;
+            return ;
+        }
+
+        const centralConfigs = this.project.picklist_mgr_.centralPicklists || [] ;
+        const existingCoachConfigs = this.project.picklist_mgr_.coachesPicklists || [] ;
+        const remainingCoachConfigs = existingCoachConfigs.filter((cfg) => !cache[cfg.name]) ;
+        const finalCoachConfigs = [...remainingCoachConfigs, ...coachCacheConfigs] ;
+        const fullConfigs = [...centralConfigs, ...finalCoachConfigs] ;
+
+        super.savePicklistConfig(fullConfigs) ;
+        this.clearCoachPicklistCache() ;
     }
 }
