@@ -1,13 +1,17 @@
 import { app } from 'electron' ;
 import * as path from 'path' ;
 import * as fs from 'fs' ;
-import { IPCImageExtension } from '../shared/ipc' ;
+import { IPCImageExtension, IPCSyncedImageData } from '../shared/ipc' ;
 
 export interface ImageInfo {
     path: string ;
     extension: IPCImageExtension ;
     mimeType: string ;
 }
+
+export type SyncedImageIngestResult =
+    { ok: true } |
+    { ok: false, reason: string } ;
 
 export class ImageManager {
     private imagedir_? : string ;
@@ -90,6 +94,23 @@ export class ImageManager {
         }
     }
 
+    public addSyncedImage(name: string, payload: unknown) : SyncedImageIngestResult {
+        if (!this.imagedir_) {
+            return {
+                ok: false,
+                reason: 'image cache is unavailable',
+            } ;
+        }
+
+        const resolved = this.resolveSyncedPayload(payload) ;
+        if (!resolved.ok) {
+            return resolved ;
+        }
+
+        this.addImageWithData(name, resolved.data, resolved.extension) ;
+        return { ok: true } ;
+    }
+
     private findUserImageDir(appname: string) : string | undefined {
         try {
             return path.join(app.getPath('userData'), 'images', appname) ;
@@ -165,5 +186,58 @@ export class ImageManager {
             return 'image/webp' ;
         }
         return 'image/png' ;
+    }
+
+    private resolveSyncedPayload(payload: unknown) : ({ ok: true, data: string, extension: IPCImageExtension } | { ok: false, reason: string }) {
+        if (typeof payload === 'string') {
+            return {
+                ok: true,
+                data: payload,
+                extension: 'png',
+            } ;
+        }
+
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            return {
+                ok: false,
+                reason: `expected string or synced image object, received ${this.describePayload(payload)}`,
+            } ;
+        }
+
+        const data = (payload as Partial<IPCSyncedImageData>).data ;
+        if (typeof data !== 'string') {
+            return {
+                ok: false,
+                reason: 'synced image object is missing string data',
+            } ;
+        }
+
+        const extension = (payload as Partial<IPCSyncedImageData>).extension ;
+        if (!this.isSupportedExtension(extension)) {
+            return {
+                ok: false,
+                reason: `synced image object has unsupported extension '${String(extension)}'`,
+            } ;
+        }
+
+        return {
+            ok: true,
+            data: data,
+            extension: extension,
+        } ;
+    }
+
+    private isSupportedExtension(extension: unknown) : extension is IPCImageExtension {
+        return extension === 'png' || extension === 'webp' ;
+    }
+
+    private describePayload(payload: unknown) : string {
+        if (payload === null) {
+            return 'null' ;
+        }
+        if (Array.isArray(payload)) {
+            return 'array' ;
+        }
+        return typeof payload ;
     }
 }

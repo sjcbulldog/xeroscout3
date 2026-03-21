@@ -11,6 +11,7 @@ import { DataValue } from "../../shared/datavalue.js";
 import { XeroMatchStatus } from "../matchstatus.js";
 import { Expr } from "../../shared/expr.js";
 import { DBDebugDialog } from "./dbdebugdialog.js";
+import { ImagePreviewDialog } from "./imagepreviewdialog.js";
 
 
 interface MatchRowCollection {
@@ -26,6 +27,7 @@ export class DatabaseView extends XeroView {
     private data_ : any[] = [] ;
     private col_cfgs_? : IPCProjColumnsConfig ;
     private col_descs_? : IPCColumnDesc[] ;
+    private col_descs_by_name_ : Map<string, IPCColumnDesc> = new Map<string, IPCColumnDesc>() ;
     private keycol_? : string[] ;
     private table_? : TabulatorFull ;
     private table_div_? : HTMLDivElement ;
@@ -38,7 +40,7 @@ export class DatabaseView extends XeroView {
     private reverting_ : boolean ;
     private format_formulas_ : IPCCheckDBViewFormula[] = [] ;
     private formulas_ : IPCFormula[] = [] ;
-    private formats_ : Map<number, Map<string, IPCCheckDBViewFormula>> = new Map<number, Map<string, IPCCheckDBViewFormula>>() ;
+    private formats_ : WeakMap<RowComponent, Map<string, IPCCheckDBViewFormula>> = new WeakMap<RowComponent, Map<string, IPCCheckDBViewFormula>>() ;
     private messages_ : string[] = [] ;
 
     protected constructor(app: XeroApp, clname: string, type: string) {
@@ -169,12 +171,7 @@ export class DatabaseView extends XeroView {
     }
 
     private getFormat(cell: CellComponent) : IPCCheckDBViewFormula | undefined {
-        let rows = this.table_!.getRows() ;
-        let pos = rows.indexOf(cell.getRow()) ;
-        if (pos < 0) {
-            return ;
-        }
-        let rowformats = this.formats_.get(pos) ;
+        let rowformats = this.formats_.get(cell.getRow()) ;
         if (rowformats) {
             let colname = cell.getField() ;
             return rowformats.get(colname) ;
@@ -182,17 +179,34 @@ export class DatabaseView extends XeroView {
         return undefined ;
     }    
 
-    private cellFormatter(cell: CellComponent, formatterParams: any) : string {
+    private cellFormatter(cell: CellComponent, formatterParams: any) : string | HTMLElement {
         let value = cell.getValue() ;
         let fmt = this.getFormat(cell) ;
+        let elem = cell.getElement() ;
         if (fmt) {
-            let elem = cell.getElement() ;
             elem.style.backgroundColor = fmt.background ;
             elem.style.color = fmt.color ;
             elem.style.fontWeight = fmt.fontWeight ;
             elem.style.fontStyle = fmt.fontStyle ;
             elem.style.fontFamily = fmt.fontFamily ;
         }
+        else {
+            elem.style.backgroundColor = '' ;
+            elem.style.color = '' ;
+            elem.style.fontWeight = '' ;
+            elem.style.fontStyle = '' ;
+            elem.style.fontFamily = '' ;
+        }
+
+        if (this.shouldRenderImagePreview(cell, value)) {
+            let button = document.createElement('button') ;
+            button.innerText = 'View Photo' ;
+            button.style.cursor = 'pointer' ;
+            button.style.padding = '2px 8px' ;
+            button.style.fontSize = '12px' ;
+            return button ;
+        }
+
         return value ;
     }
 
@@ -231,8 +245,12 @@ export class DatabaseView extends XeroView {
 
         this.col_cfgs_ = data.column_configurations ;
         this.col_descs_ = data.column_definitions ;
+        this.col_descs_by_name_ = new Map(this.col_descs_.map((desc) => [desc.name, desc])) ;
         this.keycol_ = data.keycols ;
         this.data_ = this.convertData(data.data) ;
+        if (this.revealTeamImageColumns()) {
+            this.sendColConfigs() ;
+        }
         let coldefs = this.createColumnDescs() ;
         this.table_ = new TabulatorFull(this.table_div_!, {
             data: this.data_,
@@ -245,9 +263,45 @@ export class DatabaseView extends XeroView {
 
         this.table_.on('tableBuilt', this.tableReady.bind(this)) ;
         this.table_.on('cellEdited', this.cellEdited.bind(this)) ;
+        this.table_.on('cellClick', this.cellClicked.bind(this)) ;
         this.table_.on('columnMoved', this.columnMoved.bind(this)) ;
         this.table_.on('columnResized', this.columnResized.bind(this)) ;
         this.table_.on('cellContext', this.contextMenu.bind(this)) ; 
+    }
+
+    private revealTeamImageColumns() : boolean {
+        if (this.type_ !== 'team' || !this.col_cfgs_) {
+            return false ;
+        }
+
+        let changed = false ;
+        for (let cfg of this.col_cfgs_.columns) {
+            if (!cfg.hidden) {
+                continue ;
+            }
+
+            let hasImageData = this.data_.some((row) => {
+                let value = row[cfg.name] ;
+                return typeof value === 'string' && this.isImageDataUrl(value) ;
+            }) ;
+
+            if (hasImageData) {
+                cfg.hidden = false ;
+                changed = true ;
+            }
+        }
+
+        return changed ;
+    }
+
+    private cellClicked(e: UIEvent, cell: CellComponent) {
+        if (!this.shouldRenderImagePreview(cell, cell.getValue())) {
+            return ;
+        }
+
+        e.preventDefault() ;
+        e.stopPropagation() ;
+        this.showImagePreview(cell) ;
     }
 
     private contextMenuClosed() {
@@ -337,14 +391,7 @@ export class DatabaseView extends XeroView {
     }
 
     private getColumnDesc(field: string) : IPCColumnDesc | undefined {
-        if (this.col_descs_) {
-            for(let desc of this.col_descs_) {
-                if (desc.name === field) {
-                    return desc ;
-                }
-            }
-        }
-        return undefined ;
+        return this.col_descs_by_name_.get(field) ;
     }
 
     private cellValueToIPCValue(cell: CellComponent, value: any) : IPCTypedDataValue | undefined{
@@ -411,8 +458,10 @@ export class DatabaseView extends XeroView {
     private tableReady() {
         this.hideHiddenColumns() ;
         this.freezeColumns() ;
-        this.updateFormatData() ;
-        this.updateCellFormats() ;
+        if (this.format_formulas_.length > 0) {
+            this.updateFormatData() ;
+            this.updateCellFormats() ;
+        }
     }
 
     private updateCellFormats() {
@@ -506,6 +555,37 @@ export class DatabaseView extends XeroView {
         this.dialog_.showRelative(this.table_div_!, 100, 100) ;
     }
 
+    private shouldRenderImagePreview(cell: CellComponent, value: any) : boolean {
+        return this.type_ === 'team' &&
+            typeof value === 'string' &&
+            this.isImageDataUrl(value) ;
+    }
+
+    private isImageDataUrl(value: string) : boolean {
+        return /^data:image\/[a-z0-9.+-]+;base64,/i.test(value) ;
+    }
+
+    private showImagePreview(cell: CellComponent) {
+        if (this.dialog_ || !this.table_div_) {
+            return ;
+        }
+
+        const value = cell.getValue() ;
+        if (typeof value !== 'string') {
+            return ;
+        }
+
+        const rowData = cell.getRow().getData() ;
+        const teamNumber = rowData?.team_number ? `Team ${rowData.team_number}` : 'Team Photo' ;
+        const field = cell.getField() ;
+
+        this.dialog_ = new ImagePreviewDialog(`${teamNumber} - ${field}`, value) ;
+        this.dialog_.on('closed', () => {
+            this.dialog_ = undefined ;
+        }) ;
+        this.dialog_.showCentered(this.table_div_) ;
+    }
+
     private findMatchRows() : Map<string, MatchRowCollection> {
         let ret = new Map<string, MatchRowCollection>() ;
 
@@ -538,15 +618,10 @@ export class DatabaseView extends XeroView {
     }
 
     private setFormat(row: RowComponent, column: string, formula: IPCCheckDBViewFormula) {
-        let rows = this.table_!.getRows() ;
-        let pos = rows.indexOf(row) ;
-        if (pos < 0) {
-            return ;
-        }
-        let rowformats = this.formats_.get(pos) ;
+        let rowformats = this.formats_.get(row) ;
         if (!rowformats) {
             rowformats = new Map<string, IPCCheckDBViewFormula>() ;
-            this.formats_.set(pos, rowformats) ;
+            this.formats_.set(row, rowformats) ;
         }
         rowformats.set(column, formula) ;
     }
@@ -734,7 +809,7 @@ export class DatabaseView extends XeroView {
 
     private updateFormatData() {
         this.messages_ = [] ;
-        this.formats_.clear() ;
+        this.formats_ = new WeakMap<RowComponent, Map<string, IPCCheckDBViewFormula>>() ;
 
         for(let formula of this.format_formulas_) {
             if (formula.type === 'alliance') {

@@ -8,7 +8,7 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr";
 import { kMatchAlliances } from '../../shared/playoffs';
-import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCSyncedImageData, IPCTabletDefn } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -799,14 +799,26 @@ export class SCScout extends SCBase {
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideImages) {
-            let obj = JSON.parse(p.payloadAsString()) ;
-            for(let imname of Object.keys(obj)) {
-                let imdata = obj[imname] as string | IPCSyncedImageData ;
-                if (typeof imdata === 'string') {
-                    this.image_mgr_.addImageWithData(imname, imdata, 'png') ;
-                }
-                else {
-                    this.image_mgr_.addImageWithData(imname, imdata.data, imdata.extension) ;
+            let obj: unknown ;
+            try {
+                obj = JSON.parse(p.payloadAsString()) ;
+            }
+            catch (err) {
+                this.logger_.warn('SyncTablet: received invalid ProvideImages payload JSON') ;
+                ret = this.getMissingData() ;
+                return ;
+            }
+
+            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+                this.logger_.warn('SyncTablet: received invalid ProvideImages payload shape') ;
+                ret = this.getMissingData() ;
+                return ;
+            }
+
+            for (let imname of Object.keys(obj)) {
+                const result = this.image_mgr_.addSyncedImage(imname, (obj as Record<string, unknown>)[imname]) ;
+                if (!result.ok) {
+                    this.logger_.warn(`SyncTablet: skipping synced image '${imname}' - ${result.reason}`) ;
                 }
             }
             ret = this.getMissingData() ;  
