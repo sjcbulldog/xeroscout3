@@ -7,7 +7,7 @@ import { PacketObj } from "../sync/packetobj";
 import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
-import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem, IPCSyncedImageData } from "../../shared/ipc";
+import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem } from "../../shared/ipc";
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
@@ -619,21 +619,24 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
             case PacketType.ProvideImages:
                 try {
-                    let obj = JSON.parse(p.payloadAsString()) as { [name: string]: string | IPCSyncedImageData } ;
+                    let obj = JSON.parse(p.payloadAsString()) as unknown ;
+                    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+                        this.logger_.warn('SyncTablet: received invalid ProvideImages payload shape') ;
+                        break ;
+                    }
+
                     for (let imname of Object.keys(obj)) {
-                        let imdata = obj[imname] ;
                         let norm = this.normalizeImageName(imname) ;
                         if (norm.length > 0) {
-                            if (typeof imdata === 'string') {
-                                this.image_mgr_.addImageWithData(norm, imdata, 'png') ;
-                            }
-                            else {
-                                this.image_mgr_.addImageWithData(norm, imdata.data, imdata.extension) ;
+                            const result = this.image_mgr_.addSyncedImage(norm, (obj as Record<string, unknown>)[imname]) ;
+                            if (!result.ok) {
+                                this.logger_.warn(`SyncTablet: skipping synced image '${norm}' - ${result.reason}`) ;
                             }
                         }
                     }
                 }
                 catch {
+                    this.logger_.warn('SyncTablet: received invalid ProvideImages payload JSON') ;
                 }
                 this.awaiting_images_ = false ;
                 this.completeSync() ;
