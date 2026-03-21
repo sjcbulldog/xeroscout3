@@ -1799,8 +1799,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleProvideCoachPickLists(p: PacketObj): PacketObj {
-		let obj = JSON.parse(p.payloadAsString()) ;
-		this.project!.picklist_mgr_!.coachesPicklists = obj ;
+		let obj = JSON.parse(p.payloadAsString()) as IPCPickListConfig[] ;
+		const coachOwned = obj.filter((cfg) => cfg.owner === 'coach') ;
+		this.project!.picklist_mgr_!.coachesPicklists = coachOwned ;
 		return new PacketObj(PacketType.ReceivedCoachPickLists, Buffer.from("OK", "utf-8"));
 	}
 
