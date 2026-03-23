@@ -66,6 +66,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly viewSingleTeamSummary: string = 'view-single-team-summary' ;
 	private static readonly viewAutoAnalysis: string = 'view-auto-analysis' ;
 	private static readonly viewPlayoffs: string = 'view-playoffs' ;
+	private static readonly viewScouterAccuracy: string = 'view-scouter-accuracy' ;
 	private static readonly clearExternalDownload: string = 'clear-external-download' ;
 	private static readonly viewXeroMatchSim: string = 'view-match-sim';
 
@@ -1166,6 +1167,14 @@ export class SCCentral extends SCCoachCentralBaseApp {
 					width: dims,
 					height: dims
 				});
+				treedata.push({
+					type: 'icon',
+					command: SCCentral.viewScouterAccuracy,
+					title: "Scouter Accuracy",
+					icon: this.getIconData('bar-graph.png'),
+					width: dims,
+					height: dims
+				});
 				treedata.push({  
 					type: "icon",  
 					command: SCCentral.viewXeroMatchSim,  
@@ -1271,6 +1280,8 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			this.setView("singleteam") ;
 		} else if (cmd === SCCentral.viewAutoAnalysis) {
 			this.setView("auto-analysis") ;
+		} else if (cmd === SCCentral.viewScouterAccuracy) {
+			this.setView("scouter-accuracy") ;
 		}
 		else if (cmd === SCCentral.clearExternalDownload) {
 			this.forceClearExternalDownload();
