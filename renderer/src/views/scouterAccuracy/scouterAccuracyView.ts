@@ -17,16 +17,40 @@ interface ScouterConfig {
     varianceFormula?: string;
 }
 
+type AllianceColor = "red" | "blue";
+
+interface RobotDetail {
+    label: string;
+    scouter?: string;
+    scoreValue?: number;
+    varianceValue?: number;
+}
+
+interface MatchAllianceDetails {
+    scoreAvg: number;
+    pointsAvg: number;
+    scouters: string[];
+    robotDetails?: RobotDetail[];
+}
+
 interface GraphPoint {
     label: string;
     order: number;
+    matchKey?: string;
     red?: number;
     blue?: number;
+    details?: Partial<Record<AllianceColor, MatchAllianceDetails>>;
 }
 
 interface TableEntry {
     matchLabel: string;
     value: number;
+    alliance?: AllianceColor;
+    scoreValue?: number;
+    pointsValue?: number;
+    scouters?: string[];
+    matchKey?: string;
+    robotDetails?: RobotDetail[];
 }
 
 interface ContributionEntry {
@@ -66,6 +90,8 @@ export class ScouterAccuracyView extends XeroView {
     private teamRowByKey_: Map<string, Record<string, IPCTypedDataValue>> = new Map();
     private teamRowByNumber_: Map<number, Record<string, IPCTypedDataValue>> = new Map();
     private teamDataLoaded_ = false;
+    private matchContextMenu_: HTMLDivElement | undefined;
+    private matchContextMenuCloseHandler_: (() => void) | undefined;
 
     public constructor(app: XeroApp) {
         super(app, "xero-scouter-accuracy-view");
@@ -89,6 +115,7 @@ export class ScouterAccuracyView extends XeroView {
     }
 
     public close() {
+        this.closeMatchContextMenu();
         if (this.resizeHandler_) {
             window.removeEventListener("resize", this.resizeHandler_);
             this.resizeHandler_ = undefined;
@@ -186,6 +213,7 @@ export class ScouterAccuracyView extends XeroView {
     }
 
     private render() {
+        this.closeMatchContextMenu();
         this.reset();
 
         if (!this.formulasLoaded_) {
@@ -241,7 +269,7 @@ export class ScouterAccuracyView extends XeroView {
         layout.style.boxSizing = "border-box";
 
         layout.appendChild(this.createSidebar(config));
-        layout.appendChild(this.createContent(analysis));
+        layout.appendChild(this.createContent(analysis, config));
 
         this.elem.appendChild(layout);
     }
@@ -419,7 +447,7 @@ export class ScouterAccuracyView extends XeroView {
         return sidebar;
     }
 
-    private createContent(analysis: ScouterAnalysis): HTMLElement {
+    private createContent(analysis: ScouterAnalysis, config: ScouterConfig): HTMLElement {
         const container = document.createElement("div");
         container.style.flexGrow = "1";
         container.style.display = "flex";
@@ -440,7 +468,7 @@ export class ScouterAccuracyView extends XeroView {
         tablesArea.style.flexGrow = "1";
         tablesArea.style.overflowY = "auto";
         tablesArea.style.paddingRight = "4px";
-        tablesArea.appendChild(this.createTables(analysis));
+        tablesArea.appendChild(this.createTables(analysis, config));
         container.appendChild(tablesArea);
 
         return container;
@@ -575,7 +603,7 @@ export class ScouterAccuracyView extends XeroView {
         return container;
     }
 
-    private createTables(analysis: ScouterAnalysis): HTMLElement {
+    private createTables(analysis: ScouterAnalysis, config: ScouterConfig): HTMLElement {
         const wrapper = document.createElement("div");
         wrapper.style.display = "grid";
         const tableMinWidth = Math.round(260 * 0.7);
@@ -585,9 +613,9 @@ export class ScouterAccuracyView extends XeroView {
         wrapper.style.boxSizing = "border-box";
         wrapper.style.paddingTop = "4px";
 
-        wrapper.appendChild(this.renderTable("Red Alliance", analysis.redRows));
+        wrapper.appendChild(this.renderTable("Red Alliance", analysis.redRows, false, config));
         wrapper.appendChild(this.renderTable("Contributed Variance", analysis.contributions, true));
-        wrapper.appendChild(this.renderTable("Blue Alliance", analysis.blueRows));
+        wrapper.appendChild(this.renderTable("Blue Alliance", analysis.blueRows, false, config));
 
         return wrapper;
     }
@@ -595,7 +623,8 @@ export class ScouterAccuracyView extends XeroView {
     private renderTable(
         title: string,
         rows: TableEntry[] | ContributionEntry[],
-        contributions = false
+        contributions = false,
+        config?: ScouterConfig
     ): HTMLElement {
         const container = document.createElement("div");
         container.style.backgroundColor = "#ffffff";
@@ -675,6 +704,14 @@ export class ScouterAccuracyView extends XeroView {
                 const tr = document.createElement("tr");
                 tr.style.borderTop = "1px solid #f1f5f9";
 
+                if (!contributions && config) {
+                    tr.style.cursor = "context-menu";
+                    tr.addEventListener("contextmenu", (event) => {
+                        event.preventDefault();
+                        this.showMatchContextMenu(event, row as TableEntry, config);
+                    });
+                }
+
                 const tdLabel = document.createElement("td");
                 tdLabel.textContent = contributions
                     ? (row as ContributionEntry).name
@@ -713,6 +750,162 @@ export class ScouterAccuracyView extends XeroView {
         return container;
     }
 
+    private showMatchContextMenu(event: MouseEvent, entry: TableEntry, config: ScouterConfig) {
+        if (!entry.alliance) {
+            return;
+        }
+        this.closeMatchContextMenu();
+        const popup = document.createElement("div");
+        popup.className = "scouter-accuracy-context-menu";
+        popup.style.position = "fixed";
+        popup.style.backgroundColor = "#ffffff";
+        popup.style.border = "1px solid #e2e8f0";
+        popup.style.borderRadius = "12px";
+        popup.style.boxShadow = "0 16px 48px rgba(15,23,42,0.2)";
+        popup.style.padding = "14px 18px";
+        popup.style.zIndex = "1000";
+        popup.style.fontSize = "12px";
+        popup.style.color = "#0f172a";
+        popup.style.lineHeight = "1.4";
+        popup.style.maxWidth = "320px";
+        popup.style.pointerEvents = "auto";
+        popup.style.left = "0px";
+        popup.style.top = "0px";
+
+        const allianceLabel = entry.alliance === "red" ? "Red Alliance" : "Blue Alliance";
+        const heading = document.createElement("div");
+        heading.textContent = `${entry.matchLabel} • ${allianceLabel}`;
+        heading.style.fontWeight = "600";
+        heading.style.marginBottom = "10px";
+        popup.appendChild(heading);
+
+        const createRow = (labelText: string, valueText: string) => {
+            const row = document.createElement("div");
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.gap = "12px";
+            row.style.marginBottom = "4px";
+
+            const label = document.createElement("span");
+            label.textContent = labelText;
+            label.style.color = "#475569";
+            row.appendChild(label);
+
+            const value = document.createElement("span");
+            value.textContent = valueText;
+            value.style.fontWeight = "600";
+            row.appendChild(value);
+
+            popup.appendChild(row);
+        };
+
+        const scoreLabel = config.scoreFormulaName ?? "Score formula";
+        const pointsLabel = config.pointsFormulaName ?? "Points formula";
+        const scoreValue =
+            entry.scoreValue === undefined ? "n/a" : this.formatValue(entry.scoreValue);
+        const pointsValue =
+            entry.pointsValue === undefined ? "n/a" : this.formatValue(entry.pointsValue);
+        const differenceValue = this.formatValue(entry.value);
+        createRow(scoreLabel, scoreValue);
+        createRow(pointsLabel, pointsValue);
+        createRow("Difference", differenceValue);
+        createRow("Scouter column", config.scouterColumn);
+
+        const scouterRow = document.createElement("div");
+        scouterRow.style.fontSize = "12px";
+        scouterRow.style.marginTop = "6px";
+        scouterRow.style.color = "#475569";
+        scouterRow.textContent =
+            entry.scouters && entry.scouters.length
+                ? `Scouters: ${entry.scouters.join(", ")}`
+                : "Scouters: None recorded";
+        popup.appendChild(scouterRow);
+
+        const robotDetails = entry.robotDetails ?? [];
+        if (robotDetails.length) {
+            const robotHeader = document.createElement("div");
+            robotHeader.textContent = "Robot variance details";
+            robotHeader.style.fontSize = "12px";
+            robotHeader.style.fontWeight = "600";
+            robotHeader.style.marginTop = "12px";
+            robotHeader.style.marginBottom = "4px";
+            popup.appendChild(robotHeader);
+
+            robotDetails.forEach((detail, index) => {
+                const detailRow = document.createElement("div");
+                detailRow.style.display = "flex";
+                detailRow.style.flexDirection = "column";
+                detailRow.style.gap = "4px";
+                detailRow.style.marginBottom = index === robotDetails.length - 1 ? "0" : "8px";
+                detailRow.style.paddingBottom = "6px";
+                if (index < robotDetails.length - 1) {
+                    detailRow.style.borderBottom = "1px dashed #e2e8f0";
+                }
+
+                const label = document.createElement("div");
+                label.textContent = detail.label;
+                label.style.fontWeight = "600";
+                detailRow.appendChild(label);
+
+                const infoRow = document.createElement("div");
+                infoRow.style.display = "flex";
+                infoRow.style.flexWrap = "wrap";
+                infoRow.style.gap = "8px";
+                infoRow.style.fontSize = "11px";
+                infoRow.style.color = "#475569";
+
+                const scouterSpan = document.createElement("span");
+                scouterSpan.textContent = `Scouter: ${detail.scouter ?? "n/a"}`;
+                infoRow.appendChild(scouterSpan);
+
+                const scoreSpan = document.createElement("span");
+                const scoreText =
+                    detail.scoreValue === undefined ? "n/a" : this.formatValue(detail.scoreValue);
+                scoreSpan.textContent = `Points Scored: ${scoreText}`;
+                infoRow.appendChild(scoreSpan);
+
+                const varianceSpan = document.createElement("span");
+                const varianceText =
+                    detail.varianceValue === undefined ? "n/a" : this.formatValue(detail.varianceValue);
+                varianceSpan.textContent = `Variance: ${varianceText}`;
+                infoRow.appendChild(varianceSpan);
+
+                detailRow.appendChild(infoRow);
+                popup.appendChild(detailRow);
+            });
+        }
+
+        document.body.appendChild(popup);
+
+        const adjustPosition = () => {
+            const rect = popup.getBoundingClientRect();
+            const offset = 8;
+            const maxLeft = window.innerWidth - rect.width - offset;
+            const maxTop = window.innerHeight - rect.height - offset;
+            const left = Math.min(Math.max(offset, event.clientX + offset), Math.max(offset, maxLeft));
+            const top = Math.min(Math.max(offset, event.clientY + offset), Math.max(offset, maxTop));
+            popup.style.left = `${left}px`;
+            popup.style.top = `${top}px`;
+        };
+        adjustPosition();
+
+        const closeHandler = () => this.closeMatchContextMenu();
+        this.matchContextMenu_ = popup;
+        this.matchContextMenuCloseHandler_ = closeHandler;
+        document.addEventListener("mousedown", closeHandler);
+    }
+
+    private closeMatchContextMenu() {
+        if (this.matchContextMenu_) {
+            this.matchContextMenu_.remove();
+            this.matchContextMenu_ = undefined;
+        }
+        if (this.matchContextMenuCloseHandler_) {
+            document.removeEventListener("mousedown", this.matchContextMenuCloseHandler_);
+            this.matchContextMenuCloseHandler_ = undefined;
+        }
+    }
+
     private getTableHeaderColors(title: string): { background: string; text: string } {
         const normalized = title.toLowerCase();
         if (normalized.includes("red")) {
@@ -728,6 +921,16 @@ export class ScouterAccuracyView extends XeroView {
     }
 
     private buildAnalysis(config: ScouterConfig): ScouterAnalysis {
+        const scouterColumn = config.scouterColumn?.trim();
+        if (!scouterColumn) {
+            return {
+                graphPoints: [],
+                redRows: [],
+                blueRows: [],
+                contributions: [],
+                statusMessage: "A scouter column is required in the configuration.",
+            };
+        }
         const resolved = this.resolveFormulas(config);
         const missingParts: string[] = [];
         if (!resolved.scoreExpression) {
@@ -781,16 +984,27 @@ export class ScouterAccuracyView extends XeroView {
                 pointsSum: number;
                 pointsCount: number;
                 scouters: string[];
+                robotDetails: RobotDetail[];
             }
         >();
-        const scouterMatches = new Map<string, Set<string>>();
+        let scouterMatches = new Map<string, Set<string>>();
+        let rowCounter = 0;
 
         for (const rawRow of this.rows_) {
+            const rowIndex = rowCounter++;
             const row = rawRow || {};
             const alliance = this.getString(row["alliance"])?.toLowerCase();
             const compLevel = this.getString(row["comp_level"])?.toLowerCase() ?? "unknown";
             const setNumber = this.getNumber(row["set_number"]) || 0;
             const matchNumber = this.getNumber(row["match_number"]) || 0;
+            const robotTeamNumber = this.getNumber(row["team_number"]);
+            const robotTeamKey = this.getString(row["team_key"]);
+            const robotAlternateId =
+                this.getString(row["robot"]) ??
+                this.getString(row["robot_key"]) ??
+                this.getString(row["team"]) ??
+                this.getString(row["team_name"]);
+            const fallbackLabel = `Entry ${rowIndex + 1}`;
             if (alliance !== "red" && alliance !== "blue") {
                 continue;
             }
@@ -798,15 +1012,23 @@ export class ScouterAccuracyView extends XeroView {
             const teamRow = this.findTeamRowForMatch(row);
             const scoreValue = this.evaluateRow(row, scoreExpr, teamRow);
             const pointsValue = this.evaluateRow(row, pointsExpr, teamRow);
-            if (scoreValue === undefined && pointsValue === undefined) {
+            const hasScoreValue = typeof scoreValue === "number" && Number.isFinite(scoreValue);
+            const hasPointsValue = typeof pointsValue === "number" && Number.isFinite(pointsValue);
+            // only include matches where the configuration provides every needed value
+            if (!hasScoreValue || !hasPointsValue) {
                 continue;
             }
+
+            const varianceValue = Math.abs(scoreValue - pointsValue);
+            row["pts"] = DataValue.fromReal(varianceValue);
 
             const matchKey =
                 this.getString(row["key"]) ?? `${compLevel}|${setNumber}|${matchNumber}`;
             const bucketKey = `${matchKey}|${alliance}`;
             const label = this.formatMatchLabel(compLevel, setNumber, matchNumber);
             const order = this.computeOrder(compLevel, setNumber, matchNumber);
+
+            const scouterName = this.getScouterName(row[scouterColumn]);
 
             const bucket =
                 buckets.get(bucketKey) ||
@@ -820,6 +1042,7 @@ export class ScouterAccuracyView extends XeroView {
                     pointsSum: 0,
                     pointsCount: 0,
                     scouters: [],
+                    robotDetails: [],
                 };
             if (typeof scoreValue === "number" && !Number.isNaN(scoreValue)) {
                 bucket.scoreSum += scoreValue;
@@ -830,7 +1053,6 @@ export class ScouterAccuracyView extends XeroView {
                 bucket.pointsCount++;
             }
 
-            const scouterName = this.getScouterName(row[config.scouterColumn]);
             if (scouterName) {
                 bucket.scouters.push(scouterName);
                 if (!scouterMatches.has(scouterName)) {
@@ -839,7 +1061,41 @@ export class ScouterAccuracyView extends XeroView {
                 scouterMatches.get(scouterName)!.add(matchKey);
             }
 
+            const robotLabel =
+                typeof robotTeamNumber === "number" && !Number.isNaN(robotTeamNumber)
+                    ? `Team ${Math.trunc(robotTeamNumber)}`
+                    : robotTeamKey ?? robotAlternateId ?? fallbackLabel;
+            bucket.robotDetails.push({
+                label: robotLabel,
+                scouter: scouterName,
+                scoreValue,
+                varianceValue,
+            });
+
             buckets.set(bucketKey, bucket);
+        }
+
+        const scouterGroupingThreshold = 3;
+        const aggregatedScouterName = "other";
+        const scouterNameToGroup = new Map<string, string>();
+        const groupedScouterMatches = new Map<string, Set<string>>();
+        for (const [scouterName, matches] of scouterMatches.entries()) {
+            const groupName = matches.size <= scouterGroupingThreshold ? aggregatedScouterName : scouterName;
+            scouterNameToGroup.set(scouterName, groupName);
+            const targetMatches = groupedScouterMatches.get(groupName) ?? new Set<string>();
+            for (const matchKey of matches) {
+                targetMatches.add(matchKey);
+            }
+            groupedScouterMatches.set(groupName, targetMatches);
+        }
+        scouterMatches = groupedScouterMatches;
+        for (const bucket of buckets.values()) {
+            bucket.scouters = bucket.scouters.map((name) => scouterNameToGroup.get(name) ?? name);
+            for (const detail of bucket.robotDetails) {
+                if (detail.scouter) {
+                    detail.scouter = scouterNameToGroup.get(detail.scouter) ?? detail.scouter;
+                }
+            }
         }
 
         const matchMap = new Map<string, GraphPoint>();
@@ -854,8 +1110,18 @@ export class ScouterAccuracyView extends XeroView {
             if (scoreAvg === undefined || pointsAvg === undefined) {
                 continue;
             }
-            const difference = Math.abs(scoreAvg - pointsAvg);
+            const totalVariance = bucket.robotDetails.reduce((sum, detail) => {
+                const variance = detail.varianceValue;
+                return sum + (typeof variance === "number" ? variance : 0);
+            }, 0);
+            const difference = Math.abs(pointsAvg - 3*scoreAvg); // calculate absolute difference for the match
 
+            const detail: MatchAllianceDetails = {
+                scoreAvg,
+                pointsAvg,
+                scouters: Array.from(new Set(bucket.scouters)),
+                robotDetails: bucket.robotDetails,
+            };
             const entry =
                 matchMap.get(bucket.matchKey) ||
                 ({
@@ -865,6 +1131,11 @@ export class ScouterAccuracyView extends XeroView {
                     blue: undefined,
                 } as GraphPoint);
             entry[bucket.alliance] = (entry[bucket.alliance] ?? 0) + difference;
+            entry.details = entry.details ?? {};
+            entry.details[bucket.alliance] = detail;
+            if (!entry.matchKey) {
+                entry.matchKey = bucket.matchKey;
+            }
             matchMap.set(bucket.matchKey, entry);
 
             if (bucket.scouters.length === 0) {
@@ -895,14 +1166,38 @@ export class ScouterAccuracyView extends XeroView {
             statusMessage = "Scouter initials were found but no difference values have been recorded yet.";
         }
 
+        const buildMatchRow = (
+            point: GraphPoint,
+            alliance: AllianceColor,
+            value?: number
+        ): TableEntry | undefined => {
+            if (typeof value !== "number") {
+                return undefined;
+            }
+            const detail = point.details?.[alliance];
+            return {
+                matchLabel: point.label,
+                value,
+                alliance,
+                scoreValue: detail?.scoreAvg,
+                pointsValue: detail?.pointsAvg,
+                scouters: detail?.scouters ?? [],
+                matchKey: point.matchKey,
+                robotDetails: detail?.robotDetails,
+            };
+        };
+
+        const redRows = graphPoints
+            .map((pt) => buildMatchRow(pt, "red", pt.red))
+            .filter((entry): entry is TableEntry => entry !== undefined);
+        const blueRows = graphPoints
+            .map((pt) => buildMatchRow(pt, "blue", pt.blue))
+            .filter((entry): entry is TableEntry => entry !== undefined);
+
         return {
             graphPoints,
-            redRows: graphPoints
-                .filter((pt) => typeof pt.red === "number")
-                .map((pt) => ({ matchLabel: pt.label, value: pt.red! })),
-            blueRows: graphPoints
-                .filter((pt) => typeof pt.blue === "number")
-                .map((pt) => ({ matchLabel: pt.label, value: pt.blue! })),
+            redRows,
+            blueRows,
             contributions,
             scoreFormulaName: resolved.scoreFormula?.name,
             scoreFormulaDesc: resolved.scoreFormula?.desc,
@@ -1129,7 +1424,7 @@ export class ScouterAccuracyView extends XeroView {
         dialog.appendChild(columnWrapper);
 
         const scoreFormulaField = this.createFormulaSelectionField(
-            "Alliance score formula",
+            "Team score formula",
             existing?.scoreFormulaName ?? existing?.formulaName,
             existing?.scoreFormula ?? existing?.varianceFormula
         );
