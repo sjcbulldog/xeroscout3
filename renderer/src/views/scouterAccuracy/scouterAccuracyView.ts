@@ -1020,7 +1020,6 @@ export class ScouterAccuracyView extends XeroView {
             }
 
             const varianceValue = Math.abs(scoreValue - pointsValue);
-            row["pts"] = DataValue.fromReal(varianceValue);
 
             const matchKey =
                 this.getString(row["key"]) ?? `${compLevel}|${setNumber}|${matchNumber}`;
