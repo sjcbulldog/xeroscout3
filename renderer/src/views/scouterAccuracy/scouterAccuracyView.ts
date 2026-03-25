@@ -248,19 +248,7 @@ export class ScouterAccuracyView extends XeroView {
             return;
         }
 
-        if (!this.configs_.length) {
-            this.elem.appendChild(this.createMessage("Create a configuration to start analyzing scouter variance."));
-            return;
-        }
-
         const config = this.getSelectedConfig();
-        if (!config) {
-            this.elem.appendChild(this.createMessage("Choose a configuration from the list."));
-            return;
-        }
-
-        const analysis = this.buildAnalysis(config);
-
         const layout = document.createElement("div");
         layout.style.display = "flex";
         layout.style.width = "100%";
@@ -269,7 +257,16 @@ export class ScouterAccuracyView extends XeroView {
         layout.style.boxSizing = "border-box";
 
         layout.appendChild(this.createSidebar(config));
-        layout.appendChild(this.createContent(analysis, config));
+        if (!this.configs_.length) {
+            layout.appendChild(
+                this.createEmptyContent("Create a configuration to start analyzing scouter variance.")
+            );
+        } else if (!config) {
+            layout.appendChild(this.createEmptyContent("Choose a configuration from the list."));
+        } else {
+            const analysis = this.buildAnalysis(config);
+            layout.appendChild(this.createContent(analysis, config));
+        }
 
         this.elem.appendChild(layout);
     }
@@ -288,7 +285,7 @@ export class ScouterAccuracyView extends XeroView {
         return status;
     }
 
-    private createSidebar(config: ScouterConfig): HTMLElement {
+    private createSidebar(config?: ScouterConfig): HTMLElement {
         const sidebar = document.createElement("div");
         sidebar.style.width = "260px";
         sidebar.style.minWidth = "220px";
@@ -331,14 +328,15 @@ export class ScouterAccuracyView extends XeroView {
             configButton.style.border = "1px solid #e5e7eb";
             configButton.style.borderRadius = "12px";
             configButton.style.padding = "14px 12px";
-            configButton.style.backgroundColor = cfg.id === config.id ? "#dbeafe" : "#ffffff";
+            const isSelected = cfg.id === config?.id;
+            configButton.style.backgroundColor = isSelected ? "#dbeafe" : "#ffffff";
             configButton.style.cursor = "pointer";
             configButton.style.display = "flex";
             configButton.style.flexDirection = "column";
             configButton.style.alignItems = "flex-start";
             configButton.style.gap = "4px";
             configButton.style.textAlign = "left";
-            if (cfg.id === config.id) {
+            if (isSelected) {
                 configButton.style.borderColor = "#a5b4fc";
                 configButton.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.2)";
             }
@@ -376,14 +374,14 @@ export class ScouterAccuracyView extends XeroView {
         meta.style.fontSize = "11px";
         meta.style.color = "#475569";
         meta.style.marginTop = "8px";
-        meta.textContent = `Column: ${config.scouterColumn}`;
+        meta.textContent = config ? `Column: ${config.scouterColumn}` : "Column: not configured";
         sidebar.appendChild(meta);
 
         const formulaMeta = document.createElement("div");
         formulaMeta.style.fontSize = "11px";
         formulaMeta.style.color = "#475569";
-        const scoreMeta = config.scoreFormulaName ?? "Score formula";
-        const pointsMeta = config.pointsFormulaName ?? "Points formula";
+        const scoreMeta = config?.scoreFormulaName ?? "Score formula";
+        const pointsMeta = config?.pointsFormulaName ?? "Points formula";
         formulaMeta.textContent = `Score: ${scoreMeta} | Points: ${pointsMeta}`;
         sidebar.appendChild(formulaMeta);
 
@@ -445,6 +443,29 @@ export class ScouterAccuracyView extends XeroView {
 
         sidebar.appendChild(actions);
         return sidebar;
+    }
+
+    private createEmptyContent(message: string): HTMLElement {
+        const container = document.createElement("div");
+        container.style.flexGrow = "1";
+        container.style.display = "flex";
+        container.style.alignItems = "center";
+        container.style.justifyContent = "center";
+        container.style.minHeight = "100%";
+
+        const card = document.createElement("div");
+        card.style.width = "100%";
+        card.style.maxWidth = "560px";
+        card.style.backgroundColor = "#ffffff";
+        card.style.borderRadius = "18px";
+        card.style.padding = "32px";
+        card.style.boxSizing = "border-box";
+        card.style.border = "1px solid #e2e8f0";
+        card.style.boxShadow = "0 8px 24px rgba(15,23,42,0.08)";
+        card.appendChild(this.createMessage(message));
+
+        container.appendChild(card);
+        return container;
     }
 
     private createContent(analysis: ScouterAnalysis, config: ScouterConfig): HTMLElement {
@@ -1020,7 +1041,6 @@ export class ScouterAccuracyView extends XeroView {
             }
 
             const varianceValue = Math.abs(scoreValue - pointsValue);
-            row["pts"] = DataValue.fromReal(varianceValue);
 
             const matchKey =
                 this.getString(row["key"]) ?? `${compLevel}|${setNumber}|${matchNumber}`;
@@ -1110,11 +1130,7 @@ export class ScouterAccuracyView extends XeroView {
             if (scoreAvg === undefined || pointsAvg === undefined) {
                 continue;
             }
-            const totalVariance = bucket.robotDetails.reduce((sum, detail) => {
-                const variance = detail.varianceValue;
-                return sum + (typeof variance === "number" ? variance : 0);
-            }, 0);
-            const difference = Math.abs(pointsAvg - 3*scoreAvg); // calculate absolute difference for the match
+            const difference = Math.abs(pointsAvg - bucket.scoreSum); // calculate absolute difference for the match
 
             const detail: MatchAllianceDetails = {
                 scoreAvg,
@@ -1358,26 +1374,30 @@ export class ScouterAccuracyView extends XeroView {
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             let started = false;
+            const markers: Array<{ x: number; y: number }> = [];
             points.forEach((pt, index) => {
                 const value = accessor(pt);
                 if (typeof value === "number") {
                     const x = padding + (index / xSpan) * width;
                     const y = valueToY(value);
+                    markers.push({ x, y });
                     if (!started) {
                         ctx.moveTo(x, y);
                         started = true;
                     } else {
                         ctx.lineTo(x, y);
                     }
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3, 0, Math.PI * 2);
-                    ctx.fill();
                 } else {
                     started = false;
                 }
             });
             ctx.stroke();
+            ctx.fillStyle = color;
+            for (const marker of markers) {
+                ctx.beginPath();
+                ctx.arc(marker.x, marker.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
         };
 
         drawLine("#dc2626", (pt) => pt.red);
