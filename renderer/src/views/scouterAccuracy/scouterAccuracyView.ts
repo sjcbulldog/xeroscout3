@@ -1,6 +1,6 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import { XeroView } from "../xeroview.js";
-import { IPCColumnDesc, IPCDatabaseData, IPCTypedDataValue, IPCFormula } from "../../shared/ipc.js";
+import { IPCColumnDesc, IPCDatabaseData, IPCDatabaseRow, IPCDatabaseRowValue, IPCTypedDataValue, IPCFormula } from "../../shared/ipc.js";
 import { DataValue } from "../../shared/datavalue.js";
 import { Expr } from "../../shared/expr.js";
 
@@ -75,7 +75,7 @@ export class ScouterAccuracyView extends XeroView {
     private static readonly storageKey = "scouterAccuracyConfigs";
 
     private columns_: IPCColumnDesc[] = [];
-    private rows_: Record<string, IPCTypedDataValue>[] = [];
+    private rows_: IPCDatabaseRow[] = [];
     private configs_: ScouterConfig[] = [];
     private formulas_: IPCFormula[] = [];
     private formulasLoaded_ = false;
@@ -86,9 +86,9 @@ export class ScouterAccuracyView extends XeroView {
     private graphRenderPending_ = false;
     private dataLoaded_ = false;
     private teamColumns_: IPCColumnDesc[] = [];
-    private teamRows_: Record<string, IPCTypedDataValue>[] = [];
-    private teamRowByKey_: Map<string, Record<string, IPCTypedDataValue>> = new Map();
-    private teamRowByNumber_: Map<number, Record<string, IPCTypedDataValue>> = new Map();
+    private teamRows_: IPCDatabaseRow[] = [];
+    private teamRowByKey_: Map<string, IPCDatabaseRow> = new Map();
+    private teamRowByNumber_: Map<number, IPCDatabaseRow> = new Map();
     private teamDataLoaded_ = false;
     private matchContextMenu_: HTMLDivElement | undefined;
     private matchContextMenuCloseHandler_: (() => void) | undefined;
@@ -126,7 +126,7 @@ export class ScouterAccuracyView extends XeroView {
     private receiveMatchData(data: IPCDatabaseData) {
         this.columns_ = data.column_definitions || [];
         this.rows_ = Array.isArray(data.data)
-            ? (data.data as Record<string, IPCTypedDataValue>[]).map((row) => row)
+            ? (data.data as IPCDatabaseRow[]).map((row) => row)
             : [];
         this.dataLoaded_ = true;
         this.render();
@@ -135,7 +135,7 @@ export class ScouterAccuracyView extends XeroView {
     private receiveTeamData(data: IPCDatabaseData) {
         this.teamColumns_ = data.column_definitions || [];
         this.teamRows_ = Array.isArray(data.data)
-            ? (data.data as Record<string, IPCTypedDataValue>[]).map((row) => row)
+            ? (data.data as IPCDatabaseRow[]).map((row) => row)
             : [];
         this.buildTeamIndices();
         this.teamDataLoaded_ = true;
@@ -1646,9 +1646,9 @@ export class ScouterAccuracyView extends XeroView {
     }
 
     private evaluateRow(
-        row: Record<string, IPCTypedDataValue>,
+        row: IPCDatabaseRow,
         expr: Expr,
-        teamRow?: Record<string, IPCTypedDataValue>
+        teamRow?: IPCDatabaseRow
     ): number | undefined {
         const variables = new Map<string, IPCTypedDataValue>();
         this.assignRowVariables(row, variables);
@@ -1666,7 +1666,7 @@ export class ScouterAccuracyView extends XeroView {
     }
 
     private assignRowVariables(
-        row: Record<string, IPCTypedDataValue>,
+        row: IPCDatabaseRow,
         variables: Map<string, IPCTypedDataValue>,
         skipExisting = false
     ) {
@@ -1684,7 +1684,7 @@ export class ScouterAccuracyView extends XeroView {
         }
     }
 
-    private findTeamRowForMatch(row: Record<string, IPCTypedDataValue>): Record<string, IPCTypedDataValue> | undefined {
+    private findTeamRowForMatch(row: IPCDatabaseRow): IPCDatabaseRow | undefined {
         const teamKey = this.getString(row["team_key"]) ?? this.getString(row["key"]);
         if (teamKey) {
             const match = this.teamRowByKey_.get(teamKey);
@@ -1723,36 +1723,38 @@ export class ScouterAccuracyView extends XeroView {
         return undefined;
     }
 
-    private getString(value: IPCTypedDataValue | undefined): string | undefined {
-        if (!value) {
+    private getString(value: IPCDatabaseRowValue | undefined): string | undefined {
+        const typed = this.toTypedValue(value);
+        if (!typed) {
             return undefined;
         }
-        if (DataValue.isString(value)) {
-            return DataValue.toString(value);
+        if (DataValue.isString(typed)) {
+            return DataValue.toString(typed);
         }
-        if (DataValue.isInteger(value)) {
-            return String(DataValue.toInteger(value));
+        if (DataValue.isInteger(typed)) {
+            return String(DataValue.toInteger(typed));
         }
-        if (DataValue.isReal(value)) {
-            return String(DataValue.toReal(value));
+        if (DataValue.isReal(typed)) {
+            return String(DataValue.toReal(typed));
         }
-        if (DataValue.isBoolean(value)) {
-            return String(DataValue.toBoolean(value));
+        if (DataValue.isBoolean(typed)) {
+            return String(DataValue.toBoolean(typed));
         }
-        return DataValue.toDisplayString(value);
+        return DataValue.toDisplayString(typed);
     }
 
-    private getNumber(value: IPCTypedDataValue | undefined): number | undefined {
-        if (!value) {
+    private getNumber(value: IPCDatabaseRowValue | undefined): number | undefined {
+        const typed = this.toTypedValue(value);
+        if (!typed) {
             return undefined;
         }
-        if (DataValue.isInteger(value) || DataValue.isReal(value)) {
-            return DataValue.toReal(value);
+        if (DataValue.isInteger(typed) || DataValue.isReal(typed)) {
+            return DataValue.toReal(typed);
         }
         return undefined;
     }
 
-    private getScouterName(value: IPCTypedDataValue | undefined): string | undefined {
+    private getScouterName(value: IPCDatabaseRowValue | undefined): string | undefined {
         const text = this.getString(value);
         if (!text) {
             return undefined;

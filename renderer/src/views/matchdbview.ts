@@ -5,4 +5,10 @@ export class XeroMatchDatabaseView extends DatabaseView {
     public constructor(app: XeroApp) {
         super(app, 'xero-match-db-view', 'match') ;
     }
+
+    protected getInitialSort() {
+        return [
+            { column: "comp_level", dir: "asc" as const },
+        ] ;
+    }
 }

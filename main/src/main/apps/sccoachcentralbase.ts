@@ -6,6 +6,7 @@ import { BAMatch, BATeam } from "../extnet/badata";
 import { DataRecord } from "../model/datarecord";
 import { generateAutoAnalysisData } from "../project/autoanalysis";
 import * as path from "path";
+import { DataValue } from "../../shared/datavalue";
 
 export abstract class SCCoachCentralBaseApp extends SCBase {
     private project_?: Project = undefined;
@@ -654,8 +655,18 @@ export abstract class SCCoachCentralBaseApp extends SCBase {
 		for (let d of data) {
 			let obj: any = {};
 			for (let key of d.keys()) {
-				let value: any = d.value(key);
-				obj[key] = value;
+				let value = d.value(key);
+				if (!value) {
+					obj[key] = null ;
+					continue ;
+				}
+
+				try {
+					obj[key] = DataValue.toSQLite3Value(value) ;
+				}
+				catch {
+					obj[key] = DataValue.toDisplayString(value) ;
+				}
 			}
 			ret.push(obj);
 		}
