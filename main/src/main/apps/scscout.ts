@@ -9,6 +9,7 @@ import { PacketType } from "../sync/packettypes";
 import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr";
 import { kMatchAlliances } from '../../shared/playoffs';
 import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
+import { createSyncSessionId, logSync, packetSummary, SyncTraceContext } from "../sync/syncdiag";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -69,6 +70,7 @@ export class SCScout extends SCBase {
     private ipaddr_: string = SCScout.defaultSyncIPAddr ;
     private port_ : number = SCScout.defaultSyncPort ;
     private team_number_ : number = 1425 ;
+    private sync_trace_? : SyncTraceContext ;
 
     private match_results_received_ : boolean = false ;
     private team_results_received_ : boolean = false ;
@@ -242,6 +244,10 @@ export class SCScout extends SCBase {
     }
 
     public syncError(err: Error) {
+        this.logSync('error', 'ScoutSyncError', {
+            message: err.message,
+            state: this.getSyncStateSnapshot(),
+        }) ;
         dialog.showMessageBoxSync(this.win_, {
             title: 'Synchronization Error',
             message: 'Error synchronizing - ' + err.message,
@@ -250,6 +256,9 @@ export class SCScout extends SCBase {
     }
 
     public syncDone() {
+        this.logSync('info', 'ScoutSyncDone', {
+            state: this.getSyncStateSnapshot(),
+        }) ;
         this.sync_client_ = undefined ;
     }
 
@@ -276,6 +285,7 @@ export class SCScout extends SCBase {
         if (cmd === SCScout.syncEventLocal) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
+            this.beginSyncTrace('local', '127.0.0.1', this.port_) ;
             this.sync_client_ = new TCPClient(this.logger_, '127.0.0.1') ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
@@ -287,6 +297,7 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventRemote) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
+            this.beginSyncTrace('cable', this.ipaddr_, this.port_) ;
             this.sync_client_ = new TCPClient(this.logger_, this.ipaddr_, this.port_) ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
@@ -298,6 +309,7 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventWiFi) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
+            this.beginSyncTrace('wifi', this.ipaddr_, this.port_) ;
             this.sync_client_ = new TCPClient(this.logger_, this.ipaddr_, this.port_) ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
@@ -307,6 +319,7 @@ export class SCScout extends SCBase {
             this.syncClient(this.sync_client_) ;
         }      
         else if (cmd === SCScout.syncEventIPAddr) {
+            this.logSync('info', 'ScoutSyncManualAddressRequested') ;
             this.setView('sync-ipaddr') ;
         }              
         else if (cmd === SCScout.resetTablet) {
@@ -350,6 +363,7 @@ export class SCScout extends SCBase {
         this.current_scout_ = undefined ;
         this.ipaddr_ = ipaddr ;
         this.port_ = port ;
+        this.beginSyncTrace('manual-ip', ipaddr, port) ;
         this.setSetting(SCScout.SYNC_IPADDR, this.ipaddr_) ;
         this.setSetting(SCScout.SYNC_PORT, this.port_) ;
         this.sync_client_ = new TCPClient(this.logger_, ipaddr, port) ;
@@ -503,6 +517,10 @@ export class SCScout extends SCBase {
     }
 
     public provideResults(res: IPCNamedDataValue[]) {
+        this.logSync('debug', 'ScoutProvideResults', {
+            currentScout: this.current_scout_,
+            resultCount: res.length,
+        }) ;
         this.addResults(this.current_scout_!, this.filterResults(res)) ;
         this.writeEventFile() ;
         this.logger_.silly('provideResults:' + this.current_scout_, res) ;
@@ -651,9 +669,17 @@ export class SCScout extends SCBase {
             this.playoff_status_received_ = false ;
 
             this.conn_ = conn ;
+            this.refreshSyncTrace() ;
+            this.conn_.setTraceContext(this.sync_trace_) ;
+            this.logSync('info', 'ScoutSyncConnectAttempt', {
+                connector: conn.name(),
+                state: this.getSyncStateSnapshot(),
+            }) ;
             conn.connect()
                 .then(async ()=> {
-                    this.logger_.info(`ScouterSync: connected to server ' ${conn.name()}'`) ;
+                    this.logSync('info', 'ScoutSyncConnected', {
+                        connector: conn.name(),
+                    }) ;
                     let data = new Uint8Array(0) ;
 
                     if (this.info_.tablet_ && this.info_.purpose_) {
@@ -663,8 +689,11 @@ export class SCScout extends SCBase {
                         }
                         data = Buffer.from(JSON.stringify(obj)) ;
                     }
+                    this.refreshSyncTrace() ;
+                    this.conn_!.setTraceContext(this.sync_trace_) ;
 
                     this.conn_!.on('close', () => {
+                        this.logSync('info', 'ScoutConnectionClosed') ;
                         this.conn_ = undefined ;
                     }) ;
 
@@ -684,6 +713,10 @@ export class SCScout extends SCBase {
                             msg = err.message ;
                         }
 
+                        this.logSync('error', 'ScoutConnectionError', {
+                            message: msg,
+                            state: this.getSyncStateSnapshot(),
+                        }) ;
                         this.sendToRenderer('set-status-title', 'Error Connecting To XeroScout Central') ;
                         this.sendToRenderer('set-status-visible', true) ;
                         this.sendToRenderer('set-status-text', msg) ;
@@ -694,14 +727,20 @@ export class SCScout extends SCBase {
                         this.syncTablet(p) ;
                     }) ;
 
+                    this.logSync('info', 'ScoutHandshakeSendHello', packetSummary(p)) ;
                     await this.conn_!.send(p) ;
                 })
                 .catch((err) => {
-                    this.logger_.error('cannot connect to central', err) ;
+                    this.logSync('error', 'ScoutConnectFailed', {
+                        message: err.message,
+                        state: this.getSyncStateSnapshot(),
+                    }) ;
                 }) ;
         })
         .catch((err) => {
-            this.logger_.error('cannot get results before sync', err) ;
+            this.logSync('error', 'ScoutPreSyncResultsFailed', {
+                message: err.message,
+            }) ;
         }) ;
     }
 
@@ -711,6 +750,7 @@ export class SCScout extends SCBase {
 
     private syncTablet(p: PacketObj) {
         let ret = true ;
+        this.logSync('info', 'ScoutPacketReceived', packetSummary(p)) ;
 
         if (p.type_ === PacketType.HelloFromScouter) {
             let obj ;
@@ -721,6 +761,10 @@ export class SCScout extends SCBase {
                     //
                     // We have an event loaded and it does not match
                     //
+                    this.logSync('warn', 'ScoutSyncEventMismatch', {
+                        localEventUuid: this.info_.uuid_,
+                        remoteEventUuid: obj.uuid,
+                    }) ;
                     this.sendToRenderer('set-status-title', 'Error Connecting To XeroScout Central') ;
                     this.sendToRenderer('set-status-visible', true) ;
                     this.sendToRenderer('set-status-text', 'The loaded event does not match event being synced - reset the tablet to sync to this new event.') ;
@@ -733,6 +777,10 @@ export class SCScout extends SCBase {
                     //
                     // The current tablet already has an identity.  See if we are missing things ...
                     //
+                    this.logSync('info', 'ScoutHelloAcceptedExistingTablet', {
+                        remoteEventUuid: obj.uuid,
+                        remoteEventName: obj.name,
+                    }) ;
                     this.getMissingData() ;
                     if (!this.info_.evname_) {
                         this.info_.evname_ = obj.name ;
@@ -742,14 +790,23 @@ export class SCScout extends SCBase {
                     this.info_.uuid_ = obj.uuid ;
                     this.info_.evname_ = obj.name;
                     let p: PacketObj = new PacketObj(PacketType.RequestTablets) ;
+                    this.refreshSyncTrace() ;
+                    this.logSync('info', 'ScoutRequestingTablets', packetSummary(p)) ;
                     this.conn_!.send(p) ;
                 }
             }
             catch(err) {
+                this.logSync('error', 'ScoutHelloParseFailed', {
+                    message: (err as Error).message,
+                    payloadPreview: p.payloadAsString(),
+                }) ;
             }
         }
         else if (p.type_ === PacketType.ProvideTablets) {
             this.tablets_ = JSON.parse(p.data_.toString()) ;
+            this.logSync('info', 'ScoutTabletsReceived', {
+                tabletCount: this.tablets_?.length ?? 0,
+            }) ;
             this.setView('select-tablet') ;
         }
         else if (p.type_ === PacketType.ProvideTeamForm) {
@@ -777,6 +834,10 @@ export class SCScout extends SCBase {
                 this.writeEventFile() ;
                 this.checkPlayoffMatchGeneration();
             }
+            else {
+                this.info_.playoff_assignments_ = undefined ;
+                this.logSync('info', 'ScoutPlayoffAssignmentsUnavailable') ;
+            }
 
             this.playoff_assignment_received_ = true ;
             this.getMissingData() ;
@@ -787,6 +848,10 @@ export class SCScout extends SCBase {
                 this.info_.playoff_status_ = obj ;
                 this.writeEventFile() ;
                 this.checkPlayoffMatchGeneration();                
+            }
+            else {
+                this.info_.playoff_status_ = undefined ;
+                this.logSync('info', 'ScoutPlayoffStatusUnavailable') ;
             }
 
             this.playoff_status_received_ = true ;
@@ -805,12 +870,14 @@ export class SCScout extends SCBase {
             }
             catch (err) {
                 this.logger_.warn('SyncTablet: received invalid ProvideImages payload JSON') ;
+                this.logSync('warn', 'ScoutProvideImagesInvalidJson') ;
                 ret = this.getMissingData() ;
                 return ;
             }
 
             if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
                 this.logger_.warn('SyncTablet: received invalid ProvideImages payload shape') ;
+                this.logSync('warn', 'ScoutProvideImagesInvalidShape') ;
                 ret = this.getMissingData() ;
                 return ;
             }
@@ -857,10 +924,16 @@ export class SCScout extends SCBase {
             this.conn_?.close() ;
         }
         else if (p.type_ === PacketType.ReceivedResults) {
+            this.logSync('info', 'ScoutResultsAcknowledged', {
+                tablet: this.info_.tablet_,
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.GoodbyeFromScouter, Buffer.from(this.info_.tablet_!))) ;
             this.conn_?.close() ;
         }
         else if (p.type_ === PacketType.Error) {
+            this.logSync('error', 'ScoutReceivedErrorPacket', {
+                payload: p.payloadAsString(),
+            }) ;
             this.sendToRenderer('set-status-title', 'Error Syncing With XeroScout Central') ;
             this.sendToRenderer('set-status-visible', true) ;
             this.sendToRenderer('set-status-text', p.payloadAsString()) ;
@@ -876,6 +949,12 @@ export class SCScout extends SCBase {
         } ;
 
         let jsonstr = JSON.stringify(obj) ;
+        this.logSync('info', 'ScoutSendingResults', {
+            tablet: obj.tablet,
+            purpose: obj.purpose,
+            resultCount: obj.results.length,
+            payloadBytes: Buffer.byteLength(jsonstr),
+        }) ;
         this.conn_?.send(new PacketObj(PacketType.ProvideResults, Buffer.from(jsonstr))) ;
     }
 
@@ -986,45 +1065,91 @@ export class SCScout extends SCBase {
 
     private getMissingData() {
         let ret: boolean = false ;
+        this.refreshSyncTrace() ;
 
         if (!this.team_form_received_) {
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestTeamForm',
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.RequestTeamForm)) ;
             ret = true ;
         }
         else if (!this.match_form_received_) {
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestMatchForm',
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.RequestMatchForm)) ;
             ret = true ;
         }
         else if (!this.match_list_received_) {
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestMatchList',
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.RequestMatchList)) ;
             ret = true ;
         }
         else if (!this.team_list_received_) {
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestTeamList',
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.RequestTeamList)) ;
             ret = true ;
         }
         else if (!this.match_results_received_ && this.needMatchResults().length > 0) {
-            this.conn_?.send(new PacketObj(PacketType.RequestMatchResults, Buffer.from(JSON.stringify(this.needMatchResults())))) ;
+            const missing = this.needMatchResults() ;
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestMatchResults',
+                requestedCount: missing.length,
+                state: this.getSyncStateSnapshot(),
+            }) ;
+            this.conn_?.send(new PacketObj(PacketType.RequestMatchResults, Buffer.from(JSON.stringify(missing)))) ;
             ret = true ;
         }
         else if (!this.team_results_received_ && this.needTeamResults().length > 0) {
-            this.conn_?.send(new PacketObj(PacketType.RequestTeamResults, Buffer.from(JSON.stringify(this.needTeamResults())))) ;
+            const missing = this.needTeamResults() ;
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestTeamResults',
+                requestedCount: missing.length,
+                state: this.getSyncStateSnapshot(),
+            }) ;
+            this.conn_?.send(new PacketObj(PacketType.RequestTeamResults, Buffer.from(JSON.stringify(missing)))) ;
             ret = true ;
         }
         else if (this.needImages().length > 0) {
-            this.conn_?.send(new PacketObj(PacketType.RequestImages, Buffer.from(JSON.stringify(this.needImages())))) ;
+            const missing = this.needImages() ;
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestImages',
+                requestedCount: missing.length,
+                state: this.getSyncStateSnapshot(),
+            }) ;
+            this.conn_?.send(new PacketObj(PacketType.RequestImages, Buffer.from(JSON.stringify(missing)))) ;
             ret = true ;            
         }
         else if (!this.info_.playoff_assignments_ && !this.playoff_assignment_received_) {
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestPlayoffAssignments',
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.RequestPlayoffAssignments)) ;
             ret = true ;              
         }
         else if (!this.playoff_status_received_) {
+            this.logSync('debug', 'ScoutMissingDataRequest', {
+                nextRequest: 'RequestPlayoffStatus',
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.conn_?.send(new PacketObj(PacketType.RequestPlayoffStatus)) ;
             ret = true ;              
         }
 
         if (!ret) {
+            this.logSync('info', 'ScoutMissingDataComplete', {
+                state: this.getSyncStateSnapshot(),
+            }) ;
             this.checkPlayoffMatchGeneration() ;
             this.sendNavData() ;
             this.setViewString() ;
@@ -1212,6 +1337,11 @@ export class SCScout extends SCBase {
         this.tablets_ = undefined ;
         this.info_.tablet_ = name ;
         this.info_.purpose_ = purpose ;
+        this.refreshSyncTrace() ;
+        this.logSync('info', 'ScoutTabletAssigned', {
+            tablet: name,
+            purpose: purpose,
+        }) ;
 
         this.sendToRenderer('tablet-title', this.info_.tablet_) ;
 
@@ -1302,6 +1432,54 @@ export class SCScout extends SCBase {
         return ret;
     }
 
+    private beginSyncTrace(pathName: string, host: string, port: number) {
+        this.sync_trace_ = {
+            sessionId: createSyncSessionId(),
+            role: 'scout',
+            transport: 'tcp',
+            path: pathName,
+            host: host,
+            port: port,
+            tablet: this.info_.tablet_,
+            purpose: this.info_.purpose_,
+            eventUuid: this.info_.uuid_,
+        } ;
+        this.logSync('info', 'ScoutSyncSessionStarted', {
+            state: this.getSyncStateSnapshot(),
+        }) ;
+    }
+
+    private refreshSyncTrace() {
+        if (!this.sync_trace_) {
+            return ;
+        }
+
+        this.sync_trace_.tablet = this.info_.tablet_ ;
+        this.sync_trace_.purpose = this.info_.purpose_ ;
+        this.sync_trace_.eventUuid = this.info_.uuid_ ;
+    }
+
+    private getSyncStateSnapshot() {
+        return {
+            tablet: this.info_.tablet_,
+            purpose: this.info_.purpose_,
+            eventUuid: this.info_.uuid_,
+            teamFormReceived: this.team_form_received_,
+            matchFormReceived: this.match_form_received_,
+            teamListReceived: this.team_list_received_,
+            matchListReceived: this.match_list_received_,
+            teamResultsReceived: this.team_results_received_,
+            matchResultsReceived: this.match_results_received_,
+            playoffAssignmentsReceived: this.playoff_assignment_received_,
+            playoffStatusReceived: this.playoff_status_received_,
+        } ;
+    }
+
+    private logSync(level: 'error' | 'warn' | 'info' | 'debug' | 'silly', event: string, extra?: Record<string, unknown>) {
+        this.refreshSyncTrace() ;
+        logSync(this.logger_, level, event, this.sync_trace_, extra) ;
+    }
+
     private target2Alliance(target: string) : number | undefined {
         let ret: string = target ;
 
@@ -1329,6 +1507,10 @@ export class SCScout extends SCBase {
     }
 
     private findPlayoffMatchAssignment(match: number) : PlayoffAssignment | undefined {
+        if (!Array.isArray(this.info_.playoff_assignments_)) {
+            return undefined ;
+        }
+
         for(let a of this.info_.playoff_assignments_!) {
             if (a.match === match && a.tablet === this.info_.tablet_) {
                 return a ;
@@ -1392,6 +1574,20 @@ export class SCScout extends SCBase {
     }
 
     private checkPlayoffMatchGeneration() {
+        if (!Array.isArray(this.info_.playoff_assignments_)) {
+            this.logSync('debug', 'ScoutPlayoffMatchGenerationSkipped', {
+                reason: 'no-playoff-assignments',
+            }) ;
+            return ;
+        }
+
+        if (!this.info_.playoff_status_) {
+            this.logSync('debug', 'ScoutPlayoffMatchGenerationSkipped', {
+                reason: 'no-playoff-status',
+            }) ;
+            return ;
+        }
+
         for(let m = 1 ; m <= 16 ; m++) {
             let match = kMatchAlliances[m-1] ;
             let ralliance = this.target2Alliance(match[0]) ;

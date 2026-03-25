@@ -1,5 +1,6 @@
 import { XeroApp } from "../../apps/xeroapp.js";
 import { IPCSetView } from "../../shared/ipc.js";
+import { XeroLogger } from "../../utils/xerologger.js";
 import { XeroView } from "../xeroview.js";
 import { SyncSetupDialog } from "./syncdialog.js";
 
@@ -14,10 +15,16 @@ export class XeroSyncIPAddrView extends XeroView {
     }
 
     public onVisible() {
+        XeroLogger.getInstance().info('Sync IP dialog visible') ;
         this.dialog_.showCentered(this.elem) ;        
     }
 
     private dialogClosed(changed: boolean) {
+        XeroLogger.getInstance().info('Sync IP dialog closed', {
+            changed: changed,
+            ipaddr: changed ? this.dialog_.ipaddr : undefined,
+            port: changed ? this.dialog_.port : undefined,
+        }) ;
         if (changed) {
             this.request('sync-ipaddr', { ipaddr: this.dialog_.ipaddr, port: this.dialog_.port }) ;
         }
