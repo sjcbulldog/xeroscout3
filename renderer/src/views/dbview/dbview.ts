@@ -181,14 +181,17 @@ export class DatabaseView extends XeroView {
                 formatter: this.cellFormatter.bind(this),
                 title: colcfg.name,
                 field: colcfg.name,
-                frozen: false,
-                headerSort: (colcfg.name !== 'set_number' && colcfg.name !== 'match_number'),
+                frozen: i < this.col_cfgs_!.frozenColumnCount,
+                headerSort: true,
                 width: colcfg.width !== -1 ? colcfg.width : this.getDefaultColumnWidth(desc),
                 minWidth: 90,
             } ;
 
             if (colcfg.name === 'comp_level') {
                 col_desc.sorter = XeroMatchStatus.sortMatchFunc ;
+            }
+            else if (desc.type === 'integer' || desc.type === 'real') {
+                col_desc.sorter = 'number' ;
             }
 
             if (desc.type === 'integer' || desc.type === 'real') {
@@ -415,7 +418,9 @@ export class DatabaseView extends XeroView {
             layout:"fitDataTable",
             layoutColumnsOnNewData: false,
             renderVertical: "virtual",
-            renderHorizontal: "virtual",
+            // Keep horizontal rendering basic so frozen columns remain pinned
+            // while scrolling; horizontal virtual rendering can recycle them.
+            renderHorizontal: "basic",
             renderVerticalBuffer: 600,
             resizableColumnFit:true,
             movableColumns:true,
@@ -544,14 +549,22 @@ export class DatabaseView extends XeroView {
     private freezeColumns() {
         if (this.col_cfgs_) {
             let index = 0 ;
+            let changed = false ;
             for(let col of this.table_!.getColumns()) {
                 let coldef = col.getDefinition() ;
                 let frozen = index < this.col_cfgs_.frozenColumnCount ;
                 if(frozen !== coldef.frozen) {
                     coldef.frozen = frozen ;
                     col.updateDefinition(coldef) ;
+                    changed = true ;
                 }
                 index++ ;
+            }
+
+            // Force a full layout pass after frozen state changes so unfrozen
+            // columns are repositioned to the right of the frozen block.
+            if (changed && this.table_) {
+                this.table_.redraw(true) ;
             }
         }
     }
