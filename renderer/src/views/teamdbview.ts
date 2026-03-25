@@ -8,7 +8,7 @@ export class XeroTeamDatabaseView extends DatabaseView {
 
     protected getInitialSort() {
         return [
-            {column:"team_number", dir:"asc"}, //then sort by this second
+            {column:"team_number", dir:"asc" as const}, //then sort by this second
         ]
     }
 }

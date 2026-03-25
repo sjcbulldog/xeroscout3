@@ -300,17 +300,65 @@ export abstract class SCBase {
 	public sendToRenderer(ev: string, ...args: any) {
 		let argval: any[] = args ;
 
-		let argstr = JSON.stringify(argval) ;
-
 		this.logger_.silly({
 			message: "main -> renderer",
 			args: {
 				event: ev,
-				eventArgs: argstr.substring(0, 128)
+				eventArgs: this.summarizeRendererArgs(argval)
 			},
 		});
 
 		this.win_.webContents.send(ev, args);
+	}
+
+	private summarizeRendererArgs(args: any[]) : string {
+		try {
+			const summary = args.map((arg) => this.summarizeRendererArg(arg)) ;
+			return JSON.stringify(summary).substring(0, 256) ;
+		}
+		catch {
+			return '[unavailable]' ;
+		}
+	}
+
+	private summarizeRendererArg(arg: any) : any {
+		if (Array.isArray(arg)) {
+			return { type: 'array', length: arg.length } ;
+		}
+
+		if (arg && typeof arg === 'object') {
+			const summary: Record<string, any> = {
+				type: 'object',
+			} ;
+
+			if (Array.isArray(arg.data)) {
+				summary.rows = arg.data.length ;
+			}
+
+			if (Array.isArray(arg.column_definitions)) {
+				summary.columns = arg.column_definitions.length ;
+			}
+
+			if (Array.isArray(arg.keycols)) {
+				summary.keycols = arg.keycols.length ;
+			}
+
+			if (typeof arg.view === 'string') {
+				summary.view = arg.view ;
+			}
+
+			if (typeof arg.title === 'string') {
+				summary.title = arg.title ;
+			}
+
+			if (Object.keys(summary).length > 1) {
+				return summary ;
+			}
+
+			return { type: 'object' } ;
+		}
+
+		return arg ;
 	}
 
 	protected setView(view: string, ...args: any[]) {
