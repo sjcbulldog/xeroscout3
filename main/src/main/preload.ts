@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld( 'scoutingAPI', {
 	      let validChannels = [
         'splitter-changed',               // apps/xeroapp.ts
         'get-nav-data',                   // xeronav.ts
+        'client-log',                    // renderer/src/utils/xerologger.ts
         'sync-ipaddr',                    // views/syncipaddr/syncipaddr.ts
         'get-info-data',                  // views/infoview.ts
         'get-formulas',                   // views/dataset/datasetedit.ts, views/dbview/dbview.ts, views/formulas/formulas.ts

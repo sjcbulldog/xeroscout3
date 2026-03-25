@@ -3,17 +3,23 @@ import { PacketObj } from './packetobj';
 import { PacketCompressionNone } from './packettypes';
 import { SyncServer } from './syncserver';
 import winston from 'winston';
+import { packetSummary, SyncTraceContext, traceFields } from './syncdiag';
 
 export class SyncBase extends EventEmitter {
     protected static readonly minPacketSize = 12;
 
     private buffer_? : Uint8Array ;
     protected logger_ : winston.Logger ;
+    protected traceContext_? : SyncTraceContext ;
 
     constructor(logger: winston.Logger) {
         super() ;
 
         this.logger_ = logger ;
+    }
+
+    public setTraceContext(context?: SyncTraceContext) {
+        this.traceContext_ = context ;
     }
 
     protected resetBuffers() {
@@ -25,6 +31,11 @@ export class SyncBase extends EventEmitter {
     // bytes remaining in the buffer.
     //
     protected extractPacket(data: Uint8Array) {
+        this.logger_.debug('SyncTransportBufferReceived', traceFields(this.traceContext_, {
+            incomingBytes: data.length,
+            bufferedBytesBefore: this.buffer_?.length ?? 0,
+        })) ;
+
         if (!this.buffer_) {
             this.buffer_ = data ;
         }
@@ -44,17 +55,37 @@ export class SyncBase extends EventEmitter {
 
             if (comptype !== PacketCompressionNone) {
                 let err: Error = new Error('invalid compression type') ;
+                this.logger_.error('SyncPacketParseError', traceFields(this.traceContext_, {
+                    reason: err.message,
+                    compressionType: comptype,
+                    bufferedBytes: this.buffer_.length,
+                    packetLength: len,
+                    packetType: ptype,
+                })) ;
                 this.emit('error', err) ;
                 return ;
             }
 
             if (this.buffer_.length < len + 10 + 2) {
+                this.logger_.debug('SyncPacketPartialBuffer', traceFields(this.traceContext_, {
+                    bufferedBytes: this.buffer_.length,
+                    expectedBytes: len + 12,
+                    packetLength: len,
+                    packetType: ptype,
+                })) ;
                 return ;
             }
 
             let csum = (this.buffer_[len + 10] << 0) + (this.buffer_[len + 11] << 8) ;
             if (this.computeSum16(this.buffer_, 10, len) != csum) {
                 let err: Error = new Error('invalid packet checksum') ;
+                this.logger_.error('SyncPacketParseError', traceFields(this.traceContext_, {
+                    reason: err.message,
+                    packetType: ptype,
+                    packetLength: len,
+                    expectedChecksum: csum,
+                    computedChecksum: this.computeSum16(this.buffer_, 10, len),
+                })) ;
                 this.emit('error', err) ;
                 return ;
             }
@@ -106,15 +137,25 @@ export class SyncBase extends EventEmitter {
     }
 
     private logPacket(text: string, p: PacketObj) {
+        const summary = packetSummary(p) ;
+        this.logger_.info('SyncPacket', traceFields(this.traceContext_, {
+            direction: text,
+            ...summary,
+        })) ;
+
         let msg: string = text + ':' + p.type_.toString() + ':' + p.data_.length + ':' ;
         let index = 0 ; 
         while (index < p.data_.length) {
-                msg += ' ' ;
+            msg += ' ' ;
             msg += p.data_[index].toString(16) ;
             index++ ;
         }
 
-        this.logger_.info(msg) ;
+        this.logger_.silly('SyncPacketHex', traceFields(this.traceContext_, {
+            direction: text,
+            packetType: p.type_,
+            raw: msg,
+        })) ;
     }
 
     private computeSum16(data: Uint8Array, start: number, length: number) : number {

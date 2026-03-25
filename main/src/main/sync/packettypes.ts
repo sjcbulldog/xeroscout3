@@ -39,3 +39,7 @@ export enum PacketType {
     GoodbyeFromCoach = 0xFE,
     GoodbyeFromScouter = 0xFF
 } ;
+
+export function packetTypeToString(type: PacketType | number) : string {
+    return PacketType[type as PacketType] ?? `UnknownPacket(${type})` ;
+}

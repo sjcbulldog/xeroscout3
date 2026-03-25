@@ -27,6 +27,7 @@ export abstract class SCBase {
 	protected image_mgr_ : ImageManager ;
 	public logger_: winston.Logger;
 	public lastview_?: string ;
+    protected logfileName_: string ;
 
 	protected constructor(win: BrowserWindow, type: IPCAppType) {
 		this.typestr_ = type;
@@ -47,43 +48,66 @@ export abstract class SCBase {
 		let logfileName;
 
 		if (this.isDevelop) {
-			logfileName = "xeroscout-" + this.typestr_;
+			logfileName = path.join(logdir, "xeroscout-" + this.typestr_ + ".txt");
 		} else {
 			logfileName = this.createUniqueFilename(
 				logdir,
 				"xeroscout-" + this.typestr_
 			);
+			logfileName += ".txt";
 		}
-		logfileName += ".txt";
 
 		if (fs.existsSync(logfileName)) {
 			fs.rmSync(logfileName);
 		}
 
+		this.logfileName_ = logfileName;
+
+		const normalizeStructuredLog = winston.format((info) => {
+			if (typeof info.message === 'object' && info.message !== null && !Array.isArray(info.message)) {
+				const messageObject = info.message as Record<string, unknown> ;
+				info.message = typeof messageObject.message === 'string' ? messageObject.message : JSON.stringify(messageObject) ;
+				for (const [key, value] of Object.entries(messageObject)) {
+					if (key !== 'message' && !(key in info)) {
+						(info as Record<string, unknown>)[key] = value ;
+					}
+				}
+			}
+			return info ;
+		});
+
 		this.logger_ = winston.createLogger({
 			level: this.isDevelop ? "silly" : "info",
 			format: winston.format.combine(
+				normalizeStructuredLog(),
 				winston.format.timestamp({ format: "YYYY-MM-DDTHH:mm:ss" }),
 				winston.format.printf(
-					(info) =>
-						`${JSON.stringify({
+					(info) => {
+						const rest: Record<string, unknown> = {} ;
+						for (const [key, value] of Object.entries(info)) {
+							if (!['timestamp', 'level', 'message'].includes(key) && value !== undefined) {
+								rest[key] = value ;
+							}
+						}
+
+						return `${JSON.stringify({
 							timestamp: info.timestamp,
 							level: info.level,
 							message: info.message,
-							args: info.args,
-						})}`
+							...rest,
+						})}` ;
+					}
 				)
 			),
 			transports: [new winston.transports.File({ filename: logfileName })],
 		});
 
-		this.logger_.info({
-			message: "XeroScout program started",
-			args: {
-				electronVersion: this.getVersion("electron"),
-				application: this.getVersion("application"),
-				nodejs: this.getVersion("nodejs"),
-			},
+		this.logger_.info("AppStart", {
+			logFile: this.logfileName_,
+			appType: this.typestr_,
+			electronVersion: this.getVersion("electron"),
+			application: this.getVersion("application"),
+			nodejs: this.getVersion("nodejs"),
 		});
 	}
 
@@ -218,25 +242,33 @@ export abstract class SCBase {
 	}
 
 	public logClientMessage(obj: any) {
-		let msg = 'renderer: ' + obj.message;
-		if (obj.args) {
-			msg += ', args=\'' + obj.args.toString() + '\'' ;
-		}
+		const msg = typeof obj?.message === 'string' ? obj.message : 'renderer-log' ;
+		const metadata = {
+			source: 'renderer',
+			rendererType: obj?.type,
+			rendererArgs: obj?.args,
+			stack: obj?.stack,
+			view: obj?.view,
+			location: obj?.location,
+			fileName: obj?.fileName,
+			line: obj?.line,
+			column: obj?.column,
+		} ;
 
 		if (obj.type === 'silly') {
-			this.logger_.silly(msg) ;
+			this.logger_.silly(`RendererLog:${msg}`, metadata) ;
 		}
 		if (obj.type === 'info') {
-			this.logger_.info(msg) ;
+			this.logger_.info(`RendererLog:${msg}`, metadata) ;
 		}
 		else if (obj.type === 'debug') {
-			this.logger_.debug(msg) ;
+			this.logger_.debug(`RendererLog:${msg}`, metadata) ;
 		}
 		if (obj.type === 'warn') {
-			this.logger_.warn(msg) ;
+			this.logger_.warn(`RendererLog:${msg}`, metadata) ;
 		}
 		if (obj.type === 'error') {
-			this.logger_.error(msg) ;
+			this.logger_.error(`RendererLog:${msg}`, metadata) ;
 		}
 	}
 
@@ -299,7 +331,7 @@ export abstract class SCBase {
 	): string {
 		const timestamp = Date.now();
 		const randomString = crypto.randomBytes(8).toString("hex");
-		const filename = `${prefix}-${timestamp}-${randomString}.txt`;
+		const filename = `${prefix}-${timestamp}-${randomString}`;
 		const fullPath = path.join(directory, filename);
 
 		// Check if the file already exists

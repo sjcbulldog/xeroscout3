@@ -38,6 +38,7 @@ import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventDa
          getMatchPredictorData,
          promptStringRequest,
          promptStringResponse,
+         clientLog,
          getPreviewMatchDB,
          updatePreviewMatchDB,
          resetPreviewMatchDB
@@ -207,6 +208,7 @@ function createWindow() : void {
 }
 
 app.on("ready", () => {
+    ipcMain.on('client-log', (event, ...args) => { clientLog('client-log', ...args)}) ;
     ipcMain.on('sync-ipaddr', (event, ...args) => { syncIPAddr('splitter-changed', ...args)}) ;    
     ipcMain.on('splitter-changed', (event, ...args) => { splitterChanged('splitter-changed', ...args)}) ;
     ipcMain.on('get-nav-data', (event, ...args) => { getNavData('get-nav-data', ...args)});

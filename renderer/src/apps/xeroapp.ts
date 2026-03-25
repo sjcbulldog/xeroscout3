@@ -53,6 +53,7 @@ export class XeroApp extends XeroMainProcessInterface {
     private message_overlay_? : MessageOverlay ;
     private image_src_? : ImageDataSource ;
     private type_? : IPCAppType ;
+    private current_view_name_? : string ;
 
     constructor() {
         super() ;
@@ -67,6 +68,7 @@ export class XeroApp extends XeroMainProcessInterface {
         this.registerCallback('resize-window', this.resizeWinow.bind(this)) ;
         this.registerCallback('tablet-title', this.setTabletTitle.bind(this)) ;
         this.registerCallback('prompt-string-request', this.handlePromptStringRequest.bind(this)) ;
+        this.installGlobalErrorHandlers() ;
     }
 
     public get appType() : IPCAppType {
@@ -104,6 +106,11 @@ export class XeroApp extends XeroMainProcessInterface {
     }
 
     private async handlePromptStringRequest(request: IPCPromptStringRequest) {
+        XeroLogger.getInstance().info('Prompt string request received', {
+            id: request.id,
+            title: request.title,
+            view: this.current_view_name_,
+        }) ;
         const dialog = new XeroStringDialog(
             request.title,
             request.message,
@@ -182,6 +189,11 @@ export class XeroApp extends XeroMainProcessInterface {
 
     public updateView(args: IPCSetView) {
         let logger = XeroLogger.getInstance() ;
+        logger.info('Update view requested', {
+            view: args?.view,
+            args: args?.args,
+            previousView: this.current_view_name_,
+        }) ;
 
         if (args === undefined || args.view === undefined) {
             const obj = {
@@ -207,6 +219,7 @@ export class XeroApp extends XeroMainProcessInterface {
         }
 
         let classObj = this.viewmap_.get(args.view) ;
+        this.current_view_name_ = args.view ;
         this.current_view_ = new classObj(this, args.args) ;
         this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;
         this.current_view_!.onVisible() ;
@@ -228,6 +241,36 @@ export class XeroApp extends XeroMainProcessInterface {
         }
 
         return ret;
+    }
+
+    private installGlobalErrorHandlers() {
+        const logger = XeroLogger.getInstance() ;
+
+        window.addEventListener('error', (event: ErrorEvent) => {
+            logger.error('Renderer window error', {
+                message: event.message,
+                fileName: event.filename,
+                line: event.lineno,
+                column: event.colno,
+                stack: event.error?.stack,
+                view: this.current_view_name_,
+                location: window.location.href,
+            }) ;
+        }) ;
+
+        window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+            const reason = event.reason instanceof Error ? {
+                name: event.reason.name,
+                message: event.reason.message,
+                stack: event.reason.stack,
+            } : event.reason ;
+
+            logger.error('Renderer unhandled rejection', {
+                reason: reason,
+                view: this.current_view_name_,
+                location: window.location.href,
+            }) ;
+        }) ;
     }
 
     private registerView(view: string, viewclass: any, programs: IPCAppType[]) {

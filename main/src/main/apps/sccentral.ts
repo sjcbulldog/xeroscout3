@@ -18,6 +18,7 @@ import { ManualMatchData } from "../project/matchmgr";
 import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabaseData, IPCDataSet, IPCGraphConfig, IPCNamedDataValue, IPCPickListConfig, IPCProjColumnsConfig, IPCPromptStringRequest, IPCPromptStringResponse, IPCScoutResult, IPCScoutResults, IPCSyncedImageData, IPCTeamInfo, IPCTypedDataValue } from "../../shared/ipc";
 	import { UDPBroadcast } from "../sync/udpbroadcast";
 	import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
+import { createSyncSessionId, logSync, packetSummary, SyncTraceContext } from "../sync/syncdiag";
 
 export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly recentFilesSetting: string = "recent-files";
@@ -96,6 +97,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private tablets_syncing_ : boolean = false ;
 	private promptResolvers : Map<string, (value: string | undefined) => void> = new Map() ;
 	private external_download_timeout_: NodeJS.Timeout | undefined = undefined ;
+	private sync_trace_? : SyncTraceContext ;
 
 	constructor(win: BrowserWindow, args: string[]) {
 		super(win, 'central');
@@ -1779,8 +1781,13 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private processPacket(p: PacketObj): PacketObj | undefined {
+		this.logSync('info', 'CentralPacketReceived', packetSummary(p)) ;
 		const handler = this.packetHandlers_.get(p.type_);
 		if (handler) {
+			this.logSync('debug', 'CentralPacketDispatch', {
+				handlerPacketType: p.type_,
+				handlerPacketName: PacketType[p.type_],
+			}) ;
 			return handler.call(this, p);
 		}
 		
@@ -1806,8 +1813,12 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleRequestHelloFromScouter(p: PacketObj): PacketObj {
+		this.startSyncTrace('scout', p) ;
 		// Check if external download is in progress
 		if (this.external_download_in_progress_) {
+			this.logSync('warn', 'CentralHelloRejected', {
+				reason: 'external-download-in-progress',
+			}) ;
 			return new PacketObj(
 				PacketType.Error,
 				Buffer.from("Central is busy downloading data from external sites. Please try syncing again after the download is complete.", "utf-8")
@@ -1821,7 +1832,12 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		if (p.data_.length > 0) {
 			try {
 				let obj = JSON.parse(p.payloadAsString());
-			} catch (err) {}
+				this.logSync('info', 'CentralHelloPayload', obj) ;
+			} catch (err) {
+				this.logSync('warn', 'CentralHelloPayloadParseFailed', {
+					message: (err as Error).message,
+				}) ;
+			}
 		}
 
 		let evname;
@@ -1839,20 +1855,31 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			uuid: this.project?.info?.uuid_,
 			name: evname,
 		};
+		this.logSync('info', 'CentralHelloAccepted', {
+			eventUuid: evid.uuid,
+			eventName: evid.name,
+		}) ;
 		let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
 		return new PacketObj(PacketType.HelloFromScouter, uuidbuf);
 	}
 
 	private handleRequestHelloFromCoach(p: PacketObj): PacketObj {
+		this.startSyncTrace('coach', p) ;
 		let resp: PacketObj ;
 
 		if (!this.project) {
+			this.logSync('warn', 'CentralCoachHelloRejected', {
+				reason: 'no-project-loaded',
+			}) ;
 			resp = new PacketObj(
 				PacketType.Error,
 				Buffer.from("no event loaded on central", "utf-8")
 			);				
 		}
 		else if (!this.project	.info!.locked_) {
+			this.logSync('warn', 'CentralCoachHelloRejected', {
+				reason: 'project-not-locked',
+			}) ;
 			resp = new PacketObj(
 				PacketType.Error,
 				Buffer.from("event on central is not locked", "utf-8")
@@ -1863,7 +1890,12 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			if (p.data_.length > 0) {
 				try {
 					let obj = JSON.parse(p.payloadAsString());
-				} catch (err) {}
+					this.logSync('info', 'CentralCoachHelloPayload', obj) ;
+				} catch (err) {
+					this.logSync('warn', 'CentralCoachHelloPayloadParseFailed', {
+						message: (err as Error).message,
+					}) ;
+				}
 			}
 
 			let evname;
@@ -1881,6 +1913,10 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				uuid: this.project?.info?.uuid_,
 				name: evname,
 			};
+			this.logSync('info', 'CentralCoachHelloAccepted', {
+				eventUuid: evid.uuid,
+				eventName: evid.name,
+			}) ;
 			let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
 			resp = new PacketObj(PacketType.HelloFromCoach, uuidbuf);
 		}
@@ -1890,6 +1926,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestRequestImages(p: PacketObj): PacketObj {
 		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		this.logSync('info', 'CentralProvideImages', {
+			requestedCount: obj.length,
+		}) ;
 		let retdata : { [name: string]: IPCSyncedImageData } = {} ;
 
 		for(let img of obj) {
@@ -1914,6 +1953,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestMatchResults(p: PacketObj): PacketObj {
 		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		this.logSync('info', 'CentralProvideMatchResults', {
+			requestedCount: obj.length,
+		}) ;
 		let results : IPCScoutResult[] = [] ;
 
 		for(let match of obj) {
@@ -1928,6 +1970,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestTeamResults(p: PacketObj): PacketObj {
 		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		this.logSync('info', 'CentralProvideTeamResults', {
+			requestedCount: obj.length,
+		}) ;
 		let results : IPCScoutResult[] = [] ;
 
 		for(let team of obj) {
@@ -1942,6 +1987,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestTablets(p: PacketObj): PacketObj {
 		this.synctype_ = "initialize" ;
+		this.logSync('info', 'CentralProvideTabletsStart') ;
 		let data: Uint8Array = new Uint8Array(0);
 		if (this.project && this.project.tablet_mgr_?.areTabletsValid()) {
 			let tablets: any[] = [];
@@ -1953,6 +1999,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			}
 
 			let msg: string = JSON.stringify(tablets);
+			this.logSync('info', 'CentralProvideTabletsReady', {
+				tabletCount: tablets.length,
+			}) ;
 			data = Buffer.from(msg, "utf-8");
 		}
 		return new PacketObj(PacketType.ProvideTablets, data);
@@ -2048,9 +2097,20 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private handleProvideResults(p: PacketObj): PacketObj {
 		try {
 			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
+			this.logSync('info', 'CentralResultsReceived', {
+				tablet: obj.tablet,
+				purpose: obj.purpose,
+				resultCount: obj.results.length,
+				payloadBytes: p.data_.length,
+			}) ;
 			this.project!.data_mgr_?.processResults(obj)
 				.then((count) => {
 					this.logger_.info(`processed ${count} synced ${obj.purpose} results from tablet '${obj.tablet}'`) ;
+					this.logSync('info', 'CentralResultsProcessed', {
+						tablet: obj.tablet,
+						purpose: obj.purpose,
+						processedCount: count,
+					}) ;
 					if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
 						this.setView("team-status");
 					} else {
@@ -2059,6 +2119,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				})
 				.catch((err) => {
 					let errobj: Error = err as Error;
+					this.logSync('error', 'CentralResultsProcessingFailed', {
+						message: errobj.message,
+						tablet: obj.tablet,
+						purpose: obj.purpose,
+					}) ;
 					dialog.showErrorBox(
 						"Internal Error #3",
 						"Error processing results: " + errobj.message
@@ -2066,6 +2131,10 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				}) ;
 			return new PacketObj(PacketType.ReceivedResults);
 		} catch (err) {
+			this.logSync('error', 'CentralResultsParseFailed', {
+				message: (err as Error).message,
+				payloadBytes: p.data_.length,
+			}) ;
 			dialog.showErrorBox(
 				"Internal Error #5",
 				"invalid results json received by central host"
@@ -2105,6 +2174,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleGoodbyeFromCoach(p: PacketObj): PacketObj | undefined {
+		this.logSync('info', 'CentralCoachGoodbyeReceived', {
+			payload: p.payloadAsString(),
+		}) ;
 		let msg: string ;
 		msg = `Coach tablet has sucessfully synchronized scouting data with this host, all data transferred` ;
 
@@ -2119,6 +2191,10 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private handleGoodbyeFromScouter(p: PacketObj): PacketObj | undefined {
 		// Clear tablets syncing flag
 		this.tablets_syncing_ = false;
+		this.logSync('info', 'CentralScoutGoodbyeReceived', {
+			syncType: this.synctype_,
+			tablet: p.payloadAsString(),
+		}) ;
 
 		let msg: string ;
 		if (this.synctype_ === "initialize") {
@@ -2139,18 +2215,32 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	private startSyncServer() {
 		if (!this.tcpsyncserver_) {
 			this.tcpsyncserver_ = new TCPSyncServer(this.logger_);
+			this.tcpsyncserver_.setTraceContext({
+				sessionId: 'central-server',
+				role: 'central',
+				transport: 'tcp',
+				path: 'server',
+				port: 45455,
+			}) ;
 			this.tcpsyncserver_
 				.init()
 				.then(() => {
 					this.logger_.info("TCPSyncServer: initialization completed sucessfully");
+					this.logSync('info', 'CentralSyncServerStarted', {
+						port: this.tcpsyncserver_?.port,
+					}) ;
 				})
 				.catch((err) => {
 					let errobj: Error = err;
+					this.logSync('error', 'CentralSyncServerStartFailed', {
+						message: errobj.message,
+					}) ;
 					dialog.showErrorBox("TCP Sync", "Cannot start TCP sync - " + err.message);
 				});
 				this.tcpsyncserver_.on("packet", (p: PacketObj) => {
 					let reply: PacketObj | undefined = this.processPacket(p);
 					if (reply) {
+						this.logSync('info', 'CentralPacketReply', packetSummary(reply)) ;
 						this.tcpsyncserver_!.send(reply).then(() => {
 							if (reply.type_ === PacketType.Error) {
 								this.tablets_syncing_ = false; // Clear flag on error
@@ -2165,6 +2255,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 			this.tcpsyncserver_.on("error", (err) => {
 				this.tablets_syncing_ = false; // Clear flag on error
+				this.logSync('error', 'CentralSyncServerError', {
+					message: err.message,
+				}) ;
 				this.tcpsyncserver_?.shutdownClient();
 				dialog.showMessageBox(this.win_, {
 					message: "Error syncing client - " + err.message,
@@ -2176,6 +2269,9 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		if (!this.udp_broadcast_) {
 			this.udp_broadcast_ = new UDPBroadcast(this.logger_, this.findPrimaryIPAddress(), this.team_number_, 5000) ;
 			this.udp_broadcast_.start() ;
+			this.logSync('info', 'CentralBroadcastStarted', {
+				host: this.findPrimaryIPAddress(),
+			}) ;
 		}
 	}
 	// #endregion
@@ -2396,5 +2492,40 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				resolver(response.value);
 			}
 		}
+	}
+
+	private startSyncTrace(pathName: 'scout' | 'coach', packet: PacketObj) {
+		let payload : any = undefined ;
+		try {
+			payload = packet.data_.length > 0 ? JSON.parse(packet.payloadAsString()) : undefined ;
+		}
+		catch {
+			payload = undefined ;
+		}
+
+		this.sync_trace_ = {
+			sessionId: createSyncSessionId(),
+			role: 'central',
+			transport: 'tcp',
+			path: pathName,
+			port: this.tcpsyncserver_?.port,
+			tablet: payload?.name,
+			purpose: payload?.purpose,
+			eventUuid: this.project?.info?.uuid_,
+		} ;
+
+		this.tcpsyncserver_?.setTraceContext(this.sync_trace_) ;
+		this.logSync('info', 'CentralSyncSessionStarted', {
+			syncType: pathName,
+			projectLoaded: this.project !== undefined,
+			projectLocked: this.project?.info?.locked_,
+		}) ;
+	}
+
+	private logSync(level: 'error' | 'warn' | 'info' | 'debug' | 'silly', event: string, extra?: Record<string, unknown>) {
+		if (this.sync_trace_) {
+			this.sync_trace_.eventUuid = this.project?.info?.uuid_ ;
+		}
+		logSync(this.logger_, level, event, this.sync_trace_, extra) ;
 	}
 }
