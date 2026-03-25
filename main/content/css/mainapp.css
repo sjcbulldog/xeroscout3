@@ -193,10 +193,241 @@ body {
     min-height: 200px;
  }
 
- .xero-assign-tablets-tablet-div {
-    display: flex;
-    justify-content: center;    
+.xero-assign-tablets-tablet-div {
+   display: flex;
+   justify-content: center;    
  }
+
+.xero-scouter-accuracy-view {
+    width: 100%;
+    height: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.scouter-accuracy-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.scouter-accuracy-title {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.scouter-accuracy-config-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.scouter-accuracy-config-label {
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.scouter-accuracy-config-select {
+    min-width: 220px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+}
+
+.scouter-accuracy-config-button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #94a3b8;
+    background: #1d4ed8;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.scouter-accuracy-config-button.secondary {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.scouter-accuracy-empty,
+.scouter-accuracy-status {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+}
+
+.scouter-accuracy-status {
+    font-size: 14px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.scouter-accuracy-graph {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+}
+
+.scouter-accuracy-graph-legend {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    color: #475569;
+}
+
+.scouter-accuracy-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-flex;
+}
+
+.scouter-accuracy-legend-dot.red {
+    background: #dc2626;
+}
+
+.scouter-accuracy-legend-dot.blue {
+    background: #2563eb;
+}
+
+.scouter-accuracy-graph-canvas {
+    width: 100%;
+    height: 260px;
+    border-radius: 6px;
+}
+
+.scouter-accuracy-tables {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    flex: 0 1 auto;
+}
+
+.scouter-accuracy-table {
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+}
+
+.scouter-accuracy-table-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #0f172a;
+}
+
+.scouter-accuracy-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    flex: 1 1 auto;
+}
+
+.scouter-accuracy-table th,
+.scouter-accuracy-table td {
+    text-align: left;
+    padding: 6px 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.scouter-accuracy-table thead th {
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.scouter-accuracy-table-empty {
+    text-align: center;
+    color: #94a3b8;
+}
+
+.scouter-accuracy-dialog-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(2, 6, 23, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.scouter-accuracy-dialog {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    width: min(520px, 95%);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.scouter-accuracy-dialog-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.scouter-accuracy-dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.scouter-accuracy-dialog-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.scouter-accuracy-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.scouter-accuracy-dialog-button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #111827;
+    color: #fff;
+    cursor: pointer;
+}
+
+.scouter-accuracy-dialog-button.secondary {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.scouter-accuracy-dialog-error {
+    color: #b91c1c;
+    font-size: 13px;
+    min-height: 18px;
+}
 
  .xero-assign-tablets-available {
     min-width: 200px ;
