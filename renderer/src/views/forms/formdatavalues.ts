@@ -5,11 +5,11 @@ export class XeroFormDataValues {
     private dvalues_ : IPCNamedDataValue[] ;
 
     public constructor(dvalues: IPCNamedDataValue[] = []) {
-        this.dvalues_ = dvalues;
+        this.dvalues_ = this.cloneNamedDataValues(dvalues) ;
     }
 
     public get values() : IPCNamedDataValue[] {
-        return this.dvalues_;
+        return this.cloneNamedDataValues(this.dvalues_) ;
     }
 
     public get(tag: string): IPCTypedDataValue | undefined {
@@ -17,20 +17,28 @@ export class XeroFormDataValues {
         if (dvalue === undefined) {
             return undefined;
         }
-        return dvalue.value;
+        return this.cloneTypedDataValue(dvalue.value) ;
     }
 
     public set(tag: string, value: IPCTypedDataValue): void {
         const index = this.dvalues_.findIndex((dvalue) => dvalue.tag === tag);
         if (index !== -1) {
-            this.dvalues_[index].value = value;
+            this.dvalues_[index].value = this.cloneTypedDataValue(value) ;
         }
         else {
-            this.dvalues_.push({ tag, value });
+            this.dvalues_.push({ tag, value: this.cloneTypedDataValue(value) }) ;
         }
     }
 
     public clear(): void {
         this.dvalues_ = [] ;
+    }
+
+    private cloneTypedDataValue(value: IPCTypedDataValue) : IPCTypedDataValue {
+        return JSON.parse(JSON.stringify(value)) as IPCTypedDataValue ;
+    }
+
+    private cloneNamedDataValues(values: IPCNamedDataValue[]) : IPCNamedDataValue[] {
+        return JSON.parse(JSON.stringify(values)) as IPCNamedDataValue[] ;
     }
 }

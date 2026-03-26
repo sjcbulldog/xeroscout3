@@ -545,7 +545,7 @@ export class SCScout extends SCBase {
             color: this.alliance_,
             title: this.current_scout_,
             draftKey: this.createDraftKey(type, this.current_scout_),
-            initialValues: data?.data,
+            initialValues: this.cloneNamedDataValues(data?.data),
             eventUuid: this.info_.uuid_,
             scoutItem: this.current_scout_,
         }
@@ -557,9 +557,9 @@ export class SCScout extends SCBase {
             ret.form = this.info_.matchform_ ;
             let teamScoutItem = this.getTeamScoutItemFromMatch(this.current_scout_) ;
             if (teamScoutItem) {
-                ret.activeTeamResult = this.getTeamResultFromCache(teamScoutItem) ;
+                ret.activeTeamResult = this.cloneScoutResult(this.getTeamResultFromCache(teamScoutItem)) ;
                 if (!ret.activeTeamResult) {
-                    ret.activeTeamResult = this.getOneScoutResults(teamScoutItem) ;
+                    ret.activeTeamResult = this.cloneScoutResult(this.getOneScoutResults(teamScoutItem)) ;
                 }
             }
         }
@@ -635,7 +635,7 @@ export class SCScout extends SCBase {
     private addResults(scout: string, result: IPCNamedDataValue[]) {
         let resobj : IPCScoutResult = {
             item: scout,
-            data: result
+            data: this.cloneNamedDataValues(result) ?? []
         } ;
 
         //
@@ -1393,7 +1393,7 @@ export class SCScout extends SCBase {
     private getTeamResultFromCache(item: string) : IPCScoutResult | undefined {
         for(let result of this.info_.team_results_cache_) {
             if (result.item === item) {
-                return result ;
+                return this.cloneScoutResult(result) ;
             }
         }
         return undefined ;
@@ -1404,14 +1404,35 @@ export class SCScout extends SCBase {
             return ;
         }
 
+        const cloned = this.cloneScoutResult(result) ;
+        if (!cloned) {
+            return ;
+        }
+
         for(let i = 0 ; i < this.info_.team_results_cache_.length ; i++) {
             if (this.info_.team_results_cache_[i].item === result.item) {
-                this.info_.team_results_cache_[i] = result ;
+                this.info_.team_results_cache_[i] = cloned ;
                 return ;
             }
         }
 
-        this.info_.team_results_cache_.push(result) ;
+        this.info_.team_results_cache_.push(cloned) ;
+    }
+
+    private cloneNamedDataValues(values?: IPCNamedDataValue[]) : IPCNamedDataValue[] | undefined {
+        if (!values) {
+            return undefined ;
+        }
+
+        return JSON.parse(JSON.stringify(values)) as IPCNamedDataValue[] ;
+    }
+
+    private cloneScoutResult(result?: IPCScoutResult) : IPCScoutResult | undefined {
+        if (!result) {
+            return undefined ;
+        }
+
+        return JSON.parse(JSON.stringify(result)) as IPCScoutResult ;
     }
 
     private writeEventFile() : Error | undefined {
