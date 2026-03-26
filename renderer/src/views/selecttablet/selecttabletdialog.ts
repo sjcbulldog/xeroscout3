@@ -30,21 +30,34 @@ export class SelectTabletDialog extends XeroDialog {
                     { title: 'Tablet Type', field: 'purpose', width: 200 },
                 ],
                 layout: 'fitColumns',
+                rowClick: (_e: Event, row: RowComponent) => {
+                    let data = row.getData() as IPCTabletDefn ;
+                    this.selected_tablet_ = {
+                        name: data.name,
+                        purpose: data.purpose,
+                    } ;
+                },
             }) ;
 
         pdiv.appendChild(div) ;
     }    
 
     protected isOKToClose(ok: boolean): boolean {
+        if (!ok) {
+            return true ;
+        }
+
         let ret  = true ;
         let rows = this.table_?.getSelectedRows() ;
-        if (rows && rows.length === 1) {
-            let data = rows[0].getData() ;
+        if (!this.selected_tablet_ && rows && rows.length === 1) {
+            let data = rows[0].getData() as IPCTabletDefn ;
             this.selected_tablet_ = {
                 name: data.name,
                 purpose: data.purpose
-            }
-        } else {
+            } ;
+        }
+
+        if (!this.selected_tablet_) {
             alert('You must select a tablet before closing this dialog.') ;
             ret = false ;
         }

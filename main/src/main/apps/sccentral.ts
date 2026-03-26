@@ -93,7 +93,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		private synctype_ : string = 'data' ;
 	private team_number_ : number =  1425 ;
 	private udp_broadcast_ : UDPBroadcast | undefined = undefined ;
-	private packetHandlers_ : Map<PacketType, (obj: PacketObj) => PacketObj | undefined> = new Map<PacketType, (obj: PacketObj) => PacketObj | undefined>() ;
+	private packetHandlers_ : Map<PacketType, (obj: PacketObj) => Promise<PacketObj | undefined> | PacketObj | undefined> = new Map<PacketType, (obj: PacketObj) => Promise<PacketObj | undefined> | PacketObj | undefined>() ;
 	private external_download_in_progress_ : boolean = false ;
 	private tablets_syncing_ : boolean = false ;
 	private promptResolvers : Map<string, (value: string | undefined) => void> = new Map() ;
@@ -1791,7 +1791,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		this.packetHandlers_.set(PacketType.ProvideCoachPickLists, this.handleProvideCoachPickLists.bind(this));
 	}
 
-	private processPacket(p: PacketObj): PacketObj | undefined {
+	private async processPacket(p: PacketObj): Promise<PacketObj | undefined> {
 		this.logSync('info', 'CentralPacketReceived', packetSummary(p)) ;
 		const handler = this.packetHandlers_.get(p.type_);
 		if (handler) {
@@ -1799,7 +1799,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				handlerPacketType: p.type_,
 				handlerPacketName: PacketType[p.type_],
 			}) ;
-			return handler.call(this, p);
+			return await handler.call(this, p);
 		}
 		
 		// Handle unknown packet types
@@ -2105,7 +2105,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}
 	}
 
-	private handleProvideResults(p: PacketObj): PacketObj {
+	private async handleProvideResults(p: PacketObj): Promise<PacketObj> {
 		try {
 			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
 			this.logSync('info', 'CentralResultsReceived', {
@@ -2114,48 +2114,32 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				resultCount: obj.results.length,
 				payloadBytes: p.data_.length,
 			}) ;
-			this.project!.data_mgr_?.processResults(obj)
-				.then((count) => {
-					this.logger_.info(`processed ${count} synced ${obj.purpose} results from tablet '${obj.tablet}'`) ;
-					this.logSync('info', 'CentralResultsProcessed', {
-						tablet: obj.tablet,
-						purpose: obj.purpose,
-						processedCount: count,
-					}) ;
-					if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
-						this.setView("team-status");
-					} else {
-						this.setView("match-status");
-					}
-				})
-				.catch((err) => {
-					let errobj: Error = err as Error;
-					this.logSync('error', 'CentralResultsProcessingFailed', {
-						message: errobj.message,
-						tablet: obj.tablet,
-						purpose: obj.purpose,
-					}) ;
-					dialog.showErrorBox(
-						"Internal Error #3",
-						"Error processing results: " + errobj.message
-					);
-				}) ;
+			const count = await this.project!.data_mgr_!.processResults(obj) ;
+			this.logger_.info(`processed ${count} synced ${obj.purpose} results from tablet '${obj.tablet}'`) ;
+			this.logSync('info', 'CentralResultsProcessed', {
+				tablet: obj.tablet,
+				purpose: obj.purpose,
+				processedCount: count,
+			}) ;
+			if (this.project!.tablet_mgr_!.isTabletTeam(obj.tablet)) {
+				this.setView("team-status");
+			} else {
+				this.setView("match-status");
+			}
 			return new PacketObj(PacketType.ReceivedResults);
 		} catch (err) {
-			this.logSync('error', 'CentralResultsParseFailed', {
-				message: (err as Error).message,
+			const errobj = err as Error ;
+			this.logSync('error', 'CentralResultsProcessingFailed', {
+				message: errobj.message,
 				payloadBytes: p.data_.length,
 			}) ;
 			dialog.showErrorBox(
-				"Internal Error #5",
-				"invalid results json received by central host"
+				"Internal Error #3",
+				"Error processing results: " + errobj.message
 			);
 			return new PacketObj(
 				PacketType.Error,
-				Buffer.from(
-					"internal error #5 - invalid results json received by central host",
-					"utf-8"
-				)
+				Buffer.from(errobj.message || "error processing results", "utf-8")
 			);
 		}
 	}
@@ -2248,8 +2232,8 @@ export class SCCentral extends SCCoachCentralBaseApp {
 					}) ;
 					dialog.showErrorBox("TCP Sync", "Cannot start TCP sync - " + err.message);
 				});
-				this.tcpsyncserver_.on("packet", (p: PacketObj) => {
-					let reply: PacketObj | undefined = this.processPacket(p);
+				this.tcpsyncserver_.on("packet", async (p: PacketObj) => {
+					let reply: PacketObj | undefined = await this.processPacket(p);
 					if (reply) {
 						this.logSync('info', 'CentralPacketReply', packetSummary(reply)) ;
 						this.tcpsyncserver_!.send(reply).then(() => {

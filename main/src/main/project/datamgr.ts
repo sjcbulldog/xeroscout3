@@ -187,15 +187,9 @@ export class DataManager extends Manager {
 
                 if (obj.purpose) {
                     if (obj.purpose === 'match') {
-                        this.info_.match_results_ = [] ;
-                        for(let res of obj.results) {
-                            if (res.item) {
-                                this.info_.match_results_.push(res) ;
-                            }
-                        }
-
                         try {
                             let status = await this.matchdb_.processScoutingResults(obj) ;
+                            this.mergeResults(this.info_.match_results_, obj.results) ;
                             num = status.length ;
                             for(let st of status) {
                                 if (!this.info_.scouted_match_.includes(st)) {
@@ -210,15 +204,9 @@ export class DataManager extends Manager {
                         }
                     }
                     else {
-                        this.info_.team_results_ = [] ;
-                        for(let res of obj.results) {
-                            if (res.item) {
-                                this.info_.team_results_.push(res) ;
-                            }
-                        }
-
                         try {
                             let teams = await this.teamdb_.processScoutingResults(obj) ;
+                            this.mergeResults(this.info_.team_results_, obj.results) ;
                             num = teams.length ;
                             for (let st of teams) {
                                 if (!this.info_.scouted_team_.includes(st)) {
@@ -253,6 +241,22 @@ export class DataManager extends Manager {
                 }) ;
         }) ;
         return ret ;
+    }     
+
+    private mergeResults(target: IPCScoutResult[], incoming: IPCScoutResult[]) {
+        for (let res of incoming) {
+            if (!res.item) {
+                continue ;
+            }
+
+            let index = target.findIndex((one) => one.item === res.item) ;
+            if (index !== -1) {
+                target[index] = res ;
+            }
+            else {
+                target.push(res) ;
+            }
+        }
     }
 
     // #region match related methods

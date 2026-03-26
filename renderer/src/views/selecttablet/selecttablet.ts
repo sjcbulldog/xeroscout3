@@ -15,6 +15,7 @@ export class XeroSelectTablet extends XeroView {
     }
 
     private formCallback(data: IPCTabletDefn[]) {
+        this.tablets_ = data ;
         this.dialog_ = new SelectTabletDialog(data) ;
         this.dialog_.on('closed', this.dialogClosed.bind(this)) ;
         this.dialog_.showRelative(this.elem, 100, 100) ;
@@ -29,7 +30,8 @@ export class XeroSelectTablet extends XeroView {
             else {
                 alert('No tablet selected') ;
                 this.dialog_ = new SelectTabletDialog(this.tablets_) ;
-                this.dialog_.on('closed', this.dialogClosed.bind(this)) ;                
+                this.dialog_.on('closed', this.dialogClosed.bind(this)) ;
+                this.dialog_.showRelative(this.elem, 100, 100) ;
             }
         }
     }
