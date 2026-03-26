@@ -1664,12 +1664,12 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			if (!pathname.canceled) {
 				let result = FormManager.validateForm(pathname.filePaths[0], "team") ;
 				if (result.length > 0) {
-					dialog.showErrorBox("Error", 'Error processing team form file: ' + result.join(', '));
+					dialog.showErrorBox("Team Form Error", 'Error processing team form file:\n' + result.join('\n'));
 				}
 				else {
-					let result = this.project!.setTeamForm(pathname.filePaths[0]);
-					if (result instanceof Error) {
-						dialog.showErrorBox("Error", 'Error processing team form file: ' + result.message);
+					let setResult = this.project!.setTeamForm(pathname.filePaths[0]);
+					if (setResult instanceof Error) {
+						dialog.showErrorBox("Team Form Error", 'Error processing team form file: ' + setResult.message);
 					}
 					else {
 						this.sendNavData() ;
@@ -1700,13 +1700,13 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		path.then((pathname) => {
 			if (!pathname.canceled) {
 				let result = FormManager.validateForm(pathname.filePaths[0], "match");
-				if (result instanceof Error) {
-					dialog.showErrorBox("Error", 'Error processing match form file: ' + result.join(', '));
+				if (result.length > 0) {
+					dialog.showErrorBox("Match Form Error", 'Error processing match form file:\n' + result.join('\n'));
 				}
 				else {
-					let result = this.project!.setMatchForm(pathname.filePaths[0]);
-					if (result instanceof Error) {
-						dialog.showErrorBox("Error", 'Error processing match form file: ' + result.message);
+					let setResult = this.project!.setMatchForm(pathname.filePaths[0]);
+					if (setResult instanceof Error) {
+						dialog.showErrorBox("Match Form Error", 'Error processing match form file: ' + setResult.message);
 					}
 					else {
 						this.sendNavData() ;
@@ -2019,13 +2019,21 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleRequestTeamForm(p: PacketObj): PacketObj {
-		if (this.project?.form_mgr_?.hasForms()) {
-			let jsonstr = fs.readFileSync(this.project!.form_mgr_!.getTeamFormFullPath()!).toString();
-			return new PacketObj(
-				PacketType.ProvideTeamForm,
-				Buffer.from(jsonstr, "utf8")
-			);
-		} else {
+		let formPath = this.project?.form_mgr_?.getTeamFormFullPath() ;
+		if (formPath && this.project?.form_mgr_?.hasTeamForm()) {
+			let errors = FormManager.validateForm(formPath, "team") ;
+			if (errors.length > 0) {
+				let msg = "central team form is invalid:\n" + errors.join("\n") ;
+				this.logSync('warn', 'CentralProvideTeamFormRejected', {
+					message: msg,
+				}) ;
+				return new PacketObj(PacketType.Error, Buffer.from(msg, "utf-8")) ;
+			}
+
+			let jsonstr = fs.readFileSync(formPath).toString();
+			return new PacketObj(PacketType.ProvideTeamForm, Buffer.from(jsonstr, "utf8"));
+		}
+		else {
 			dialog.showErrorBox(
 				"Internal Error #1",
 				"No team form is defined but event is locked"
@@ -2038,13 +2046,21 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleRequestMatchForm(p: PacketObj): PacketObj {
-		if (this.project?.form_mgr_?.hasForms()) {
-			let jsonstr = fs.readFileSync(this.project!.form_mgr_.getMatchFormFullPath()!).toString();
-			return new PacketObj(
-				PacketType.ProvideMatchForm,
-				Buffer.from(jsonstr, "utf8")
-			);
-		} else {
+		let formPath = this.project?.form_mgr_?.getMatchFormFullPath() ;
+		if (formPath && this.project?.form_mgr_?.hasMatchForm()) {
+			let errors = FormManager.validateForm(formPath, "match") ;
+			if (errors.length > 0) {
+				let msg = "central match form is invalid:\n" + errors.join("\n") ;
+				this.logSync('warn', 'CentralProvideMatchFormRejected', {
+					message: msg,
+				}) ;
+				return new PacketObj(PacketType.Error, Buffer.from(msg, "utf-8")) ;
+			}
+
+			let jsonstr = fs.readFileSync(formPath).toString();
+			return new PacketObj(PacketType.ProvideMatchForm, Buffer.from(jsonstr, "utf8"));
+		}
+		else {
 			dialog.showErrorBox(
 				"Internal Error #1",
 				"No match form is defined but event is locked"

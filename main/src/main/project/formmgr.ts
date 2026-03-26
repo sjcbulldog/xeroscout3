@@ -18,6 +18,63 @@ export class FormManager extends Manager {
 	private info_: FormInfo;
 	private data_mgr_: DataManager;
 
+	private static isDataBearingControl(item: IPCFormItem): boolean {
+		if (item.type === "image" || item.type === "label" || item.type === "box" || item.type === "robotviewer") {
+			return false;
+		}
+
+		if (item.type === "robotphoto") {
+			return (item as IPCRobotPhotoItem).mode === "capture";
+		}
+
+		return true;
+	}
+
+	private static validateDataTags(filename: string, form: IPCForm): string[] {
+		let ret: string[] = [];
+		let seen = new Map<string, { section: string; controlType: IPCFormControlType; tag: string }>();
+
+		for (let section of form.sections) {
+			if (!section.items || !Array.isArray(section.items)) {
+				continue;
+			}
+
+			for (let obj of section.items) {
+				let item = obj as IPCFormItem;
+				if (!FormManager.isDataBearingControl(item)) {
+					continue;
+				}
+
+				let rawTag = typeof item.tag === "string" ? item.tag : "";
+				let normalizedTag = rawTag.trim();
+				let sectionName = section.name || "<unnamed section>";
+
+				if (normalizedTag.length === 0) {
+					ret.push(
+						`${filename}: section '${sectionName}' contains a ${item.type} control with a blank data tag`
+					);
+					continue;
+				}
+
+				let prior = seen.get(normalizedTag);
+				if (prior) {
+					ret.push(
+						`${filename}: duplicate data tag '${normalizedTag}' found in section '${sectionName}' (${item.type}) and section '${prior.section}' (${prior.controlType})`
+					);
+					continue;
+				}
+
+				seen.set(normalizedTag, {
+					section: sectionName,
+					controlType: item.type,
+					tag: rawTag,
+				});
+			}
+		}
+
+		return ret;
+	}
+
 	constructor(logger: winston.Logger, writer: () => void, info: FormInfo, dir: string, datamgr: DataManager) {
 		super(logger, writer);
 		this.info_ = info;
@@ -92,6 +149,7 @@ export class FormManager extends Manager {
 		let rulesengine = new RulesEngine(fobj) ;
 		rulesengine.doRulesWork(Number.MAX_SAFE_INTEGER) ;
 		ret.push(...rulesengine.errors) ;
+		ret.push(...FormManager.validateDataTags(filename, fobj)) ;
 
 		let captureCount = 0 ;
 		let viewerCount = 0 ;
@@ -388,14 +446,8 @@ export class FormManager extends Manager {
 				if (section.items && Array.isArray(section.items)) {
 						for (let obj of section.items) {
 							let item = obj as IPCFormItem ;
-							if (item.type === "image" || item.type === "label" || item.type === "box") {
+							if (!FormManager.isDataBearingControl(item)) {
 								// Skip any control that does not provide data, as these are not stored in the database
-								continue;
-							}
-							if (item.type === "robotviewer") {
-								continue ;
-							}
-							if (item.type === "robotphoto" && (item as IPCRobotPhotoItem).mode === 'display') {
 								continue ;
 							}
 

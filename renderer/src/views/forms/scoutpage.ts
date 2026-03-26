@@ -9,6 +9,7 @@ import { XeroFormDataValues } from "./formdatavalues.js";
 export class XeroFormScoutSectionPage extends XeroWidget {
     private app_ : XeroApp ;
     private data_ : XeroFormDataValues ;
+    private capture_controls_ : ((controls: FormControl[]) => void) | undefined ;
     private controls_ : FormControl[] = [] ;
     private formdiv_ : HTMLDivElement ;
     private observer_ : ResizeObserver ;
@@ -20,11 +21,12 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     private mirrorx_? : boolean ;
     private mirrory_? : boolean ;
 
-    public constructor(app: XeroApp, data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean, mirrorx?: boolean, mirrory?: boolean) {
+    public constructor(app: XeroApp, data: XeroFormDataValues, formsize: XeroSize, color: string, reversed: boolean, captureControls?: (controls: FormControl[]) => void, mirrorx?: boolean, mirrory?: boolean) {
         super('div', 'xero-form-section-page') ;
 
         this.app_ = app ;
         this.data_ = data ;
+        this.capture_controls_ = captureControls ;
         this.size_ = formsize ;
         this.color_ = color ;
         this.reversed_ = reversed ;
@@ -54,6 +56,10 @@ export class XeroFormScoutSectionPage extends XeroWidget {
     }
 
     public doLayout() : void {
+        if (this.capture_controls_ && this.formdiv_.childElementCount > 0 && this.controls_.length > 0) {
+            this.capture_controls_(this.controls_) ;
+        }
+
         this.formdiv_.innerHTML = '' ;
 
         let fbounds = this.formdiv_.getBoundingClientRect() ;

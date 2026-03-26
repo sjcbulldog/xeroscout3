@@ -1,4 +1,7 @@
 import { expect, test, vi } from "vitest" ;
+import fs from "fs" ;
+import os from "os" ;
+import path from "path" ;
 
 vi.mock("electron", () => {
     return {
@@ -22,6 +25,13 @@ vi.mock("electron", () => {
 import { SCCentral } from "../main/apps/sccentral" ;
 import { PacketObj } from "../main/sync/packetobj" ;
 import { PacketType } from "../main/sync/packettypes" ;
+
+function writeTempForm(contents: object, filename: string) : string {
+    let dir = fs.mkdtempSync(path.join(os.tmpdir(), "xeroscout-central-form-")) ;
+    let fullpath = path.join(dir, filename) ;
+    fs.writeFileSync(fullpath, JSON.stringify(contents, null, 4)) ;
+    return fullpath ;
+}
 
 function createDeferred<T>() {
     let resolve! : (value: T) => void ;
@@ -92,4 +102,115 @@ test('handleProvideResults returns an error packet when processResults fails', a
 
     expect(reply.type_).toBe(PacketType.Error) ;
     expect(reply.payloadAsString()).toBe('team import failed') ;
+}) ;
+
+test('handleRequestTeamForm refuses an invalid stored form', () => {
+    let formPath = writeTempForm({
+        purpose: 'team',
+        tablet: { name: 'Tablet 1', size: { width: 1024, height: 768 } },
+        sections: [
+            {
+                name: 'Photo',
+                items: [
+                    {
+                        type: 'text',
+                        tag: 'robot_photo',
+                        x: 0,
+                        y: 0,
+                        width: 100,
+                        height: 40,
+                        fontFamily: 'Arial',
+                        fontSize: 14,
+                        fontStyle: 'normal',
+                        fontWeight: 'normal',
+                        color: '#000000',
+                        background: '#ffffff',
+                        transparent: false,
+                        datatype: 'string',
+                        placeholder: '',
+                    },
+                    {
+                        type: 'autoplan',
+                        tag: 'robot_photo',
+                        x: 0,
+                        y: 50,
+                        width: 100,
+                        height: 40,
+                        fontFamily: 'Arial',
+                        fontSize: 14,
+                        fontStyle: 'normal',
+                        fontWeight: 'normal',
+                        color: '#000000',
+                        background: '#ffffff',
+                        transparent: false,
+                        datatype: 'string',
+                    },
+                ],
+            },
+        ],
+    }, 'team.json') ;
+
+    const central = Object.create(SCCentral.prototype) as any ;
+    central.logSync = vi.fn() ;
+    central.project_ = {
+        form_mgr_: {
+            hasTeamForm: vi.fn(() => true),
+            getTeamFormFullPath: vi.fn(() => formPath),
+        },
+    } ;
+
+    const reply = central["handleRequestTeamForm"](new PacketObj(PacketType.RequestTeamForm)) ;
+
+    expect(reply.type_).toBe(PacketType.Error) ;
+    expect(reply.payloadAsString()).toContain("central team form is invalid") ;
+    expect(reply.payloadAsString()).toContain("duplicate data tag") ;
+
+    fs.rmSync(path.dirname(formPath), { recursive: true, force: true }) ;
+}) ;
+
+test('handleRequestMatchForm returns the stored form when it validates', () => {
+    let formPath = writeTempForm({
+        purpose: 'match',
+        tablet: { name: 'Tablet 1', size: { width: 1024, height: 768 } },
+        sections: [
+            {
+                name: 'Start',
+                items: [
+                    {
+                        type: 'text',
+                        tag: 'notes',
+                        x: 0,
+                        y: 0,
+                        width: 100,
+                        height: 40,
+                        fontFamily: 'Arial',
+                        fontSize: 14,
+                        fontStyle: 'normal',
+                        fontWeight: 'normal',
+                        color: '#000000',
+                        background: '#ffffff',
+                        transparent: false,
+                        datatype: 'string',
+                        placeholder: '',
+                    },
+                ],
+            },
+        ],
+    }, 'match.json') ;
+
+    const central = Object.create(SCCentral.prototype) as any ;
+    central.logSync = vi.fn() ;
+    central.project_ = {
+        form_mgr_: {
+            hasMatchForm: vi.fn(() => true),
+            getMatchFormFullPath: vi.fn(() => formPath),
+        },
+    } ;
+
+    const reply = central["handleRequestMatchForm"](new PacketObj(PacketType.RequestMatchForm)) ;
+
+    expect(reply.type_).toBe(PacketType.ProvideMatchForm) ;
+    expect(JSON.parse(reply.payloadAsString())).toMatchObject({ purpose: 'match' }) ;
+
+    fs.rmSync(path.dirname(formPath), { recursive: true, force: true }) ;
 }) ;

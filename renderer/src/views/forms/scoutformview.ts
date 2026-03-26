@@ -368,6 +368,7 @@ export class XeroScoutFormView extends XeroView {
             sz,
             this.form_info_!.color || 'blue',
             this.form_info_!.reversed || false,
+            this.captureControlsToDataValues.bind(this),
             this.form_info_!.mirrorx,
             this.form_info_!.mirrory
         ) ;
