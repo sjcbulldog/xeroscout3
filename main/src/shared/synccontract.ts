@@ -51,6 +51,22 @@ function addError(errors: string[], path: string, message: string) {
     errors.push(`${path} ${message}`);
 }
 
+function summarizeScoutResultTags(value: unknown): string {
+    if (!isObject(value) || !Array.isArray(value.data)) {
+        return "";
+    }
+
+    const tags = value.data
+        .filter((entry) => isObject(entry) && typeof entry.tag === "string" && entry.tag.trim().length > 0)
+        .map((entry) => (entry as Record<string, unknown>).tag as string);
+
+    if (tags.length === 0) {
+        return "";
+    }
+
+    return `; data tags: ${tags.join(", ")}`;
+}
+
 function requireStrictObject(value: unknown, path: string, errors: string[], keys: string[]): value is Record<string, unknown> {
     if (!isObject(value)) {
         addError(errors, path, `expected object but got ${describeValue(value)}`);
@@ -232,7 +248,10 @@ function validateScoutResult(value: unknown, path: string, errors: string[]): va
 
     const obj = value as Record<string, unknown>;
     let ok = true;
-    ok = requireString(obj.item, `${path}.item`, errors) && ok;
+    if (!requireString(obj.item, `${path}.item`, errors)) {
+        addError(errors, path, `is missing scout item id${summarizeScoutResultTags(value)}`);
+        ok = false;
+    }
     if (typeof obj.item === "string") {
         validateScoutItemId(obj.item, `${path}.item`, errors);
     }

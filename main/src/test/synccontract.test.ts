@@ -72,6 +72,45 @@ test("stringifyScoutResultsPayload rejects mismatched typed values", () => {
     }
 }) ;
 
+test("stringifyScoutResultsPayload includes tag preview for missing result item", () => {
+    const result = stringifyScoutResultsPayload({
+        tablet: "Tablet 41",
+        purpose: "match",
+        results: [
+            {
+                data: [
+                    {
+                        tag: "auto_notes",
+                        value: {
+                            type: "string",
+                            value: "",
+                        },
+                    },
+                    {
+                        tag: "defense_rating",
+                        value: {
+                            type: "integer",
+                            value: 3,
+                        },
+                    },
+                    {
+                        tag: "climb",
+                        value: {
+                            type: "string",
+                            value: "yes",
+                        },
+                    },
+                ],
+            },
+        ],
+    }) ;
+
+    expect(result.ok).toBe(false) ;
+    if (!result.ok) {
+        expect(result.errors.join("\n")).toContain("results[0] is missing scout item id; data tags: auto_notes, defense_rating, climb") ;
+    }
+}) ;
+
 test("validateCoachSyncPreflight rejects non-coach-owned graph payloads", () => {
     const result = validateCoachSyncPreflight([
         {
