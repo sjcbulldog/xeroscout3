@@ -297,8 +297,8 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventRemote) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
-            this.beginSyncTrace('cable', this.ipaddr_, this.port_) ;
-            this.sync_client_ = new TCPClient(this.logger_, this.ipaddr_, this.port_) ;
+            this.beginSyncTrace('cable', SCScout.defaultSyncIPAddr, this.port_) ;
+            this.sync_client_ = new TCPClient(this.logger_, SCScout.defaultSyncIPAddr, this.port_) ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
 
@@ -1209,7 +1209,7 @@ export class SCScout extends SCBase {
 
         synctcpitem = new MenuItem( {
             type: 'normal',
-            label: 'Sync Event Cable (Last Sync Address)',
+            label: 'Sync Event Cable (192.168.1.1)',
             click: () => { this.executeCommand(SCScout.syncEventRemote)}
         }) ;
         filemenu.submenu?.insert(1, synctcpitem) ;

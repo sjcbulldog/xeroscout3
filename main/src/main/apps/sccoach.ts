@@ -258,7 +258,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
             this.syncCoach() ;            
         }
         else if (cmd === SCCoach.syncEventRemote) {
-            this.sync_client_ = new TCPClient(this.logger_, this.sync_ipaddr_, this.sync_port_) ;
+            this.sync_client_ = new TCPClient(this.logger_, SCCoach.defaultSyncIPAddr, this.sync_port_) ;
             this.sync_client_?.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_?.on('error', this.syncError.bind(this)) ;
             this.syncCoach() ;
@@ -332,7 +332,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
         synctcpitem = new MenuItem( {
             type: 'normal',
-            label: 'Sync Event Cable (Last Sync Address)',
+            label: 'Sync Event Cable (192.168.1.1)',
             click: () => { this.executeCommand(SCCoach.syncEventRemote)}
         }) ;
         filemenu.submenu?.insert(1, synctcpitem) ;
