@@ -5,3 +5,5 @@ xeroscout-scout.txt
 xeroscout-central.txt
 xeroscout-coach.txt
 installer/*.exe
+playwright-report
+test-results

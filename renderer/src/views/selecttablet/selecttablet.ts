@@ -21,18 +21,24 @@ export class XeroSelectTablet extends XeroView {
         this.dialog_.showRelative(this.elem, 100, 100) ;
     }
 
-    private dialogClosed() {
-        if (this.dialog_) {
-            if (this.dialog_.selectedTablet) {
-                this.request('set-tablet-name-purpose', this.dialog_.selectedTablet) ;
-                this.dialog_ = undefined ;
-            }
-            else {
-                alert('No tablet selected') ;
-                this.dialog_ = new SelectTabletDialog(this.tablets_) ;
-                this.dialog_.on('closed', this.dialogClosed.bind(this)) ;
-                this.dialog_.showRelative(this.elem, 100, 100) ;
-            }
+    private dialogClosed(changed: boolean) {
+        const dialog = this.dialog_ ;
+        this.dialog_ = undefined ;
+
+        if (!dialog) {
+            return ;
+        }
+
+        if (dialog.selectedTablet) {
+            this.request('set-tablet-name-purpose', dialog.selectedTablet) ;
+            return ;
+        }
+
+        if (changed) {
+            alert('No tablet selected') ;
+            this.dialog_ = new SelectTabletDialog(this.tablets_) ;
+            this.dialog_.on('closed', this.dialogClosed.bind(this)) ;
+            this.dialog_.showRelative(this.elem, 100, 100) ;
         }
     }
 }

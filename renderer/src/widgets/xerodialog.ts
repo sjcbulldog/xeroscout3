@@ -32,6 +32,14 @@ export abstract class XeroDialog extends EventEmitter {
         this.key_down_handler_ = this.keyDown.bind(this) ;
     }
 
+    private static toTestIdSegment(value: string) : string {
+        return value
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'dialog' ;
+    }
+
     public disableEnterKeyProcessing() {
         this.process_enter_key_ = false ;
     }
@@ -93,12 +101,16 @@ export abstract class XeroDialog extends EventEmitter {
     }
 
     private prePlaceInit() {
+        const titleId = XeroDialog.toTestIdSegment(this.title_) ;
+
         this.popup_ = document.createElement('div') ;
         this.popup_.className = 'xero-popup-form-edit-dialog' ;
         this.popup_.style.zIndex = '1100' ;
+        this.popup_.setAttribute('data-testid', `dialog-${titleId}`) ;
 
         this.topbar_ = document.createElement('div') ;
         this.topbar_.className = 'xero-popup-form-edit-dialog-topbar' ;
+        this.topbar_.setAttribute('data-testid', `dialog-titlebar-${titleId}`) ;
         if (this.title_) {
             this.topbar_.innerHTML = this.title_ ;
         }
@@ -106,10 +118,12 @@ export abstract class XeroDialog extends EventEmitter {
 
         this.client_area_ = document.createElement('div') ;
         this.client_area_.className = 'xero-popup-form-edit-dialog-client' ;
+        this.client_area_.setAttribute('data-testid', `dialog-client-${titleId}`) ;
         this.popup_.appendChild(this.client_area_) ;
 
         this.button_area_ = document.createElement('div') ;
         this.button_area_.className = 'xero-popup-form-edit-dialog-buttons' ;
+        this.button_area_.setAttribute('data-testid', `dialog-buttons-${titleId}`) ;
         this.popup_.appendChild(this.button_area_) ;
 
         this.populateDialog(this.client_area_) 
@@ -205,15 +219,19 @@ export abstract class XeroDialog extends EventEmitter {
     }
 
     public populateButtons(div: HTMLDivElement) {
+        const titleId = XeroDialog.toTestIdSegment(this.title_) ;
+
         let okbutton = document.createElement('button') ;
         okbutton.innerText = this.yes_no_ ? 'Yes' : 'OK' ;
         okbutton.className = 'xero-popup-form-edit-dialog-button' ;
+        okbutton.setAttribute('data-testid', `dialog-ok-${titleId}`) ;
         okbutton.addEventListener('click', this.okButton.bind(this)) ;
         div.appendChild(okbutton) ;
 
         let cancelbutton = document.createElement('button') ;
         cancelbutton.innerText = this.yes_no_ ? 'No' : 'Cancel' ;
         cancelbutton.className = 'xero-popup-form-edit-dialog-button' ;
+        cancelbutton.setAttribute('data-testid', `dialog-cancel-${titleId}`) ;
         cancelbutton.addEventListener('click', this.cancelButton.bind(this)) ;
         div.appendChild(cancelbutton) ;
     }

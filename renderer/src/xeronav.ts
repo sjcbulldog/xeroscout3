@@ -8,6 +8,7 @@ export class XeroNav  extends XeroWidget {
 
     public constructor() {
         super('div', 'xero-nav-list');
+        this.setTestId('nav-list') ;
 
         this.registerCallback('send-nav-data', this.onNavData.bind(this)) ;
         this.registerCallback('send-nav-highlight', this.onNavHighlight.bind(this)) ;
@@ -23,6 +24,7 @@ export class XeroNav  extends XeroWidget {
             let navItem = document.createElement('div') ;
             navItem.className = 'xero-nav-item' ;
             navItem.xerodata = item.command ;
+            navItem.dataset.navCommand = item.command ?? '' ;
 
             if (item.type === 'item') {
                 let titleDiv = document.createElement('div');
@@ -38,12 +40,14 @@ export class XeroNav  extends XeroWidget {
                 }
                 
                 navItem.className = 'xero-nav-list-item' ;
+                navItem.setAttribute('data-testid', `nav-item-${XeroWidget.toTestIdSegment(item.command ?? item.title)}`) ;
                 this.navelems_.push(navItem) ;
 
                 navItem.addEventListener('click', this.navItemClicked.bind(this)) ;
             }
             else if (item.type === 'icon') {
                 navItem.className = 'xero-nav-list-icon' ;
+                navItem.setAttribute('data-testid', `nav-icon-${XeroWidget.toTestIdSegment(item.command ?? item.title)}`) ;
                 let icon = document.createElement('img') ;
                 icon.src = `data:image/png;base64,${item.icon}`
                 icon.alt = item.title;
@@ -59,6 +63,7 @@ export class XeroNav  extends XeroWidget {
             else if (item.type === 'separator') {
                 navItem.className = 'xero-nav-list-separator' ;
                 navItem.textContent = item.title ;
+                navItem.setAttribute('data-testid', `nav-separator-${XeroWidget.toTestIdSegment(item.title)}`) ;
             }
 
             this.elem.appendChild(navItem) ;

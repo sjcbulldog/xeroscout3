@@ -1,4 +1,4 @@
-import { CellComponent, RowComponent, TabulatorFull } from "tabulator-tables";
+import { TabulatorFull } from "tabulator-tables";
 import { IPCTabletDefn } from "../../shared/ipc.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 
@@ -20,6 +20,7 @@ export class SelectTabletDialog extends XeroDialog {
     async populateDialog(pdiv: HTMLDivElement) {
         let div = document.createElement('div') ;
         div.className = 'xero-db-dialog-hide-show' ;
+        div.setAttribute('data-testid', 'select-tablet-table') ;
 
         this.table_ = new TabulatorFull(div, 
             {
@@ -30,14 +31,22 @@ export class SelectTabletDialog extends XeroDialog {
                     { title: 'Tablet Type', field: 'purpose', width: 200 },
                 ],
                 layout: 'fitColumns',
-                rowClick: (_e: Event, row: RowComponent) => {
+                rowFormatter: (row) => {
                     let data = row.getData() as IPCTabletDefn ;
-                    this.selected_tablet_ = {
-                        name: data.name,
-                        purpose: data.purpose,
-                    } ;
+                    row.getElement().setAttribute(
+                        'data-testid',
+                        `select-tablet-row-${data.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tablet'}`
+                    ) ;
                 },
             }) ;
+
+        this.table_.on('rowClick', (_e, row) => {
+            let data = row.getData() as IPCTabletDefn ;
+            this.selected_tablet_ = {
+                name: data.name,
+                purpose: data.purpose,
+            } ;
+        }) ;
 
         pdiv.appendChild(div) ;
     }    

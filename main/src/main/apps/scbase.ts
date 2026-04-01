@@ -1,12 +1,12 @@
 import { app, BrowserWindow, dialog,Menu, } from "electron";
 import * as path from "path";
-import * as os from "os";
 import * as fs from "fs";
 import * as winston from "winston";
 import * as crypto from "crypto";
 import settings from "electron-settings";
 import { ImageManager } from "../imagemgr";
 import { IPCAppInit, IPCAppType, IPCImageResponse, IPCSetView } from "../../shared/ipc";
+import { isTestMode, resolveLegacyAppHome } from "../runtimeenv";
 
 export interface XeroVersion {
 	major: number;
@@ -32,7 +32,7 @@ export abstract class SCBase {
 	protected constructor(win: BrowserWindow, type: IPCAppType) {
 		this.typestr_ = type;
 		this.win_ = win;
-		this.appdir_ = path.join(os.homedir(), SCBase.appdirName);
+		this.appdir_ = resolveLegacyAppHome();
 		this.content_dir_ = path.join(process.cwd(), 'content') ;
 		this.image_mgr_ = new ImageManager(type, type === 'central' ? path.join(this.content_dir_, 'images') : undefined) ;
 
@@ -297,6 +297,14 @@ export abstract class SCBase {
 	public mainWindowLoaded() : void {
 	}
 
+	public getRuntimeState() : Record<string, unknown> {
+		return {
+			appType: this.typestr_,
+			currentView: this.lastview_,
+			logFile: this.logfileName_,
+		} ;
+	}
+
 	public sendToRenderer(ev: string, ...args: any) {
 		let argval: any[] = args ;
 
@@ -490,6 +498,7 @@ export abstract class SCBase {
 		let initData : IPCAppInit = {
 			type: this.typestr_,
 			splitter: value,
+			testMode: isTestMode(),
 		} ;
 
 		this.sendToRenderer('xero-app-init', initData) ;

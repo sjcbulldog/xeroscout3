@@ -55,6 +55,7 @@ export class XeroApp extends XeroMainProcessInterface {
     private image_src_? : ImageDataSource ;
     private type_? : IPCAppType ;
     private current_view_name_? : string ;
+    private test_mode_ : boolean = false ;
 
     constructor() {
         super() ;
@@ -81,14 +82,21 @@ export class XeroApp extends XeroMainProcessInterface {
         logger_.debug(`XeroApp init called with type ${init.type}`) ;
 
         this.type_ = init.type ;
+        this.test_mode_ = init.testMode === true ;
         this.hintdb_ = new HintManager() ;
         this.image_src_ = new ImageDataSource() ;
 
         let body = document.getElementsByTagName("body")[0] ;
+        body.dataset.appType = init.type ;
+        body.dataset.testMode = this.test_mode_ ? 'true' : 'false' ;
+        body.setAttribute('data-testid', 'app-root') ;
 
         this.left_nav_pane_ = new XeroNav() ;
+        this.left_nav_pane_.setTestId('nav-root') ;
         this.right_view_pane_ = new XeroWidget('div', "xero-view-pane") ;
+        this.right_view_pane_.setTestId('view-root') ;
         this.splitter_ = new XeroSplitter("horizontal", this.left_nav_pane_, this.right_view_pane_) ;
+        this.splitter_.setTestId('main-splitter') ;
         this.splitter_.on('changed', this.splitterChanged.bind(this)) ;
         this.splitter_.position = init.splitter || 10 ;
 
@@ -222,6 +230,9 @@ export class XeroApp extends XeroMainProcessInterface {
         let classObj = this.viewmap_.get(args.view) ;
         this.current_view_name_ = args.view ;
         this.current_view_ = new classObj(this, args.args) ;
+        this.current_view_!.elem.dataset.viewName = args.view ;
+        this.current_view_!.elem.setAttribute('data-testid', `view-${XeroWidget.toTestIdSegment(args.view)}`) ;
+        document.body.dataset.currentView = args.view ;
         this.right_view_pane_!.elem.appendChild(this.current_view_!.elem) ;
         this.current_view_!.onVisible() ;
     }

@@ -14,6 +14,20 @@ declare global {
     }
 }
 
+export function toTestIdSegment(value: string | undefined) : string {
+    if (!value) {
+        return "untagged" ;
+    }
+
+    const normalized = value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") ;
+
+    return normalized.length > 0 ? normalized : "untagged" ;
+}
+
 export class XeroMainProcessInterface extends EventEmitter {
     private static cbmgr_? : XeroCBManager = new XeroCBManager() ;
     private cbs_registered_ : [name: string , callback: XeroCBCallback][] = [] ;

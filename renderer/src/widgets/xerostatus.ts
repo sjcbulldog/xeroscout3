@@ -7,17 +7,21 @@ export class XeroStatusBar extends XeroWidget {
 
     constructor() {
         super('div', 'xero-status-bar');
+        this.setTestId('status-bar') ;
 
         this.left_status_ = document.createElement('div') ;
         this.left_status_.className = 'xero-status-bar-left' ;
+        this.left_status_.setAttribute('data-testid', 'status-left') ;
         this.elem.appendChild(this.left_status_) ;
 
         this.middle_status_ = document.createElement('div') ;
         this.middle_status_.className = 'xero-status-bar-middle' ;
+        this.middle_status_.setAttribute('data-testid', 'status-middle') ;
         this.elem.appendChild(this.middle_status_) ;
 
         this.right_status_ = document.createElement('div') ;
         this.right_status_.className = 'xero-status-bar-right' ;
+        this.right_status_.setAttribute('data-testid', 'status-right') ;
         this.elem.appendChild(this.right_status_) ;
     }
 
@@ -59,8 +63,10 @@ export class XeroStatusWindow extends XeroWidget {
 
     constructor(child: XeroWidget) {
         super('div', 'xero-status-win');
+        this.setTestId('status-window') ;
 
         this.mainview_ = new XeroWidget('div', 'xero-status-win-mainview') ;
+        this.mainview_.setTestId('status-mainview') ;
         this.mainview_.setParentWidget(this) ;
         this.mainview_.elem.style.height = `calc(100% - ${this.status_bar_height_}px)` ;
         this.mainview_.elem.style.width = '100%' ;

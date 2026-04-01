@@ -19,6 +19,7 @@ import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabas
 	import { UDPBroadcast } from "../sync/udpbroadcast";
 	import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 import { createSyncSessionId, logSync, packetSummary, SyncTraceContext } from "../sync/syncdiag";
+import { resolveSyncPort } from "../runtimeenv";
 
 export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly recentFilesSetting: string = "recent-files";
@@ -2225,13 +2226,14 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private startSyncServer() {
 		if (!this.tcpsyncserver_) {
-			this.tcpsyncserver_ = new TCPSyncServer(this.logger_);
+			const syncPort = resolveSyncPort() ?? 45455 ;
+			this.tcpsyncserver_ = new TCPSyncServer(this.logger_, syncPort);
 			this.tcpsyncserver_.setTraceContext({
 				sessionId: 'central-server',
 				role: 'central',
 				transport: 'tcp',
 				path: 'server',
-				port: 45455,
+				port: syncPort,
 			}) ;
 			this.tcpsyncserver_
 				.init()

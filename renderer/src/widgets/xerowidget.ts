@@ -1,5 +1,6 @@
 import {  XeroMainProcessInterface  } from "./xerocbtarget.js";
 import {  XeroRect  } from "../shared/xerogeom.js";
+import { toTestIdSegment } from "./xerocbtarget.js";
 
 declare global {
     interface HTMLElement {
@@ -36,6 +37,15 @@ export class XeroWidget extends XeroMainProcessInterface {
     public setParentWidget(parent: XeroWidget) {
         this.parentWidget_ = parent;
         this.setParent(this.parentWidget_!.elem);
+    }
+
+    public setTestId(value: string) : void {
+        this.elem.dataset.testid = value ;
+        this.elem.setAttribute('data-testid', value) ;
+    }
+
+    public static toTestIdSegment(value: string | undefined) : string {
+        return toTestIdSegment(value) ;
     }
 
     public static checkWidgetPositions(elem: HTMLElement) {

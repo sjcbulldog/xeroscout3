@@ -325,6 +325,7 @@ export type IPCAppType = 'central' | 'scout' | 'coach' ;
 export interface IPCAppInit {
     type: IPCAppType ;
     splitter: number ;
+    testMode?: boolean ;
 }
 
 export interface IPCImageResponse {

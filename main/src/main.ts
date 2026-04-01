@@ -4,6 +4,7 @@ import { SCBase } from "./main/apps/scbase";
 import { SCScout } from "./main/apps/scscout";
 import { SCCentral } from "./main/apps/sccentral";
 import { SCCoach } from "./main/apps/sccoach";
+import { ensureDirectoryExists, isTestDriverEnabled, isTestMode, resolveUserDataPath } from "./main/runtimeenv";
 import { getNavData as getNavData, executeCommand, getInfoData, getSelectEventData, loadBaEventData, getTabletData, 
          setTabletData, getTeamData, setTeamData, getMatchData, setMatchData, getTeamStatus, getMatchStatus, setTabletNamePurpose, 
          provideResult, setEventName, getMatchDB, getTeamDB, sendMatchColConfig, sendTeamColConfig, generateRandomData,
@@ -48,17 +49,23 @@ import { runUnitTests } from "./main/units/unittest";
 export let scappbase : SCBase | undefined = undefined ;
 let mainWindow : BrowserWindow | undefined = undefined ;
 
+function getRequestedCommand(args: string[]) : string | undefined {
+    for (let index = 2 ; index < args.length ; index++) {
+        const value = args[index] ;
+        if (value.startsWith('-')) {
+            continue ;
+        }
+
+        if (value === 'central' || value === 'scout' || value === 'coach' || value === 'unittests') {
+            return value ;
+        }
+    }
+
+    return undefined ;
+}
+
 function getRequestedAppType(args: string[]) : string | undefined {
-    let index = 2 ;
-    while (index < args.length && args[index].startsWith('-')) {
-        index++ ;
-    }
-
-    if (index >= args.length) {
-        return undefined ;
-    }
-
-    let value = args[index] ;
+    const value = getRequestedCommand(args) ;
     if (value === 'central' || value === 'scout' || value === 'coach') {
         return value ;
     }
@@ -75,6 +82,11 @@ const requestedAppType = getRequestedAppType(process.argv) ;
 const allowMultiInstance = !app.isPackaged ||
     process.argv.includes('--allow-multi-instance') ||
     requestedAppType !== undefined ;
+
+const userDataPath = resolveUserDataPath() ;
+if (userDataPath) {
+    app.setPath('userData', ensureDirectoryExists(userDataPath)) ;
+}
 
 if (!allowMultiInstance) {
     const gotSingleInstanceLock = app.requestSingleInstanceLock() ;
@@ -95,6 +107,79 @@ if (!allowMultiInstance) {
 
 const Config = require('electron-config') ;
 let config = new Config({ name: getWindowConfigName(process.argv) }) ;
+const testModeEnabled = isTestMode() ;
+const testDriverEnabled = testModeEnabled && isTestDriverEnabled() ;
+
+type TestDriverRequest = {
+    id?: string,
+    command?: string,
+} ;
+
+function sendTestDriverMessage(message: Record<string, unknown>) {
+    const proc = process as NodeJS.Process & {
+        send?: (message: Record<string, unknown>) => void
+    } ;
+
+    if (typeof proc.send === 'function') {
+        proc.send(message) ;
+    }
+}
+
+function collectTestDriverState() : Record<string, unknown> {
+    return {
+        ready: app.isReady(),
+        testMode: testModeEnabled,
+        userDataPath: app.getPath('userData'),
+        requestedAppType: requestedAppType,
+        windowExists: mainWindow !== undefined,
+        appState: scappbase?.getRuntimeState() ?? {
+            appType: undefined,
+            currentView: undefined,
+            logFile: undefined,
+        },
+    } ;
+}
+
+function installTestDriver() {
+    if (!testDriverEnabled) {
+        return ;
+    }
+
+    process.on('message', (message: TestDriverRequest) => {
+        if (!message || typeof message !== 'object') {
+            return ;
+        }
+
+        if (message.command === 'ping') {
+            sendTestDriverMessage({
+                type: 'xeroscout-test-driver-response',
+                id: message.id,
+                ok: true,
+                result: 'pong',
+            }) ;
+            return ;
+        }
+
+        if (message.command === 'get-state') {
+            sendTestDriverMessage({
+                type: 'xeroscout-test-driver-response',
+                id: message.id,
+                ok: true,
+                result: collectTestDriverState(),
+            }) ;
+            return ;
+        }
+
+        sendTestDriverMessage({
+            type: 'xeroscout-test-driver-response',
+            id: message.id,
+            ok: false,
+            error: `unknown test driver command '${String(message.command)}'`,
+        }) ;
+    }) ;
+}
+
+installTestDriver() ;
 
 function createWindow() : void {
     const args = process.argv;
@@ -134,25 +219,21 @@ function createWindow() : void {
         win.maximize() ;
     }
 
-    if (process.argv.length > 2) {
-        let index = 2 ;
-        while (index < process.argv.length && process.argv[index].startsWith('-')) {
-            index++ ;
-        }
-
-        if (index === process.argv.length) {
-            scappbase = new SCCentral(win, args) ;            
-        }       
-        else if (process.argv[index] === "scout") {
+    const requestedCommand = getRequestedCommand(process.argv) ;
+    if (requestedCommand === undefined) {
+        scappbase = new SCCentral(win, args) ;
+    }
+    else {
+        if (requestedCommand === "scout") {
             scappbase = new SCScout(win, args) ;
         }
-        else if (process.argv[index] === "coach") {
+        else if (requestedCommand === "coach") {
             scappbase = new SCCoach(win, args) ;
         }
-        else if (process.argv[index] === 'central') {
+        else if (requestedCommand === 'central') {
             scappbase = new SCCentral(win, args) ;
         }
-        else if (process.argv[index] === 'unittests') {
+        else if (requestedCommand === 'unittests') {
             runUnitTests() ;
             app.exit(0) ;
         }
@@ -172,8 +253,11 @@ function createWindow() : void {
         app.exit(1) ;
     }
   
+    const basePage = scappbase!.basePage() ;
+    const basePagePath = path.isAbsolute(basePage) ? basePage : path.join(process.cwd(), basePage) ;
+
     win
-      .loadFile(scappbase!.basePage())
+      .loadFile(basePagePath)
       .then(() => {
         scappbase?.mainWindowLoaded() ;
       })
@@ -205,6 +289,11 @@ function createWindow() : void {
     }) ;
 
     scappbase!.windowCreated() ;
+    sendTestDriverMessage({
+        type: 'xeroscout-test-driver-event',
+        event: 'window-created',
+        state: collectTestDriverState(),
+    }) ;
 }
 
 app.on("ready", () => {
@@ -283,6 +372,11 @@ app.on("ready", () => {
     ipcMain.on('prompt-string-response', (event, ...args) => { promptStringResponse('prompt-string-response', ...args)}) ;
 
     createWindow() ;
+    sendTestDriverMessage({
+        type: 'xeroscout-test-driver-event',
+        event: 'app-ready',
+        state: collectTestDriverState(),
+    }) ;
 }) ;
 
 app.on('window-all-closed', () => {

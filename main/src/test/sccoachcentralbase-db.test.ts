@@ -128,7 +128,7 @@ test('sendMatchDB returns match database rows even when the match manager is emp
 
     let payload = getSinglePayload(app, 'send-match-db') ;
     expect(payload.keycols).toEqual(['comp_level', 'set_number', 'match_number', 'team_key']) ;
-    expect(payload.data).toEqual([{ team_key: DataValue.fromString('frc1425') }]) ;
+    expect(payload.data).toEqual([{ team_key: 'frc1425' }]) ;
 }) ;
 
 test('sendTeamDB returns team database rows even when the team manager is empty', async () => {
@@ -140,7 +140,7 @@ test('sendTeamDB returns team database rows even when the team manager is empty'
 
     let payload = getSinglePayload(app, 'send-team-db') ;
     expect(payload.keycols).toEqual(['team_number']) ;
-    expect(payload.data).toEqual([{ team_number: DataValue.fromInteger(1425) }]) ;
+    expect(payload.data).toEqual([{ team_number: 1425 }]) ;
 }) ;
 
 test('sendMatchDB returns a valid empty payload when the match database has no rows', async () => {

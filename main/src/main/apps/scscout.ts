@@ -10,6 +10,7 @@ import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr
 import { kMatchAlliances } from '../../shared/playoffs';
 import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 import { createSyncSessionId, logSync, packetSummary, SyncTraceContext } from "../sync/syncdiag";
+import { isTestMode, resolveSyncCableHost, resolveSyncPort } from "../runtimeenv";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -83,6 +84,7 @@ export class SCScout extends SCBase {
 
     public constructor(win: BrowserWindow, args: string[]) {
         super(win, 'scout') ;
+        this.port_ = resolveSyncPort() ?? this.port_ ;
 
         this.checkLastEvent() ;
 
@@ -107,6 +109,15 @@ export class SCScout extends SCBase {
                 this.port_ = value ;
             }
         }
+
+        const cableHost = resolveSyncCableHost() ;
+        if (cableHost) {
+            this.ipaddr_ = cableHost ;
+        }
+    }
+
+    private shouldSkipScoutingConfirmation() : boolean {
+        return isTestMode() ;
     }
 
     public get applicationType() : IPCAppType { 
@@ -286,7 +297,7 @@ export class SCScout extends SCBase {
             this.setViewString() ;
             this.current_scout_ = undefined ;
             this.beginSyncTrace('local', '127.0.0.1', this.port_) ;
-            this.sync_client_ = new TCPClient(this.logger_, '127.0.0.1') ;
+            this.sync_client_ = new TCPClient(this.logger_, '127.0.0.1', this.port_) ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
 
@@ -427,7 +438,7 @@ export class SCScout extends SCBase {
             // About to scout a new team, be sure that is what we want to do.
             //
             let data: IPCScoutResult | undefined = this.getOneScoutResults(team) ;
-            if (!data) {
+            if (!data && !this.shouldSkipScoutingConfirmation()) {
                 let ans = dialog.showMessageBoxSync(
                     {
                       title: 'Scout New Team?',
@@ -466,7 +477,7 @@ export class SCScout extends SCBase {
                 // About to scout a new match, be sure that is what we want to do.
                 //
                 let data: IPCScoutResult | undefined = this.getOneScoutResults(match) ;
-                if (!data) {
+                if (!data && !this.shouldSkipScoutingConfirmation()) {
                     let ans = dialog.showMessageBoxSync(
                         {
                           title: 'Scout New Team?',

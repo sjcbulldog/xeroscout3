@@ -18,6 +18,7 @@ export class XeroTabbedWidget extends XeroWidget {
 
     public constructor(options: XeroTabbedWidgetOptions = {}) {
         super('div', 'xero-tabbed-widget-top') ;
+        this.setTestId('tabbed-widget') ;
 
         this.options_ = options ;
 
@@ -107,6 +108,9 @@ export class XeroTabbedWidget extends XeroWidget {
         if (this.options_.fontColor) {
             tab.style.color = this.options_.fontColor ;
         }
+
+        tab.dataset.pageName = name ;
+        tab.setAttribute('data-testid', `tab-${XeroWidget.toTestIdSegment(name)}`) ;
         
         tab.addEventListener('click', this.tabButtonClicked.bind(this, tab)) ;  
         tab.addEventListener('dblclick', this.tabButtonDoubleClicked.bind(this, tab)) ;         
@@ -129,6 +133,8 @@ export class XeroTabbedWidget extends XeroWidget {
         }
 
         page.classList.add('xero-tabbed-widget-page') ;
+        page.dataset.pageName = name ;
+        page.setAttribute('data-testid', `tab-page-${XeroWidget.toTestIdSegment(name)}`) ;
         this.names_.splice(index, 0, name) ;
         this.pages_.splice(index, 0, page) ;
 
@@ -140,6 +146,8 @@ export class XeroTabbedWidget extends XeroWidget {
 
     public addPage(name: string, page: HTMLElement) : void {
         page.classList.add('xero-tabbed-widget-page') ;
+        page.dataset.pageName = name ;
+        page.setAttribute('data-testid', `tab-page-${XeroWidget.toTestIdSegment(name)}`) ;
 
         this.names_.push(name) ;
         this.pages_.push(page) ;

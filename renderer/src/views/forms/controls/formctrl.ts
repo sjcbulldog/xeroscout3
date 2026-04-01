@@ -275,6 +275,7 @@ export abstract class FormControl {
 
     public set ctrl(ctrl: HTMLElement) {
         this.ctrl_ = ctrl ;
+        this.decorateForTesting(ctrl) ;
     }
 
     public clone(tag: string) : FormControl {
@@ -359,5 +360,34 @@ export abstract class FormControl {
 
         name = 'xero-form-' + oper + '-item' ;
         ctrl.classList.add(name) ;
+
+        if (ctrl === this.ctrl_) {
+            this.decorateForTesting(ctrl, oper) ;
+        }
+    }
+
+    private decorateForTesting(ctrl: HTMLElement, mode?: string) {
+        const resolvedMode = mode ?? (ctrl.className.includes('xero-form-edit') ? 'edit' : 'scout') ;
+        ctrl.dataset.controlTag = this.item_.tag ;
+        ctrl.dataset.controlType = this.item_.type ;
+        ctrl.dataset.controlMode = resolvedMode ;
+        ctrl.setAttribute(
+            'data-testid',
+            `form-control-${resolvedMode}-${this.item_.type}-${this.toTestIdSegment(this.item_.tag)}`
+        ) ;
+    }
+
+    private toTestIdSegment(value: string | undefined) : string {
+        if (!value) {
+            return 'untagged' ;
+        }
+
+        const normalized = value
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') ;
+
+        return normalized.length > 0 ? normalized : 'untagged' ;
     }
 }
