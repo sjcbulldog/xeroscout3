@@ -8,6 +8,17 @@ import { PacketType } from "../sync/packettypes";
 import { Project } from "../project/project";
 import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCImageItem, IPCPickListConfig, IPCSyncedImageData } from "../../shared/ipc";
+import {
+    parseFormPayload,
+    parseHelloResponsePayload,
+    parseImagesPayload,
+    parseProjectInfoPayload,
+    stringifyCoachGraphsPayload,
+    stringifyCoachPicklistsPayload,
+    stringifyStringArrayPayload,
+    summarizeValidationErrors,
+    validateCoachSyncPreflight,
+} from "../../shared/synccontract";
 
 export class SCCoach extends SCCoachCentralBaseApp {
     private static readonly lastEventLoaded: string = 'coach-last-event-loaded' ;
@@ -415,6 +426,14 @@ export class SCCoach extends SCCoachCentralBaseApp {
         this.awaiting_images_ = false ;
         this.sync_finalized_ = false ;
 
+        const configs = this.project?.graph_mgr_?.coachConfigs || [] ;
+        const picklists = this.project?.picklist_mgr_?.coachesPicklists || [] ;
+        const preflight = validateCoachSyncPreflight(configs, picklists) ;
+        if (!preflight.ok) {
+            this.showSyncValidationError('Invalid Local Sync Data', preflight.errors) ;
+            return ;
+        }
+
         this.sync_client_!.connect()
             .then(async ()=> {
                 this.logger_.info(`ScouterSync: connected to server ' ${this.sync_client_!.name()}'`) ;
@@ -454,8 +473,13 @@ export class SCCoach extends SCCoachCentralBaseApp {
                 
             })
             .catch((err) => {
-                this.logger_.error('Error connecting to sync server: ' + err.message) ;
+            this.logger_.error('Error connecting to sync server: ' + err.message) ;
             }) ;
+    }
+
+    private showSyncValidationError(title: string, errors: string[]) : void {
+        dialog.showErrorBox(title, summarizeValidationErrors(errors)) ;
+        this.logger_.error(`${title}: ${errors.join(" | ")}`) ;
     }
 
     private normalizeImageName(name: string) : string {
@@ -532,8 +556,13 @@ export class SCCoach extends SCCoachCentralBaseApp {
     private maybeRequestImagesOrCompleteSync() : void {
         let missing = this.computeMissingImages() ;
         if (missing.length > 0) {
+            const serialized = stringifyStringArrayPayload(missing, 'RequestImages') ;
+            if (!serialized.ok) {
+                this.showSyncValidationError('Invalid Local Sync Data', serialized.errors) ;
+                return ;
+            }
             this.awaiting_images_ = true ;
-            let payload = Buffer.from(JSON.stringify(missing), 'utf-8') ;
+            let payload = Buffer.from(serialized.value, 'utf-8') ;
             this.sync_client_!.send(new PacketObj(PacketType.RequestImages, payload)) ;
         }
         else {
@@ -560,7 +589,13 @@ export class SCCoach extends SCCoachCentralBaseApp {
             case PacketType.HelloFromCoach:
                 this.receiveHello(p) ;
                 let configs = this.project?.graph_mgr_?.coachConfigs || [] ;
-                str = JSON.stringify(configs) ;
+                let configPayload = stringifyCoachGraphsPayload(configs) ;
+                if (!configPayload.ok) {
+                    this.showSyncValidationError('Invalid Local Sync Data', configPayload.errors) ;
+                    this.sync_client_?.close() ;
+                    return ;
+                }
+                str = configPayload.value ;
                 data = new Uint8Array(Buffer.from(str)) ;
                 p = new PacketObj(PacketType.ProvideCoachGraphs, data) ;
                 this.sync_client_!.send(p) ;
@@ -569,7 +604,13 @@ export class SCCoach extends SCCoachCentralBaseApp {
             case PacketType.ReceivedCoachGraphcs:
                 this.logger_.debug('SyncTablet: received ReceivedCoachGraphcs packet') ;
                 let picklists = this.project?.picklist_mgr_?.coachesPicklists || [] ;
-                str = JSON.stringify(picklists) ;
+                let picklistPayload = stringifyCoachPicklistsPayload(picklists) ;
+                if (!picklistPayload.ok) {
+                    this.showSyncValidationError('Invalid Local Sync Data', picklistPayload.errors) ;
+                    this.sync_client_?.close() ;
+                    return ;
+                }
+                str = picklistPayload.value ;
                 data = new Uint8Array(Buffer.from(str)) ;
                 p = new PacketObj(PacketType.ProvideCoachPickLists, data) ;
                 this.sync_client_!.send(p) ;
@@ -589,7 +630,10 @@ export class SCCoach extends SCCoachCentralBaseApp {
                 this.sync_client_!.send(p) ;                   
                 break ;
             case PacketType.ProvideProject:
-                this.receiveProject(p) ;
+                if (!this.receiveProject(p)) {
+                    this.sync_client_?.close() ;
+                    return ;
+                }
                 p = new PacketObj(PacketType.RequestTeamDB, new Uint8Array(0)) ;
                 this.sync_client_!.send(p) ;                
                 break ;
@@ -608,11 +652,13 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
             case PacketType.ProvideTeamForm:
                 this.logger_.debug('SyncTablet: received ProvideTeamForm packet') ;
-                try {
-                    this.team_form_ = JSON.parse(p.payloadAsString()) as IPCForm ;
-                }
-                catch {
-                    this.team_form_ = undefined ;
+                {
+                    const parsed = parseFormPayload(p.payloadAsString(), 'ProvideTeamForm') ;
+                    if (!parsed.ok) {
+                        this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                        return ;
+                    }
+                    this.team_form_ = parsed.value ;
                 }
                 this.receiveTeamForm(p) ;
                 p = new PacketObj(PacketType.RequestMatchForm, new Uint8Array(0)) ;
@@ -621,36 +667,35 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
             case PacketType.ProvideMatchForm:
                 this.logger_.debug('SyncTablet: received ProvideMatchForm packet') ;
-                try {
-                    this.match_form_ = JSON.parse(p.payloadAsString()) as IPCForm ;
-                }
-                catch {
-                    this.match_form_ = undefined ;
+                {
+                    const parsed = parseFormPayload(p.payloadAsString(), 'ProvideMatchForm') ;
+                    if (!parsed.ok) {
+                        this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                        return ;
+                    }
+                    this.match_form_ = parsed.value ;
                 }
                 this.receiveMatchForm(p) ;
                 this.maybeRequestImagesOrCompleteSync() ;
                 break ;
 
             case PacketType.ProvideImages:
-                try {
-                    let obj = JSON.parse(p.payloadAsString()) as unknown ;
-                    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-                        this.logger_.warn('SyncTablet: received invalid ProvideImages payload shape') ;
-                        break ;
+                {
+                    const parsed = parseImagesPayload(p.payloadAsString()) ;
+                    if (!parsed.ok) {
+                        this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                        return ;
                     }
 
-                    for (let imname of Object.keys(obj)) {
+                    for (let imname of Object.keys(parsed.value)) {
                         let norm = this.normalizeImageName(imname) ;
                         if (norm.length > 0) {
-                            const result = this.image_mgr_.addSyncedImage(norm, (obj as Record<string, unknown>)[imname]) ;
+                            const result = this.image_mgr_.addSyncedImage(norm, parsed.value[imname]) ;
                             if (!result.ok) {
                                 this.logger_.warn(`SyncTablet: skipping synced image '${norm}' - ${result.reason}`) ;
                             }
                         }
                     }
-                }
-                catch {
-                    this.logger_.warn('SyncTablet: received invalid ProvideImages payload JSON') ;
                 }
                 this.awaiting_images_ = false ;
                 this.completeSync() ;
@@ -675,23 +720,23 @@ export class SCCoach extends SCCoachCentralBaseApp {
 
     private receiveHello(p: PacketObj) : void {
         this.logger_.debug('SyncTablet: received HelloFromCoach packet') ;
-        try {
-            let obj = JSON.parse(p.payloadAsString()) ;
-            if (this.project && this.project.info?.uuid_ && obj.uuid !== this.project.info.uuid_) {
-                dialog.showMessageBoxSync(this.win_, {
-                    title: 'Synchronization Error',
-                    message: 'The connected event does not match the currently loaded event.\nReset the Coach tablet to sync to this new event.',
-                    type: 'error'
-                }) ;
-                //
-                // We have an event loaded and it does not match
-                //
-                this.sync_client_!!.close() ;
-                return ;
-            }
+        const parsed = parseHelloResponsePayload(p.payloadAsString(), 'HelloFromCoach') ;
+        if (!parsed.ok) {
+            this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+            this.sync_client_?.close() ;
+            return ;
         }
-        catch(err) {
-        }    
+
+        let obj = parsed.value ;
+        if (this.project && this.project.info?.uuid_ && obj.uuid !== this.project.info.uuid_) {
+            dialog.showMessageBoxSync(this.win_, {
+                title: 'Synchronization Error',
+                message: 'The connected event does not match the currently loaded event.\nReset the Coach tablet to sync to this new event.',
+                type: 'error'
+            }) ;
+            this.sync_client_!!.close() ;
+            return ;
+        }
     }
 
     private receiveTeamForm(p: PacketObj) : void {
@@ -706,10 +751,15 @@ export class SCCoach extends SCCoachCentralBaseApp {
         fs.writeFileSync(fname, str) ;
     }
 
-    private receiveProject(p: PacketObj) : void {
+    private receiveProject(p: PacketObj) : boolean {
         this.logger_.debug('SyncTablet: received ProvideProject packet') ;        
         let str : string = p.payloadAsString() ;
-        let info : any = JSON.parse(str) ;
+        const parsed = parseProjectInfoPayload(str) ;
+        if (!parsed.ok) {
+            this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+            return false ;
+        }
+        let info : any = parsed.value ;
         this.sync_project_file_ = this.getProjectDir(info) ;
 
         if (!fs.existsSync(this.sync_project_file_)) {
@@ -717,6 +767,7 @@ export class SCCoach extends SCCoachCentralBaseApp {
         }
 
         fs.writeFileSync(path.join(this.sync_project_file_, 'event.json'), str) ;
+        return true ;
     }
 
     public override savePicklistConfig(configs: IPCPickListConfig[]) {

@@ -104,6 +104,36 @@ test('handleProvideResults returns an error packet when processResults fails', a
     expect(reply.payloadAsString()).toBe('team import failed') ;
 }) ;
 
+test('handleProvideResults rejects malformed sync payloads before processing', async () => {
+    const central = createCentral(async () => {
+        throw new Error('should not be called') ;
+    }) ;
+    const packet = new PacketObj(PacketType.ProvideResults, Buffer.from(JSON.stringify({
+        tablet: 'Tablet 41',
+        purpose: 'team',
+        results: [
+            {
+                item: 'st-111',
+                data: [
+                    {
+                        tag: 'cycles',
+                        value: {
+                            type: 'integer',
+                            value: 'bad',
+                        },
+                    },
+                ],
+            },
+        ],
+    }))) ;
+
+    const reply = await central.handleProvideResults(packet) ;
+
+    expect(reply.type_).toBe(PacketType.Error) ;
+    expect(reply.payloadAsString()).toContain('ProvideResults validation failed') ;
+    expect(central.project_.data_mgr_.processResults).not.toHaveBeenCalled() ;
+}) ;
+
 test('handleRequestTeamForm refuses an invalid stored form', () => {
     let formPath = writeTempForm({
         purpose: 'team',

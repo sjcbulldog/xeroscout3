@@ -1,10 +1,11 @@
-import { expect, test } from "vitest" ;
+import { expect, test, vi } from "vitest" ;
 
 import { SCScout, SCScoutInfo } from "../main/apps/scscout" ;
 import { IPCNamedDataValue, IPCScoutResult } from "../shared/ipc" ;
 
 function createScout() : any {
     const scout = Object.create(SCScout.prototype) as any ;
+    scout.sent_ = [] ;
     scout.info_ = new SCScoutInfo() ;
     scout.info_.uuid_ = "event-uuid" ;
     scout.info_.tablet_ = "Tablet 41" ;
@@ -15,6 +16,7 @@ function createScout() : any {
     scout.alliance_ = "blue" ;
     scout.sendToRenderer = (_name: string, payload: unknown) => {
         scout.lastPayload_ = payload ;
+        scout.sent_.push({ name: _name, payload }) ;
     } ;
     return scout ;
 }
@@ -83,4 +85,41 @@ test("getTeamResultFromCache returns a cloned result", () => {
     cached.data[0].value.value = "mutated" ;
 
     expect(scout.info_.team_results_cache_[0].data[0].value.value).toBe("team-111") ;
+}) ;
+
+test("syncClient blocks before connect when local scout payload is invalid", async () => {
+    const scout = createScout() ;
+    scout.info_.purpose_ = "team" ;
+    scout.info_.results_ = [
+        {
+            item: "st-111",
+            data: [
+                {
+                    tag: "cycles",
+                    value: {
+                        type: "integer",
+                        value: "bad",
+                    },
+                },
+            ],
+        },
+    ] ;
+
+    const connect = vi.fn(() => Promise.resolve()) ;
+    const conn = {
+        name: () => "test-conn",
+        setTraceContext: vi.fn(),
+        connect,
+        on: vi.fn(),
+    } ;
+
+    scout.optionallyGetResults = vi.fn(() => Promise.resolve()) ;
+    scout.logSync = vi.fn() ;
+    scout.getSyncStateSnapshot = vi.fn(() => ({})) ;
+
+    scout["syncClient"](conn as any) ;
+    await Promise.resolve() ;
+
+    expect(connect).not.toHaveBeenCalled() ;
+    expect(scout.sent_.some((entry: any) => entry.name === "set-status-title" && entry.payload === "Invalid Local Sync Data")).toBe(true) ;
 }) ;

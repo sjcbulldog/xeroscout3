@@ -19,6 +19,23 @@ import { IPCAppType, IPCChange, IPCCheckDBViewFormula, IPCColumnDesc, IPCDatabas
 	import { UDPBroadcast } from "../sync/udpbroadcast";
 	import { SCCoachCentralBaseApp } from "./sccoachcentralbase";
 import { createSyncSessionId, logSync, packetSummary, SyncTraceContext } from "../sync/syncdiag";
+import {
+	parseCoachGraphsPayload,
+	parseCoachPicklistsPayload,
+	parseRequestedNamesPayload,
+	parseScoutHelloPayload,
+	parseScoutResultsPayload,
+	stringifyImagesPayload,
+	stringifyHelloResponsePayload,
+	stringifyMatchAssignmentsPayload,
+	stringifyPlayoffAssignmentsPayload,
+	stringifyPlayoffStatusPayload,
+	stringifyProjectInfoPayload,
+	stringifyScoutResultArrayPayload,
+	stringifyTeamAssignmentsPayload,
+	stringifyTabletsPayload,
+	summarizeValidationErrors,
+} from "../../shared/synccontract";
 
 export class SCCentral extends SCCoachCentralBaseApp {
 	private static readonly recentFilesSetting: string = "recent-files";
@@ -1811,16 +1828,33 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleProvideCoachGraphs(p: PacketObj): PacketObj {
-		let obj = JSON.parse(p.payloadAsString()) ;
+		let parsed = parseCoachGraphsPayload(p.payloadAsString()) ;
+		if (!parsed.ok) {
+			return this.validationErrorPacket('ProvideCoachGraphs', parsed.errors) ;
+		}
+		let obj = parsed.value ;
 		this.project!.graph_mgr_!.coachConfigs = obj ;
 		return new PacketObj(PacketType.ReceivedCoachGraphcs, Buffer.from("OK", "utf-8"));
 	}
 
 	private handleProvideCoachPickLists(p: PacketObj): PacketObj {
-		let obj = JSON.parse(p.payloadAsString()) as IPCPickListConfig[] ;
+		let parsed = parseCoachPicklistsPayload(p.payloadAsString()) ;
+		if (!parsed.ok) {
+			return this.validationErrorPacket('ProvideCoachPickLists', parsed.errors) ;
+		}
+		let obj = parsed.value as IPCPickListConfig[] ;
 		const coachOwned = obj.filter((cfg) => cfg.owner === 'coach') ;
 		this.project!.picklist_mgr_!.coachesPicklists = coachOwned ;
 		return new PacketObj(PacketType.ReceivedCoachPickLists, Buffer.from("OK", "utf-8"));
+	}
+
+	private validationErrorPacket(packetName: string, errors: string[]) : PacketObj {
+		this.logSync('warn', 'CentralSyncValidationFailed', {
+			packet: packetName,
+			errorCount: errors.length,
+			errors: errors,
+		}) ;
+		return new PacketObj(PacketType.Error, Buffer.from(`${packetName} validation failed:\n${summarizeValidationErrors(errors)}`, "utf-8")) ;
 	}
 
 	private handleRequestHelloFromScouter(p: PacketObj): PacketObj {
@@ -1841,14 +1875,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 		this.synctype_ = 'data' ;
 		if (p.data_.length > 0) {
-			try {
-				let obj = JSON.parse(p.payloadAsString());
-				this.logSync('info', 'CentralHelloPayload', obj) ;
-			} catch (err) {
-				this.logSync('warn', 'CentralHelloPayloadParseFailed', {
-					message: (err as Error).message,
-				}) ;
+			let parsed = parseScoutHelloPayload(p.payloadAsString()) ;
+			if (!parsed.ok) {
+				return this.validationErrorPacket('HelloFromScouter', parsed.errors) ;
 			}
+			this.logSync('info', 'CentralHelloPayload', parsed.value) ;
 		}
 
 		let evname;
@@ -1870,7 +1901,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 			eventUuid: evid.uuid,
 			eventName: evid.name,
 		}) ;
-		let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
+		let helloPayload = stringifyHelloResponsePayload(evid, 'HelloFromScouter') ;
+		if (!helloPayload.ok) {
+			return this.validationErrorPacket('HelloFromScouter', helloPayload.errors) ;
+		}
+		let uuidbuf = Buffer.from(helloPayload.value, "utf-8");
 		return new PacketObj(PacketType.HelloFromScouter, uuidbuf);
 	}
 
@@ -1899,14 +1934,7 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		else {			
 			this.synctype_ = 'coach' ;
 			if (p.data_.length > 0) {
-				try {
-					let obj = JSON.parse(p.payloadAsString());
-					this.logSync('info', 'CentralCoachHelloPayload', obj) ;
-				} catch (err) {
-					this.logSync('warn', 'CentralCoachHelloPayloadParseFailed', {
-						message: (err as Error).message,
-					}) ;
-				}
+				return this.validationErrorPacket('HelloFromCoach', ['HelloFromCoach must not contain a JSON payload']) ;
 			}
 
 			let evname;
@@ -1928,7 +1956,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				eventUuid: evid.uuid,
 				eventName: evid.name,
 			}) ;
-			let uuidbuf = Buffer.from(JSON.stringify(evid), "utf-8");
+			let helloPayload = stringifyHelloResponsePayload(evid, 'HelloFromCoach') ;
+			if (!helloPayload.ok) {
+				return this.validationErrorPacket('HelloFromCoach', helloPayload.errors) ;
+			}
+			let uuidbuf = Buffer.from(helloPayload.value, "utf-8");
 			resp = new PacketObj(PacketType.HelloFromCoach, uuidbuf);
 		}
 
@@ -1936,7 +1968,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 	}
 
 	private handleRequestRequestImages(p: PacketObj): PacketObj {
-		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		let requested = parseRequestedNamesPayload(p.payloadAsString(), 'RequestImages') ;
+		if (!requested.ok) {
+			return this.validationErrorPacket('RequestImages', requested.errors) ;
+		}
+		let obj : string[] = requested.value ;
 		this.logSync('info', 'CentralProvideImages', {
 			requestedCount: obj.length,
 		}) ;
@@ -1957,13 +1993,21 @@ export class SCCentral extends SCCoachCentralBaseApp {
 		}
 
 		let data: Uint8Array = new Uint8Array(0);
-		let msg : string = JSON.stringify(retdata) ;
+		let imagePayload = stringifyImagesPayload(retdata) ;
+		if (!imagePayload.ok) {
+			return this.validationErrorPacket('ProvideImages', imagePayload.errors) ;
+		}
+		let msg : string = imagePayload.value ;
 		data = Buffer.from(msg, "utf-8");
 		return new PacketObj(PacketType.ProvideImages, data);
 	}	
 
 	private handleRequestMatchResults(p: PacketObj): PacketObj {
-		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		let requested = parseRequestedNamesPayload(p.payloadAsString(), 'RequestMatchResults') ;
+		if (!requested.ok) {
+			return this.validationErrorPacket('RequestMatchResults', requested.errors) ;
+		}
+		let obj : string[] = requested.value ;
 		this.logSync('info', 'CentralProvideMatchResults', {
 			requestedCount: obj.length,
 		}) ;
@@ -1975,12 +2019,20 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				results.push(one) ;
 			}
 		}
-		let msg: string = JSON.stringify(results) ;
+		let payload = stringifyScoutResultArrayPayload(results, 'ProvideMatchResults') ;
+		if (!payload.ok) {
+			return this.validationErrorPacket('ProvideMatchResults', payload.errors) ;
+		}
+		let msg: string = payload.value ;
 		return new PacketObj(PacketType.ProvideMatchResults, Buffer.from(msg, "utf-8"));
 	}
 
 	private handleRequestTeamResults(p: PacketObj): PacketObj {
-		let obj : string[] = JSON.parse(p.payloadAsString()) as string[] ;
+		let requested = parseRequestedNamesPayload(p.payloadAsString(), 'RequestTeamResults') ;
+		if (!requested.ok) {
+			return this.validationErrorPacket('RequestTeamResults', requested.errors) ;
+		}
+		let obj : string[] = requested.value ;
 		this.logSync('info', 'CentralProvideTeamResults', {
 			requestedCount: obj.length,
 		}) ;
@@ -1992,7 +2044,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				results.push(one) ;
 			}
 		}
-		let msg: string = JSON.stringify(results) ;
+		let payload = stringifyScoutResultArrayPayload(results, 'ProvideTeamResults') ;
+		if (!payload.ok) {
+			return this.validationErrorPacket('ProvideTeamResults', payload.errors) ;
+		}
+		let msg: string = payload.value ;
 		return new PacketObj(PacketType.ProvideTeamResults, Buffer.from(msg, "utf-8"));
 	}
 
@@ -2009,7 +2065,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 				}
 			}
 
-			let msg: string = JSON.stringify(tablets);
+			let tabletPayload = stringifyTabletsPayload(tablets) ;
+			if (!tabletPayload.ok) {
+				return this.validationErrorPacket('ProvideTablets', tabletPayload.errors) ;
+			}
+			let msg: string = tabletPayload.value;
 			this.logSync('info', 'CentralProvideTabletsReady', {
 				tabletCount: tablets.length,
 			}) ;
@@ -2074,7 +2134,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestTeamList(p: PacketObj): PacketObj {
 		if (this.project?.tablet_mgr_?.hasTeamAssignments()) {
-			let str = JSON.stringify(this.project?.tablet_mgr_?.getTeamAssignments());
+			let serialized = stringifyTeamAssignmentsPayload(this.project?.tablet_mgr_?.getTeamAssignments());
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvideTeamList', serialized.errors) ;
+			}
+			let str = serialized.value;
 			return new PacketObj(PacketType.ProvideTeamList, Buffer.from(str));
 		} else {
 			dialog.showErrorBox(
@@ -2093,27 +2157,47 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestPlayoffAssignments(p: PacketObj): PacketObj {
 		if (this.project?.tablet_mgr_?.hasPlayoffAssignments()) {
-			let str = JSON.stringify(this.project?.tablet_mgr_?.getPlayoffAssignments());
+			let serialized = stringifyPlayoffAssignmentsPayload(this.project?.tablet_mgr_?.getPlayoffAssignments());
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvidePlayoffAssignments', serialized.errors) ;
+			}
+			let str = serialized.value;
 			return new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));
 		} else {
-			let str = JSON.stringify(null) ;
+			let serialized = stringifyPlayoffAssignmentsPayload(null) ;
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvidePlayoffAssignments', serialized.errors) ;
+			}
+			let str = serialized.value ;
 			return new PacketObj(PacketType.ProvidePlayoffAssignments, Buffer.from(str));				
 		}
 	}
 
 	private handleRequestPlayoffStatus(p: PacketObj): PacketObj {
 		if (this.project?.playoff_mgr_?.hasPlayoffStatus()) {
-			let str = JSON.stringify(this.project?.playoff_mgr_?.info) ;
+			let serialized = stringifyPlayoffStatusPayload(this.project?.playoff_mgr_?.info) ;
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvidePlayoffStatus', serialized.errors) ;
+			}
+			let str = serialized.value ;
 			return new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
 		} else {
-			let str = JSON.stringify(null) ;
+			let serialized = stringifyPlayoffStatusPayload(null) ;
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvidePlayoffStatus', serialized.errors) ;
+			}
+			let str = serialized.value ;
 			return new PacketObj(PacketType.ProvidePlayoffStatus, Buffer.from(str));
 		}
 	}
 
 	private handleRequestMatchList(p: PacketObj): PacketObj {
 		if (this.project?.tablet_mgr_?.hasMatchAssignments()) {
-			let str = JSON.stringify(this.project?.tablet_mgr_?.getMatchAssignments());
+			let serialized = stringifyMatchAssignmentsPayload(this.project?.tablet_mgr_?.getMatchAssignments());
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvideMatchList', serialized.errors) ;
+			}
+			let str = serialized.value;
 			return new PacketObj(PacketType.ProvideMatchList, Buffer.from(str));
 		} else {
 			let str = JSON.stringify([]) ;
@@ -2123,7 +2207,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private async handleProvideResults(p: PacketObj): Promise<PacketObj> {
 		try {
-			let obj : IPCScoutResults = JSON.parse(p.payloadAsString()) as IPCScoutResults ;
+			let parsed = parseScoutResultsPayload(p.payloadAsString()) ;
+			if (!parsed.ok) {
+				return this.validationErrorPacket('ProvideResults', parsed.errors) ;
+			}
+			let obj : IPCScoutResults = parsed.value ;
 			this.logSync('info', 'CentralResultsReceived', {
 				tablet: obj.tablet,
 				purpose: obj.purpose,
@@ -2162,7 +2250,11 @@ export class SCCentral extends SCCoachCentralBaseApp {
 
 	private handleRequestProject(p: PacketObj): PacketObj | undefined {
 		if (this.project) {
-			let msg = JSON.stringify(this.project.info) ;
+			let serialized = stringifyProjectInfoPayload(this.project.info) ;
+			if (!serialized.ok) {
+				return this.validationErrorPacket('ProvideProject', serialized.errors) ;
+			}
+			let msg = serialized.value ;
 			return new PacketObj(PacketType.ProvideProject, Buffer.from(msg, "utf-8"));
 		}
 		return undefined;
