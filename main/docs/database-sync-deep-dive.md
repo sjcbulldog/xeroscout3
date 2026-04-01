@@ -560,6 +560,83 @@ flowchart TD
     REQPLAYASSIGN --> PROVPLAYASSIGN --> REQPLAYSTATUS --> PROVPLAYSTATUS --> READY --> UPLOAD --> INGEST --> ACK --> BYE --> DONE
 ```
 
+### 8.7 Mermaid: scouting sync sequence
+
+This sequence view is useful when debugging sync stability because it shows the strict packet ordering and where the scout waits for the next response.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as Scout Tablet
+    participant C as Central
+    participant DB as team.db / match.db
+    participant EJ as event.json / image store
+
+    U->>S: Click Sync
+    S->>S: Save current in-memory form state into local results_
+    S->>C: HelloFromScouter
+    C->>C: Validate locked event, UUID, and sync availability
+    alt Central rejects sync
+        C-->>S: Error
+    else Central accepts sync
+        C-->>S: HelloFromScouter(event uuid, event name)
+        opt Tablet identity missing
+            S->>C: RequestTablets
+            C-->>S: ProvideTablets
+            U->>S: Choose tablet and purpose
+            S->>S: Persist tablet assignment locally
+        end
+
+        S->>C: RequestTeamForm
+        C-->>S: ProvideTeamForm
+        Note over S,C: Example payload: team.json form definition
+
+        S->>C: RequestMatchForm
+        C-->>S: ProvideMatchForm
+        Note over S,C: Example payload: match.json form definition
+
+        S->>C: RequestMatchList
+        C-->>S: ProvideMatchList
+        Note over S,C: Example payload: qm1 / red1 / frc254 assignment
+
+        S->>C: RequestTeamList
+        C-->>S: ProvideTeamList
+        Note over S,C: Example payload: st-254 and st-1678 assignments
+
+        opt Missing match scouting results
+            S->>C: RequestMatchResults(sm-qm-1-12-254)
+            C->>EJ: Read cached match_results_
+            C-->>S: ProvideMatchResults
+        end
+
+        opt Missing team scouting results
+            S->>C: RequestTeamResults(st-254)
+            C->>EJ: Read cached team_results_
+            C-->>S: ProvideTeamResults
+        end
+
+        opt Missing robot photos or other form images
+            S->>C: RequestImages(frc254-front, robot-side)
+            C->>EJ: Read image files and base64 encode
+            C-->>S: ProvideImages
+        end
+
+        S->>C: RequestPlayoffAssignments
+        C-->>S: ProvidePlayoffAssignments
+        S->>C: RequestPlayoffStatus
+        C-->>S: ProvidePlayoffStatus
+
+        S->>S: Refresh UI and finalize local synced state
+        S->>C: ProvideResults(full local results_ array)
+        Note over S,C: Example items: st-254 and sm-qm-1-12-254
+        C->>DB: Upsert relational rows by natural key
+        C->>EJ: Replace raw cached IPCScoutResult by item
+        C-->>S: ReceivedResults
+        S->>C: GoodbyeFromScouter
+    end
+```
+
 ## 9. How Scout Decides What To Download
 
 ### 9.1 Match results
