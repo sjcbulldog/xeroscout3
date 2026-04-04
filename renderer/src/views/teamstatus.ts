@@ -13,7 +13,22 @@ export class XeroTeamStatus extends XeroView {
         this.request('get-team-status', args) ;
     }
 
+    public override close(): void {
+        if (this.table_) {
+            this.table_.destroy() ;
+            this.table_ = undefined ;
+        }
+
+        this.main_div_ = undefined ;
+        super.close() ;
+    }
+
     private receivedTeamStatus( args: any) {
+        if (this.table_) {
+            this.table_.setData(args) ;
+            return ;
+        }
+
         this.main_div_ = document.createElement('div') ;
         this.main_div_.classList.add('xero-teamstatus-view') ;
         this.elem.appendChild(this.main_div_) ;
