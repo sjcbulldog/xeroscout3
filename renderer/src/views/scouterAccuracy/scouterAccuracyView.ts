@@ -3,6 +3,7 @@ import { XeroView } from "../xeroview.js";
 import { IPCColumnDesc, IPCDatabaseData, IPCDatabaseRow, IPCDatabaseRowValue, IPCTypedDataValue, IPCFormula } from "../../shared/ipc.js";
 import { DataValue } from "../../shared/datavalue.js";
 import { Expr } from "../../shared/expr.js";
+import { Matrix, pseudoInverse } from "ml-matrix";
 
 interface ScouterConfig {
     id: string;
@@ -1233,67 +1234,47 @@ export class ScouterAccuracyView extends XeroView {
         }
 
         const m = scouters.length;
-        const AtA = Array.from({ length: m }, () => new Array<number>(m).fill(0));
-        const Atb = new Array<number>(m).fill(0);
+        let solution: number[] | null = null;
 
-        for (const eq of equations) {
-            for (let i = 0; i < m; i++) {
-                for (let j = 0; j < m; j++) {
-                    AtA[i][j] += eq.coefficients[i] * eq.coefficients[j];
+        if (equations.length > 0) {
+            try {
+                const coefficientMatrix = new Matrix(equations.map((eq) => eq.coefficients));
+                const valueMatrix = new Matrix(equations.map((eq) => [eq.value]));
+                const pseudoInv = pseudoInverse(coefficientMatrix);
+                const result = pseudoInv.mmul(valueMatrix);
+                solution = new Array<number>(m);
+                for (let i = 0; i < m; i++) {
+                    if (i < result.rows && result.columns > 0) {
+                        solution[i] = result.get(i, 0);
+                    } else {
+                        solution[i] = 0;
+                    }
                 }
-                Atb[i] += eq.coefficients[i] * eq.value;
+            } catch (error) {
+                console.warn("Failed to solve scouter contributions", error);
             }
         }
 
-        const solution = this.solveLinearSystem(AtA, Atb);
-        return scouters.map((name, idx) => ({
+        const entries: ContributionEntry[] = scouters.map((name, idx) => ({
             name,
             matches: matchMap.get(name)?.size ?? 0,
             contribution: solution ? solution[idx] : undefined,
         }));
-    }
-
-    private solveLinearSystem(matrix: number[][], vector: number[]): number[] | null {
-        const n = matrix.length;
-        if (n === 0) {
-            return [];
-        }
-
-        const augmented = matrix.map((row, idx) => [...row, vector[idx]]);
-
-        for (let i = 0; i < n; i++) {
-            let pivot = i;
-            for (let r = i + 1; r < n; r++) {
-                if (Math.abs(augmented[r][i]) > Math.abs(augmented[pivot][i])) {
-                    pivot = r;
-                }
+        entries.sort((a, b) => {
+            const aValue =
+                typeof a.contribution === "number" && Number.isFinite(a.contribution)
+                    ? a.contribution
+                    : Number.POSITIVE_INFINITY;
+            const bValue =
+                typeof b.contribution === "number" && Number.isFinite(b.contribution)
+                    ? b.contribution
+                    : Number.POSITIVE_INFINITY;
+            if (aValue === bValue) {
+                return a.name.localeCompare(b.name);
             }
-            if (Math.abs(augmented[pivot][i]) < 1e-9) {
-                return null;
-            }
-            if (pivot !== i) {
-                const temp = augmented[i];
-                augmented[i] = augmented[pivot];
-                augmented[pivot] = temp;
-            }
-
-            const divisor = augmented[i][i];
-            for (let col = i; col <= n; col++) {
-                augmented[i][col] /= divisor;
-            }
-
-            for (let row = 0; row < n; row++) {
-                if (row === i) {
-                    continue;
-                }
-                const factor = augmented[row][i];
-                for (let col = i; col <= n; col++) {
-                    augmented[row][col] -= factor * augmented[i][col];
-                }
-            }
-        }
-
-        return augmented.map((row) => row[n]);
+            return aValue - bValue;
+        });
+        return entries;
     }
 
     private requestGraphRender() {
