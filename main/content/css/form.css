@@ -60,6 +60,30 @@
     cursor: pointer;
 }
 
+.xero-form-header-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.xero-form-reset-match-button {
+    font-family: Arial;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #666;
+    background: #fff;
+    color: #222;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.xero-form-reset-match-button:hover {
+    background: #f4f4f4;
+}
+
 .xero-form-tab {
     border: 1px solid #ccc;
     background-color:   rgb(192, 192, 192) ;

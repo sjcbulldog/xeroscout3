@@ -13,6 +13,16 @@ export class XeroMatchStatus extends XeroView {
         this.request('get-match-status', args) ;
     }
 
+    public override close(): void {
+        if (this.table_) {
+            this.table_.destroy() ;
+            this.table_ = undefined ;
+        }
+
+        this.main_div_ = undefined ;
+        super.close() ;
+    }
+
     private static mapMatchType(mtype: string) : number {
         let ret= -1 ;
 
@@ -66,6 +76,11 @@ export class XeroMatchStatus extends XeroView {
     }
 
     private receivedMatchStatus( args: any) {
+        if (this.table_) {
+            this.table_.setData(args) ;
+            return ;
+        }
+
         this.main_div_ = document.createElement('div') ;
         this.main_div_.classList.add('xero-teamstatus-view') ;
         this.elem.appendChild(this.main_div_) ;

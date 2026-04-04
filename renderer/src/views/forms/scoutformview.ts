@@ -302,15 +302,16 @@ export class XeroScoutFormView extends XeroView {
         }
     }
 
-    private scoutDataConfirmed(changed: boolean) {
-        this.request('provide-result', this.data_!.values) ;
+    private scoutDataConfirmed(changed: boolean, scoutItem?: string) {
+        const targetScoutItem = scoutItem?.length ? scoutItem : this.getScoutItemId() ;
+        this.request('provide-result', { scoutItem: targetScoutItem, data: this.data_!.values }) ;
         this.clearDraft() ;
     }
 
-    private provideResults() {
+    private provideResults(args?: { scoutItem?: string }) {
         // This extracts the results from the current section
         this.beforeSectionChanged(this.tabbed_ctrl_!.selectedPageNumber, -1) ;     
-        this.scoutDataConfirmed(true) ;   
+        this.scoutDataConfirmed(true, args?.scoutItem) ;   
     }
 
     private setCurrentSectionByIndex(sectionIndex: number) : boolean {
@@ -323,6 +324,12 @@ export class XeroScoutFormView extends XeroView {
     }    
 
     private receivedForm(args: IPCFormScoutData) : void {
+        this.resetAllTimersAndStopwatches() ;
+        for (let page of this.section_pages_) {
+            page.close() ;
+        }
+        this.section_pages_ = [] ;
+
         this.form_info_ = args ;
         this.data_ = new XeroFormDataValues() ;
         this.preview_restored_from_db_ = false ;

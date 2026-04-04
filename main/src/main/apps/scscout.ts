@@ -10,6 +10,23 @@ import { MatchTablet, PlayoffAssignment, TeamTablet } from "../project/tabletmgr
 import { kMatchAlliances } from '../../shared/playoffs';
 import { IPCAppType, IPCAutoPlanItem, IPCAutoSelectorItem, IPCForm, IPCFormScoutData, IPCImageItem, IPCNamedDataValue, IPCPlayoffStatus, IPCScoutResult, IPCScoutResults, IPCSection, IPCTabletDefn } from "../../shared/ipc";
 import { createSyncSessionId, logSync, packetSummary, SyncTraceContext } from "../sync/syncdiag";
+import {
+    parseFormPayload,
+    parseHelloResponsePayload,
+    parseImagesPayload,
+    parseMatchAssignmentsPayload,
+    parsePlayoffAssignmentsPayload,
+    parsePlayoffStatusPayload,
+    parseScoutHelloPayload,
+    parseScoutResultArrayPayload,
+    parseTabletsPayload,
+    parseTeamAssignmentsPayload,
+    stringifyScoutHelloPayload,
+    stringifyScoutResultsPayload,
+    stringifyStringArrayPayload,
+    summarizeValidationErrors,
+    validateScoutSyncPreflight,
+} from "../../shared/synccontract";
 
 export class SCScoutInfo {
     public tablet_? : string ;
@@ -43,6 +60,7 @@ export class SCScout extends SCBase {
     private static readonly syncEventRemote: string = "sync-event-remote" ;
     private static readonly syncEventWiFi: string = "sync-event-wifi" ;
     private static readonly syncEventIPAddr: string = "sync-event-ipaddr" ;
+    private static readonly resetCurrentMatch: string = "reset-current-match" ;
     private static readonly resetTablet: string = "reset-tablet" ;
     private static readonly resizeWindow: string = "resize-window" ;
     private static readonly showTeams: string = 'show-teams' ;
@@ -53,6 +71,7 @@ export class SCScout extends SCBase {
     private info_ : SCScoutInfo = new SCScoutInfo() ;
 
     private resultPromiseResolve_ ? : () => void ;
+    private pending_result_request_item_?: string ;
     private tablets_?: IPCTabletDefn[] ;
     private conn_?: SyncClient ;
     private current_scout_? : string ;
@@ -272,6 +291,11 @@ export class SCScout extends SCBase {
     }
 
     public executeCommand(cmd: string) : void {   
+        if (cmd === SCScout.resetCurrentMatch) {
+            this.executeCommandInternal(cmd) ;
+            return ;
+        }
+
         this.optionallyGetResults()
         .then(() => {
             this.executeCommandInternal(cmd) ;
@@ -297,8 +321,8 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventRemote) {
             this.setViewString() ;
             this.current_scout_ = undefined ;
-            this.beginSyncTrace('cable', this.ipaddr_, this.port_) ;
-            this.sync_client_ = new TCPClient(this.logger_, this.ipaddr_, this.port_) ;
+            this.beginSyncTrace('cable', SCScout.defaultSyncIPAddr, this.port_) ;
+            this.sync_client_ = new TCPClient(this.logger_, SCScout.defaultSyncIPAddr, this.port_) ;
             this.sync_client_.on('close', this.syncDone.bind(this)) ; 
             this.sync_client_.on('error', this.syncError.bind(this)) ;
 
@@ -321,7 +345,10 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventIPAddr) {
             this.logSync('info', 'ScoutSyncManualAddressRequested') ;
             this.setView('sync-ipaddr') ;
-        }              
+        }
+        else if (cmd === SCScout.resetCurrentMatch) {
+            this.resetCurrentMatchCmd() ;
+        }
         else if (cmd === SCScout.resetTablet) {
             this.resetTabletCmd() ;
         }
@@ -420,6 +447,28 @@ export class SCScout extends SCBase {
         this.image_mgr_.removeAllImages() ;
     }
 
+    private resetCurrentMatchCmd() {
+        if (!this.current_scout_ || !this.current_scout_.startsWith('sm-')) {
+            dialog.showMessageBoxSync(this.win_, {
+                title: 'Reset Match Data',
+                type: 'warning',
+                message: 'No active match is selected to reset.',
+            }) ;
+            return ;
+        }
+
+        const matchItem = this.current_scout_ ;
+        this.deleteResults(matchItem) ;
+        this.writeEventFile() ;
+        this.logSync('info', 'ScoutCurrentMatchReset', {
+            item: matchItem,
+            remainingResults: this.info_.results_.length,
+        }) ;
+
+        this.sendToRenderer('send-nav-highlight', matchItem) ;
+        this.sendForm('match') ;
+    }
+
     private scoutTeam(team: string, force: boolean = false) {
         this.optionallyGetResults()
         .then(() => {
@@ -508,28 +557,78 @@ export class SCScout extends SCBase {
         let ret: IPCNamedDataValue[] = [] ;
 
         for(let r of res) {
-            if (r.value !== undefined) {
-                ret.push(r) ;
+            if (r && r.value !== undefined && r.value !== null) {
+                let value = (r as any).value ;
+                if (value.value !== undefined && value.value !== null) {
+                    ret.push(r) ;
+                }
             }
         }
 
         return ret ;
     }
 
-    public provideResults(res: IPCNamedDataValue[]) {
+    private isValidScoutItemId(item: string | undefined) : item is string {
+        if (!item || item.trim().length === 0) {
+            return false ;
+        }
+
+        if (/^st-\d+$/.test(item)) {
+            return true ;
+        }
+
+        const match = /^sm-([^-]+)-(\d+)-(\d+)-(\d+)$/.exec(item) ;
+        if (!match) {
+            return false ;
+        }
+
+        const level = match[1] ;
+        if (!['qm', 'sf', 'f'].includes(level)) {
+            return false ;
+        }
+
+        return Number(match[2]) > 0 && Number(match[3]) > 0 && Number(match[4]) > 0 ;
+    }
+
+    public provideResults(res: IPCNamedDataValue[], scoutItem?: string) {
+        const effectiveScoutItem = scoutItem ?? this.pending_result_request_item_ ?? this.current_scout_ ;
         this.logSync('debug', 'ScoutProvideResults', {
             currentScout: this.current_scout_,
+            requestedScoutItem: scoutItem,
+            pendingRequestedScoutItem: this.pending_result_request_item_ ?? null,
+            effectiveScoutItem: effectiveScoutItem,
             resultCount: res.length,
         }) ;
-        this.addResults(this.current_scout_!, this.filterResults(res)) ;
+
+        if (!this.isValidScoutItemId(effectiveScoutItem)) {
+            this.logSync('warn', 'ScoutProvideResultsDropped', {
+                reason: 'invalid-current-scout-item',
+                currentScout: this.current_scout_,
+                requestedScoutItem: scoutItem,
+            }) ;
+            this.sendToRenderer('set-status-title', 'Invalid Local Scout State') ;
+            this.sendToRenderer('set-status-visible', true) ;
+            this.sendToRenderer('set-status-text', 'Cannot save scouting results because no valid scout item is active. Please reopen the item and try again.') ;
+            this.sendToRenderer('set-status-close-button-visible', true) ;
+
+            if (this.resultPromiseResolve_) {
+                this.resultPromiseResolve_() ;
+                this.resultPromiseResolve_ = undefined ;
+            }
+            this.pending_result_request_item_ = undefined ;
+            return ;
+        }
+
+        this.addResults(effectiveScoutItem, this.filterResults(res)) ;
         this.writeEventFile() ;
-        this.logger_.silly('provideResults:' + this.current_scout_, res) ;
+        this.logger_.silly('provideResults:' + effectiveScoutItem, res) ;
 
         if (this.resultPromiseResolve_) {
             // If there is a promise waiting for results, resolve it now.
             this.resultPromiseResolve_() ;
             this.resultPromiseResolve_ = undefined ;
         }
+        this.pending_result_request_item_ = undefined ;
     }
 
     public sendForm(type: string) {
@@ -545,7 +644,7 @@ export class SCScout extends SCBase {
             color: this.alliance_,
             title: this.current_scout_,
             draftKey: this.createDraftKey(type, this.current_scout_),
-            initialValues: this.cloneNamedDataValues(data?.data),
+            initialValues: this.cloneNamedDataValues(data?.data) ?? [],
             eventUuid: this.info_.uuid_,
             scoutItem: this.current_scout_,
         }
@@ -633,6 +732,14 @@ export class SCScout extends SCBase {
     }
     
     private addResults(scout: string, result: IPCNamedDataValue[]) {
+        if (!this.isValidScoutItemId(scout)) {
+            this.logSync('warn', 'ScoutAddResultsDropped', {
+                reason: 'invalid-scout-item-id',
+                scout: scout,
+            }) ;
+            return ;
+        }
+
         let resobj : IPCScoutResult = {
             item: scout,
             data: this.cloneNamedDataValues(result) ?? []
@@ -651,14 +758,86 @@ export class SCScout extends SCBase {
     private getCurrentResults() : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             this.resultPromiseResolve_ = resolve ;
-            this.sendToRenderer('request-results') ;
+            this.pending_result_request_item_ = this.current_scout_ ;
+            this.sendToRenderer('request-results', { scoutItem: this.current_scout_ }) ;
         }) ;
         return ret;
+    }
+
+    private buildScoutResultsPayload() : IPCScoutResults {
+        return {
+            tablet: this.info_.tablet_!,
+            purpose: this.info_.purpose_!,
+            results: this.info_.results_
+        } ;
+    }
+
+    private findFirstResultIndexFromErrors(errors: string[]) : number | undefined {
+        for (let err of errors) {
+            let match = /results\[(\d+)\]/.exec(err) ;
+            if (match) {
+                return +match[1] ;
+            }
+        }
+
+        return undefined ;
+    }
+
+    private buildValidationDiagnosticDump(title: string, errors: string[]) : string | undefined {
+        if (title !== 'Invalid Local Sync Data') {
+            return undefined ;
+        }
+
+        let index = this.findFirstResultIndexFromErrors(errors) ;
+        let failingResult = undefined ;
+        if (index !== undefined && index >= 0 && index < this.info_.results_.length) {
+            failingResult = this.info_.results_[index] ;
+        }
+
+        let dump = {
+            title: title,
+            errors: errors,
+            currentScout: this.current_scout_ ?? null,
+            tablet: this.info_.tablet_,
+            purpose: this.info_.purpose_,
+            eventUuid: this.info_.uuid_,
+            resultsCount: this.info_.results_.length,
+            failingResultIndex: index,
+            failingResult: failingResult,
+        } ;
+
+        return JSON.stringify(dump, null, 2) ;
+    }
+
+    private showSyncValidationError(title: string, errors: string[]) {
+        let message = summarizeValidationErrors(errors) ;
+        let dump = this.buildValidationDiagnosticDump(title, errors) ;
+        if (dump) {
+            message += '\n\nDiagnostic JSON (copy/paste):\n' + dump ;
+        }
+
+        this.logSync('error', 'ScoutSyncValidationFailed', {
+            title: title,
+            errorCount: errors.length,
+            errors: errors,
+        }) ;
+        this.sendToRenderer('set-status-title', title) ;
+        this.sendToRenderer('set-status-visible', true) ;
+        this.sendToRenderer('set-status-text', message) ;
+        this.sendToRenderer('set-status-close-button-visible', true) ;
     }
 
     private syncClient(conn: SyncClient) {
         this.optionallyGetResults()
         .then(() => {
+            if (this.info_.tablet_ && this.info_.purpose_) {
+                const preflight = validateScoutSyncPreflight(this.buildScoutResultsPayload()) ;
+                if (!preflight.ok) {
+                    this.showSyncValidationError('Invalid Local Sync Data', preflight.errors) ;
+                    return ;
+                }
+            }
+
             this.match_results_received_ = false ;
             this.team_results_received_ = false ;
             this.team_form_received_ = false ;
@@ -687,7 +866,13 @@ export class SCScout extends SCBase {
                             name: this.info_.tablet_,
                             purpose: this.info_.purpose_
                         }
-                        data = Buffer.from(JSON.stringify(obj)) ;
+                        const helloPayload = stringifyScoutHelloPayload(obj) ;
+                        if (!helloPayload.ok) {
+                            this.showSyncValidationError('Invalid Local Sync Data', helloPayload.errors) ;
+                            this.conn_?.close() ;
+                            return ;
+                        }
+                        data = Buffer.from(helloPayload.value) ;
                     }
                     this.refreshSyncTrace() ;
                     this.conn_!.setTraceContext(this.sync_trace_) ;
@@ -753,10 +938,14 @@ export class SCScout extends SCBase {
         this.logSync('info', 'ScoutPacketReceived', packetSummary(p)) ;
 
         if (p.type_ === PacketType.HelloFromScouter) {
-            let obj ;
+            const parsed = parseHelloResponsePayload(p.payloadAsString(), 'HelloFromScouter') ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                this.conn_?.close() ;
+                return ;
+            }
 
-            try {
-                obj = JSON.parse(p.payloadAsString()) ;
+            const obj = parsed.value ;
                 if (this.info_.uuid_ && obj.uuid !== this.info_.uuid_) {
                     //
                     // We have an event loaded and it does not match
@@ -794,43 +983,61 @@ export class SCScout extends SCBase {
                     this.logSync('info', 'ScoutRequestingTablets', packetSummary(p)) ;
                     this.conn_!.send(p) ;
                 }
-            }
-            catch(err) {
-                this.logSync('error', 'ScoutHelloParseFailed', {
-                    message: (err as Error).message,
-                    payloadPreview: p.payloadAsString(),
-                }) ;
-            }
         }
         else if (p.type_ === PacketType.ProvideTablets) {
-            this.tablets_ = JSON.parse(p.data_.toString()) ;
+            const parsed = parseTabletsPayload(p.payloadAsString()) ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            this.tablets_ = parsed.value ;
             this.logSync('info', 'ScoutTabletsReceived', {
                 tabletCount: this.tablets_?.length ?? 0,
             }) ;
             this.setView('select-tablet') ;
         }
         else if (p.type_ === PacketType.ProvideTeamForm) {
-            this.info_.teamform_ = JSON.parse(p.payloadAsString()) ;
+            const parsed = parseFormPayload(p.payloadAsString(), 'ProvideTeamForm') ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            this.info_.teamform_ = parsed.value ;
             this.team_form_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;            
         }
         else if (p.type_ === PacketType.ProvideMatchForm) {
-            this.info_.matchform_ = JSON.parse(p.payloadAsString()) ;
+            const parsed = parseFormPayload(p.payloadAsString(), 'ProvideMatchForm') ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            this.info_.matchform_ = parsed.value ;
             this.match_form_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideTeamList) {
-            this.info_.teamlist_ = JSON.parse(p.payloadAsString()) ;
+            const parsed = parseTeamAssignmentsPayload(p.payloadAsString()) ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            this.info_.teamlist_ = parsed.value as TeamTablet[] ;
             this.team_list_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvidePlayoffAssignments) {
-            let obj = JSON.parse(p.payloadAsString()) ;
+            const parsed = parsePlayoffAssignmentsPayload(p.payloadAsString()) ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            let obj = parsed.value ;
             if (obj !== null) {
-                this.info_.playoff_assignments_ = obj ;
+                this.info_.playoff_assignments_ = obj as PlayoffAssignment[] ;
                 this.writeEventFile() ;
                 this.checkPlayoffMatchGeneration();
             }
@@ -843,7 +1050,12 @@ export class SCScout extends SCBase {
             this.getMissingData() ;
         }
         else if (p.type_ === PacketType.ProvidePlayoffStatus) {
-            let obj = JSON.parse(p.payloadAsString()) ;
+            const parsed = parsePlayoffStatusPayload(p.payloadAsString()) ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            let obj = parsed.value ;
             if (obj !== null) {
                 this.info_.playoff_status_ = obj ;
                 this.writeEventFile() ;
@@ -858,32 +1070,30 @@ export class SCScout extends SCBase {
             this.getMissingData() ;
         }        
         else if (p.type_ === PacketType.ProvideMatchList) {
-            this.info_.matchlist_ = JSON.parse(p.payloadAsString()) ;
+            const parsed = parseMatchAssignmentsPayload(p.payloadAsString()) ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            this.info_.matchlist_ = parsed.value as MatchTablet[] ;
             this.match_list_received_ = true ;
             this.writeEventFile() ;
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideImages) {
-            let obj: unknown ;
-            try {
-                obj = JSON.parse(p.payloadAsString()) ;
-            }
-            catch (err) {
-                this.logger_.warn('SyncTablet: received invalid ProvideImages payload JSON') ;
-                this.logSync('warn', 'ScoutProvideImagesInvalidJson') ;
+            const parsed = parseImagesPayload(p.payloadAsString()) ;
+            if (!parsed.ok) {
+                this.logSync('warn', 'ScoutProvideImagesInvalidShape', {
+                    errors: parsed.errors,
+                }) ;
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
                 ret = this.getMissingData() ;
                 return ;
             }
 
-            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-                this.logger_.warn('SyncTablet: received invalid ProvideImages payload shape') ;
-                this.logSync('warn', 'ScoutProvideImagesInvalidShape') ;
-                ret = this.getMissingData() ;
-                return ;
-            }
-
+            const obj = parsed.value ;
             for (let imname of Object.keys(obj)) {
-                const result = this.image_mgr_.addSyncedImage(imname, (obj as Record<string, unknown>)[imname]) ;
+                const result = this.image_mgr_.addSyncedImage(imname, obj[imname]) ;
                 if (!result.ok) {
                     this.logger_.warn(`SyncTablet: skipping synced image '${imname}' - ${result.reason}`) ;
                 }
@@ -891,10 +1101,15 @@ export class SCScout extends SCBase {
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideMatchResults) {
+            const parsed = parseScoutResultArrayPayload(p.payloadAsString(), 'ProvideMatchResults') ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
             if (this.info_.purpose_ === 'match') {
-                let obj = JSON.parse(p.payloadAsString()) ;
+                let obj = parsed.value ;
                 for(let res of obj) {
-                    if (!this.getOneScoutResults(res.item)) {
+                    if (res.item && !this.getOneScoutResults(res.item)) {
                         this.addResults(res.item, res.data) ;
                     }
                 }
@@ -904,7 +1119,12 @@ export class SCScout extends SCBase {
             ret = this.getMissingData() ;  
         }
         else if (p.type_ === PacketType.ProvideTeamResults) {
-            let obj = JSON.parse(p.payloadAsString()) as IPCScoutResult[] ;
+            const parsed = parseScoutResultArrayPayload(p.payloadAsString(), 'ProvideTeamResults') ;
+            if (!parsed.ok) {
+                this.showSyncValidationError('Invalid Sync Data From Central', parsed.errors) ;
+                return ;
+            }
+            let obj = parsed.value ;
             for(let res of obj) {
                 if (!res.item) {
                     continue ;
@@ -942,13 +1162,15 @@ export class SCScout extends SCBase {
     }
 
     private sendScoutingData() {
-        let obj : IPCScoutResults = {
-            tablet: this.info_.tablet_!,
-            purpose: this.info_.purpose_!,
-            results: this.info_.results_
-        } ;
+        let obj : IPCScoutResults = this.buildScoutResultsPayload() ;
+        let serialized = stringifyScoutResultsPayload(obj) ;
+        if (!serialized.ok) {
+            this.showSyncValidationError('Invalid Local Sync Data', serialized.errors) ;
+            this.conn_?.close() ;
+            return ;
+        }
 
-        let jsonstr = JSON.stringify(obj) ;
+        let jsonstr = serialized.value ;
         this.logSync('info', 'ScoutSendingResults', {
             tablet: obj.tablet,
             purpose: obj.purpose,
@@ -1101,32 +1323,47 @@ export class SCScout extends SCBase {
         }
         else if (!this.match_results_received_ && this.needMatchResults().length > 0) {
             const missing = this.needMatchResults() ;
+            const payload = stringifyStringArrayPayload(missing, 'RequestMatchResults') ;
+            if (!payload.ok) {
+                this.showSyncValidationError('Invalid Local Sync Data', payload.errors) ;
+                return ret ;
+            }
             this.logSync('debug', 'ScoutMissingDataRequest', {
                 nextRequest: 'RequestMatchResults',
                 requestedCount: missing.length,
                 state: this.getSyncStateSnapshot(),
             }) ;
-            this.conn_?.send(new PacketObj(PacketType.RequestMatchResults, Buffer.from(JSON.stringify(missing)))) ;
+            this.conn_?.send(new PacketObj(PacketType.RequestMatchResults, Buffer.from(payload.value))) ;
             ret = true ;
         }
         else if (!this.team_results_received_ && this.needTeamResults().length > 0) {
             const missing = this.needTeamResults() ;
+            const payload = stringifyStringArrayPayload(missing, 'RequestTeamResults') ;
+            if (!payload.ok) {
+                this.showSyncValidationError('Invalid Local Sync Data', payload.errors) ;
+                return ret ;
+            }
             this.logSync('debug', 'ScoutMissingDataRequest', {
                 nextRequest: 'RequestTeamResults',
                 requestedCount: missing.length,
                 state: this.getSyncStateSnapshot(),
             }) ;
-            this.conn_?.send(new PacketObj(PacketType.RequestTeamResults, Buffer.from(JSON.stringify(missing)))) ;
+            this.conn_?.send(new PacketObj(PacketType.RequestTeamResults, Buffer.from(payload.value))) ;
             ret = true ;
         }
         else if (this.needImages().length > 0) {
             const missing = this.needImages() ;
+            const payload = stringifyStringArrayPayload(missing, 'RequestImages') ;
+            if (!payload.ok) {
+                this.showSyncValidationError('Invalid Local Sync Data', payload.errors) ;
+                return ret ;
+            }
             this.logSync('debug', 'ScoutMissingDataRequest', {
                 nextRequest: 'RequestImages',
                 requestedCount: missing.length,
                 state: this.getSyncStateSnapshot(),
             }) ;
-            this.conn_?.send(new PacketObj(PacketType.RequestImages, Buffer.from(JSON.stringify(missing)))) ;
+            this.conn_?.send(new PacketObj(PacketType.RequestImages, Buffer.from(payload.value))) ;
             ret = true ;            
         }
         else if (!this.info_.playoff_assignments_ && !this.playoff_assignment_received_) {
@@ -1209,7 +1446,7 @@ export class SCScout extends SCBase {
 
         synctcpitem = new MenuItem( {
             type: 'normal',
-            label: 'Sync Event Cable (Last Sync Address)',
+            label: 'Sync Event Cable (192.168.1.1)',
             click: () => { this.executeCommand(SCScout.syncEventRemote)}
         }) ;
         filemenu.submenu?.insert(1, synctcpitem) ;
@@ -1232,6 +1469,13 @@ export class SCScout extends SCBase {
 
         ret.append(filemenu) ;
 
+        let editmenu: MenuItem = new MenuItem({
+            type: 'submenu',
+            role: 'editMenu',
+            label: 'Edit',
+        }) ;
+        ret.append(editmenu) ;
+
         let resetmenu: MenuItem = new MenuItem({
             type: 'submenu',
             label: 'Reset',
@@ -1240,10 +1484,17 @@ export class SCScout extends SCBase {
 
         let resetitem: MenuItem = new MenuItem( {
             type: 'normal',
+            label: 'Reset Current Match',
+            click: () => { this.executeCommand(SCScout.resetCurrentMatch)}
+        }) ;
+        resetmenu.submenu?.insert(0, resetitem) ;
+
+        resetitem = new MenuItem( {
+            type: 'normal',
             label: 'Reset Tablet',
             click: () => { this.executeCommand(SCScout.resetTablet)}
         }) ;
-        resetmenu.submenu?.insert(0, resetitem) ;
+        resetmenu.submenu?.insert(1, resetitem) ;
         ret.append(resetmenu);    
 
         let optionmenu: MenuItem = new MenuItem({

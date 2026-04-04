@@ -1,4 +1,4 @@
-import { CellComponent, RowComponent, TabulatorFull } from "tabulator-tables";
+import { RowComponent, TabulatorFull } from "tabulator-tables";
 import { IPCTabletDefn } from "../../shared/ipc.js";
 import { XeroDialog } from "../../widgets/xerodialog.js";
 
@@ -30,14 +30,15 @@ export class SelectTabletDialog extends XeroDialog {
                     { title: 'Tablet Type', field: 'purpose', width: 200 },
                 ],
                 layout: 'fitColumns',
-                rowClick: (_e: Event, row: RowComponent) => {
-                    let data = row.getData() as IPCTabletDefn ;
-                    this.selected_tablet_ = {
-                        name: data.name,
-                        purpose: data.purpose,
-                    } ;
-                },
             }) ;
+
+        this.table_.on('rowClick', (_e: UIEvent, row: RowComponent) => {
+            let data = row.getData() as IPCTabletDefn ;
+            this.selected_tablet_ = {
+                name: data.name,
+                purpose: data.purpose,
+            } ;
+        }) ;
 
         pdiv.appendChild(div) ;
     }    
