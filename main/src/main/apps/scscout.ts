@@ -71,6 +71,7 @@ export class SCScout extends SCBase {
     private info_ : SCScoutInfo = new SCScoutInfo() ;
 
     private resultPromiseResolve_ ? : () => void ;
+    private pending_result_request_item_?: string ;
     private tablets_?: IPCTabletDefn[] ;
     private conn_?: SyncClient ;
     private current_scout_? : string ;
@@ -590,10 +591,11 @@ export class SCScout extends SCBase {
     }
 
     public provideResults(res: IPCNamedDataValue[], scoutItem?: string) {
-        const effectiveScoutItem = scoutItem ?? this.current_scout_ ;
+        const effectiveScoutItem = scoutItem ?? this.pending_result_request_item_ ?? this.current_scout_ ;
         this.logSync('debug', 'ScoutProvideResults', {
             currentScout: this.current_scout_,
             requestedScoutItem: scoutItem,
+            pendingRequestedScoutItem: this.pending_result_request_item_ ?? null,
             effectiveScoutItem: effectiveScoutItem,
             resultCount: res.length,
         }) ;
@@ -613,6 +615,7 @@ export class SCScout extends SCBase {
                 this.resultPromiseResolve_() ;
                 this.resultPromiseResolve_ = undefined ;
             }
+            this.pending_result_request_item_ = undefined ;
             return ;
         }
 
@@ -625,6 +628,7 @@ export class SCScout extends SCBase {
             this.resultPromiseResolve_() ;
             this.resultPromiseResolve_ = undefined ;
         }
+        this.pending_result_request_item_ = undefined ;
     }
 
     public sendForm(type: string) {
@@ -640,7 +644,7 @@ export class SCScout extends SCBase {
             color: this.alliance_,
             title: this.current_scout_,
             draftKey: this.createDraftKey(type, this.current_scout_),
-            initialValues: this.cloneNamedDataValues(data?.data),
+            initialValues: this.cloneNamedDataValues(data?.data) ?? [],
             eventUuid: this.info_.uuid_,
             scoutItem: this.current_scout_,
         }
@@ -754,6 +758,7 @@ export class SCScout extends SCBase {
     private getCurrentResults() : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             this.resultPromiseResolve_ = resolve ;
+            this.pending_result_request_item_ = this.current_scout_ ;
             this.sendToRenderer('request-results', { scoutItem: this.current_scout_ }) ;
         }) ;
         return ret;

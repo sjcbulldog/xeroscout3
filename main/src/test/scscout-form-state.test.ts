@@ -212,6 +212,22 @@ test("getCurrentResults requests renderer payload for the active scout item", ()
     const request = scout.sent_.find((entry: any) => entry.name === "request-results") ;
     expect(request).toBeDefined() ;
     expect(request.payload).toEqual({ scoutItem: "st-111" }) ;
+    expect(scout.pending_result_request_item_).toBe("st-111") ;
+}) ;
+
+test("provideResults prefers pending requested scout item when current scout changed", () => {
+    const scout = createScout() ;
+    scout.logSync = vi.fn() ;
+    scout.writeEventFile = vi.fn() ;
+    scout.logger_ = { silly: vi.fn() } ;
+    scout.pending_result_request_item_ = "sm-qm-1-1-111" ;
+    scout.current_scout_ = "sm-qm-1-2-222" ;
+
+    scout.provideResults(createValues("old-match-values")) ;
+
+    expect(scout.info_.results_.length).toBe(1) ;
+    expect(scout.info_.results_[0].item).toBe("sm-qm-1-1-111") ;
+    expect(scout.pending_result_request_item_).toBeUndefined() ;
 }) ;
 
 test("showSyncValidationError includes diagnostic JSON for local sync validation failures", () => {
