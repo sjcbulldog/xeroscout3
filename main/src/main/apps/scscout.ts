@@ -60,6 +60,7 @@ export class SCScout extends SCBase {
     private static readonly syncEventRemote: string = "sync-event-remote" ;
     private static readonly syncEventWiFi: string = "sync-event-wifi" ;
     private static readonly syncEventIPAddr: string = "sync-event-ipaddr" ;
+    private static readonly resetCurrentMatch: string = "reset-current-match" ;
     private static readonly resetTablet: string = "reset-tablet" ;
     private static readonly resizeWindow: string = "resize-window" ;
     private static readonly showTeams: string = 'show-teams' ;
@@ -289,6 +290,11 @@ export class SCScout extends SCBase {
     }
 
     public executeCommand(cmd: string) : void {   
+        if (cmd === SCScout.resetCurrentMatch) {
+            this.executeCommandInternal(cmd) ;
+            return ;
+        }
+
         this.optionallyGetResults()
         .then(() => {
             this.executeCommandInternal(cmd) ;
@@ -338,7 +344,10 @@ export class SCScout extends SCBase {
         else if (cmd === SCScout.syncEventIPAddr) {
             this.logSync('info', 'ScoutSyncManualAddressRequested') ;
             this.setView('sync-ipaddr') ;
-        }              
+        }
+        else if (cmd === SCScout.resetCurrentMatch) {
+            this.resetCurrentMatchCmd() ;
+        }
         else if (cmd === SCScout.resetTablet) {
             this.resetTabletCmd() ;
         }
@@ -437,6 +446,28 @@ export class SCScout extends SCBase {
         this.image_mgr_.removeAllImages() ;
     }
 
+    private resetCurrentMatchCmd() {
+        if (!this.current_scout_ || !this.current_scout_.startsWith('sm-')) {
+            dialog.showMessageBoxSync(this.win_, {
+                title: 'Reset Match Data',
+                type: 'warning',
+                message: 'No active match is selected to reset.',
+            }) ;
+            return ;
+        }
+
+        const matchItem = this.current_scout_ ;
+        this.deleteResults(matchItem) ;
+        this.writeEventFile() ;
+        this.logSync('info', 'ScoutCurrentMatchReset', {
+            item: matchItem,
+            remainingResults: this.info_.results_.length,
+        }) ;
+
+        this.sendToRenderer('send-nav-highlight', matchItem) ;
+        this.sendForm('match') ;
+    }
+
     private scoutTeam(team: string, force: boolean = false) {
         this.optionallyGetResults()
         .then(() => {
@@ -525,22 +556,69 @@ export class SCScout extends SCBase {
         let ret: IPCNamedDataValue[] = [] ;
 
         for(let r of res) {
-            if (r.value !== undefined) {
-                ret.push(r) ;
+            if (r && r.value !== undefined && r.value !== null) {
+                let value = (r as any).value ;
+                if (value.value !== undefined && value.value !== null) {
+                    ret.push(r) ;
+                }
             }
         }
 
         return ret ;
     }
 
-    public provideResults(res: IPCNamedDataValue[]) {
+    private isValidScoutItemId(item: string | undefined) : item is string {
+        if (!item || item.trim().length === 0) {
+            return false ;
+        }
+
+        if (/^st-\d+$/.test(item)) {
+            return true ;
+        }
+
+        const match = /^sm-([^-]+)-(\d+)-(\d+)-(\d+)$/.exec(item) ;
+        if (!match) {
+            return false ;
+        }
+
+        const level = match[1] ;
+        if (!['qm', 'sf', 'f'].includes(level)) {
+            return false ;
+        }
+
+        return Number(match[2]) > 0 && Number(match[3]) > 0 && Number(match[4]) > 0 ;
+    }
+
+    public provideResults(res: IPCNamedDataValue[], scoutItem?: string) {
+        const effectiveScoutItem = scoutItem ?? this.current_scout_ ;
         this.logSync('debug', 'ScoutProvideResults', {
             currentScout: this.current_scout_,
+            requestedScoutItem: scoutItem,
+            effectiveScoutItem: effectiveScoutItem,
             resultCount: res.length,
         }) ;
-        this.addResults(this.current_scout_!, this.filterResults(res)) ;
+
+        if (!this.isValidScoutItemId(effectiveScoutItem)) {
+            this.logSync('warn', 'ScoutProvideResultsDropped', {
+                reason: 'invalid-current-scout-item',
+                currentScout: this.current_scout_,
+                requestedScoutItem: scoutItem,
+            }) ;
+            this.sendToRenderer('set-status-title', 'Invalid Local Scout State') ;
+            this.sendToRenderer('set-status-visible', true) ;
+            this.sendToRenderer('set-status-text', 'Cannot save scouting results because no valid scout item is active. Please reopen the item and try again.') ;
+            this.sendToRenderer('set-status-close-button-visible', true) ;
+
+            if (this.resultPromiseResolve_) {
+                this.resultPromiseResolve_() ;
+                this.resultPromiseResolve_ = undefined ;
+            }
+            return ;
+        }
+
+        this.addResults(effectiveScoutItem, this.filterResults(res)) ;
         this.writeEventFile() ;
-        this.logger_.silly('provideResults:' + this.current_scout_, res) ;
+        this.logger_.silly('provideResults:' + effectiveScoutItem, res) ;
 
         if (this.resultPromiseResolve_) {
             // If there is a promise waiting for results, resolve it now.
@@ -650,6 +728,14 @@ export class SCScout extends SCBase {
     }
     
     private addResults(scout: string, result: IPCNamedDataValue[]) {
+        if (!this.isValidScoutItemId(scout)) {
+            this.logSync('warn', 'ScoutAddResultsDropped', {
+                reason: 'invalid-scout-item-id',
+                scout: scout,
+            }) ;
+            return ;
+        }
+
         let resobj : IPCScoutResult = {
             item: scout,
             data: this.cloneNamedDataValues(result) ?? []
@@ -668,7 +754,7 @@ export class SCScout extends SCBase {
     private getCurrentResults() : Promise<void> {
         let ret = new Promise<void>((resolve, reject) => {
             this.resultPromiseResolve_ = resolve ;
-            this.sendToRenderer('request-results') ;
+            this.sendToRenderer('request-results', { scoutItem: this.current_scout_ }) ;
         }) ;
         return ret;
     }
@@ -681,8 +767,50 @@ export class SCScout extends SCBase {
         } ;
     }
 
+    private findFirstResultIndexFromErrors(errors: string[]) : number | undefined {
+        for (let err of errors) {
+            let match = /results\[(\d+)\]/.exec(err) ;
+            if (match) {
+                return +match[1] ;
+            }
+        }
+
+        return undefined ;
+    }
+
+    private buildValidationDiagnosticDump(title: string, errors: string[]) : string | undefined {
+        if (title !== 'Invalid Local Sync Data') {
+            return undefined ;
+        }
+
+        let index = this.findFirstResultIndexFromErrors(errors) ;
+        let failingResult = undefined ;
+        if (index !== undefined && index >= 0 && index < this.info_.results_.length) {
+            failingResult = this.info_.results_[index] ;
+        }
+
+        let dump = {
+            title: title,
+            errors: errors,
+            currentScout: this.current_scout_ ?? null,
+            tablet: this.info_.tablet_,
+            purpose: this.info_.purpose_,
+            eventUuid: this.info_.uuid_,
+            resultsCount: this.info_.results_.length,
+            failingResultIndex: index,
+            failingResult: failingResult,
+        } ;
+
+        return JSON.stringify(dump, null, 2) ;
+    }
+
     private showSyncValidationError(title: string, errors: string[]) {
-        const message = summarizeValidationErrors(errors) ;
+        let message = summarizeValidationErrors(errors) ;
+        let dump = this.buildValidationDiagnosticDump(title, errors) ;
+        if (dump) {
+            message += '\n\nDiagnostic JSON (copy/paste):\n' + dump ;
+        }
+
         this.logSync('error', 'ScoutSyncValidationFailed', {
             title: title,
             errorCount: errors.length,
@@ -1336,6 +1464,13 @@ export class SCScout extends SCBase {
 
         ret.append(filemenu) ;
 
+        let editmenu: MenuItem = new MenuItem({
+            type: 'submenu',
+            role: 'editMenu',
+            label: 'Edit',
+        }) ;
+        ret.append(editmenu) ;
+
         let resetmenu: MenuItem = new MenuItem({
             type: 'submenu',
             label: 'Reset',
@@ -1344,10 +1479,17 @@ export class SCScout extends SCBase {
 
         let resetitem: MenuItem = new MenuItem( {
             type: 'normal',
+            label: 'Reset Current Match',
+            click: () => { this.executeCommand(SCScout.resetCurrentMatch)}
+        }) ;
+        resetmenu.submenu?.insert(0, resetitem) ;
+
+        resetitem = new MenuItem( {
+            type: 'normal',
             label: 'Reset Tablet',
             click: () => { this.executeCommand(SCScout.resetTablet)}
         }) ;
-        resetmenu.submenu?.insert(0, resetitem) ;
+        resetmenu.submenu?.insert(1, resetitem) ;
         ret.append(resetmenu);    
 
         let optionmenu: MenuItem = new MenuItem({

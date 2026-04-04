@@ -637,13 +637,22 @@ export async function setTabletNamePurpose(cmd: string, ...args: any[]) {
     } 
 }
 
-// provide-result data:object[]
+// provide-result data:object[] | { scoutItem?: string, data: object[] }
 export async function provideResult(cmd: string, ...args: any[]) {
     if (scappbase && isScoutType()) {
         scappbase.logger_.silly({ message: 'renderer -> main', args: {cmd: cmd, cmdargs: args}});
         let scout : SCScout = scappbase as SCScout ;
         if (args.length === 1 && typeof args[0] === 'object') {
-            scout.provideResults(args[0] as IPCNamedDataValue[]) ;
+            const payload = args[0] ;
+            if (Array.isArray(payload)) {
+                scout.provideResults(payload as IPCNamedDataValue[]) ;
+            }
+            else if (Array.isArray(payload.data)) {
+                scout.provideResults(payload.data as IPCNamedDataValue[], payload.scoutItem as string | undefined) ;
+            }
+            else {
+                scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});
+            }
         }
         else {
             scappbase.logger_.error({ message: 'renderer -> main invalid args', args: {cmd: cmd, cmdargs: args}});             
